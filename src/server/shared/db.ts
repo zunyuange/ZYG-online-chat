@@ -207,8 +207,74 @@ export async function initializeSchema(): Promise<void> {
     "updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))"
   );
 
+  // Create robot_knowledge table for AI auto-reply
+  await database.exec(
+    "CREATE TABLE IF NOT EXISTS robot_knowledge (" +
+    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+    "keyword TEXT NOT NULL, " +
+    "question TEXT NOT NULL, " +
+    "answer TEXT NOT NULL, " +
+    "sort INTEGER NOT NULL DEFAULT 0, " +
+    "status INTEGER NOT NULL DEFAULT 1, " +
+    "lang TEXT NOT NULL DEFAULT 'zh-CN', " +
+    "created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))"
+  );
+
+  // Create faq table for frequently asked questions
+  await database.exec(
+    "CREATE TABLE IF NOT EXISTS faq (" +
+    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+    "question TEXT NOT NULL, " +
+    "answer TEXT NOT NULL, " +
+    "sort INTEGER NOT NULL DEFAULT 0, " +
+    "status INTEGER NOT NULL DEFAULT 1, " +
+    "lang TEXT NOT NULL DEFAULT 'zh-CN', " +
+    "created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))"
+  );
+
+  // Create evaluations table for visitor feedback
+  await database.exec(
+    "CREATE TABLE IF NOT EXISTS evaluations (" +
+    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+    "session_id TEXT NOT NULL, " +
+    "visitor_name TEXT, " +
+    "score INTEGER NOT NULL DEFAULT 5, " +
+    "comment TEXT, " +
+    "created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))"
+  );
+
+  // Create banwords table for prohibited words
+  await database.exec(
+    "CREATE TABLE IF NOT EXISTS banwords (" +
+    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+    "keyword TEXT NOT NULL UNIQUE, " +
+    "status INTEGER NOT NULL DEFAULT 1, " +
+    "created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))"
+  );
+
+  // Create staff_groups table for staff grouping
+  await database.exec(
+    "CREATE TABLE IF NOT EXISTS staff_groups (" +
+    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+    "name TEXT NOT NULL UNIQUE, " +
+    "description TEXT, " +
+    "sort INTEGER NOT NULL DEFAULT 0, " +
+    "status INTEGER NOT NULL DEFAULT 1, " +
+    "created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))"
+  );
+
+  // Create staff_group_members table for staff-group relationships
+  await database.exec(
+    "CREATE TABLE IF NOT EXISTS staff_group_members (" +
+    "group_id INTEGER NOT NULL, " +
+    "staff_id INTEGER NOT NULL, " +
+    "PRIMARY KEY (group_id, staff_id))"
+  );
+
   // Create indexes
   await database.exec("CREATE INDEX IF NOT EXISTS messages_session_id_idx ON messages(session_id)");
   await database.exec("CREATE INDEX IF NOT EXISTS messages_created_at_idx ON messages(created_at)");
   await database.exec("CREATE INDEX IF NOT EXISTS staff_users_username_idx ON staff_users(username)");
+  await database.exec("CREATE INDEX IF NOT EXISTS robot_knowledge_keyword_idx ON robot_knowledge(keyword)");
+  await database.exec("CREATE INDEX IF NOT EXISTS evaluations_session_id_idx ON evaluations(session_id)");
 }
