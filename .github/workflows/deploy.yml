@@ -1,0 +1,158 @@
+name: Deploy to Cloudflare
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy-worker:
+    runs-on: ubuntu-latest
+    name: Deploy Worker API
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Ensure D1 database exists
+        run: |
+          set -euo pipefail
+
+          DB_ID=$(npx wrangler d1 list --json | node -e '
+            let input = "";
+            process.stdin.on("data", c => input += c);
+            process.stdin.on("end", () => {
+              const list = JSON.parse(input);
+              const db = Array.isArray(list) ? list.find(item => item.name === "online-chat-db") : null;
+              process.stdout.write(db?.uuid ?? "");
+            });
+          ')
+
+          if [ -z "$DB_ID" ]; then
+            echo "🆕 D1 database online-chat-db not found, creating..."
+            npx wrangler d1 create online-chat-db
+            DB_ID=$(npx wrangler d1 list --json | node -e '
+              let input = "";
+              process.stdin.on("data", c => input += c);
+              process.stdin.on("end", () => {
+                const list = JSON.parse(input);
+                const db = Array.isArray(list) ? list.find(item => item.name === "online-chat-db") : null;
+                process.stdout.write(db?.uuid ?? "");
+              });
+            ')
+          fi
+
+          if [ -z "$DB_ID" ]; then
+            echo "❌ Failed to resolve D1 database id"
+            exit 1
+          fi
+
+          echo "✅ Using D1 database id: $DB_ID"
+          echo "DB_ID=$DB_ID" >> $GITHUB_ENV
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Ensure R2 bucket exists
+        run: |
+          set -euo pipefail
+
+          BUCKET_EXISTS=$(npx wrangler r2 bucket list --json | node -e '
+            let input = "";
+            process.stdin.on("data", c => input += c);
+            process.stdin.on("end", () => {
+              const list = JSON.parse(input);
+              const exists = Array.isArray(list) && list.some(item => item.name === "online-chat-uploads");
+              process.stdout.write(exists ? "true" : "false");
+            });
+          ')
+
+          if [ "$BUCKET_EXISTS" = "false" ]; then
+            echo "🆕 R2 bucket online-chat-uploads not found, creating..."
+            npx wrangler r2 bucket create online-chat-uploads
+          else
+            echo "✅ R2 bucket online-chat-uploads already exists"
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Update wrangler.toml with DB ID
+        run: |
+          sed -i -E "s/database_id = \"[^\"]+\"/database_id = \"$DB_ID\"/g" wrangler.toml
+          cat wrangler.toml | grep database_id
+        env:
+          DB_ID: ${{ env.DB_ID }}
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Deploy Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+          secrets: |
+            BARK_KEY
+            STAFF_PASSWORD
+            JWT_SECRET
+        env:
+          BARK_KEY: ${{ secrets.BARK_KEY }}
+          STAFF_PASSWORD: ${{ secrets.STAFF_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+  deploy-pages:
+    needs: deploy-worker
+    runs-on: ubuntu-latest
+    name: Deploy Pages Frontend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Ensure Pages project exists
+        run: |
+          if npx wrangler pages project list 2>/dev/null | grep -q "online-chat"; then
+            echo "✅ Pages project 'online-chat' exists"
+          else
+            echo "🆕 Creating Pages project 'online-chat'"
+            npx wrangler pages project create online-chat --production-branch main
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Deploy to Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=online-chat
+
+      - name: Success
+        run: |
+          echo "✅ 部署完成！"
+          echo "📍 Pages: https://online-chat.pages.dev"
+          echo "📍 Worker: https://online-chat.workers.dev"
+          echo "💡 使用 GitHub Secrets 配置自定义域名"

@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run lint-staged on staged files
+npx lint-staged
+
+# Run tests
+npm test -- --run
+
+# Run validation script
+node --import tsx/esm scripts/validate-all.ts

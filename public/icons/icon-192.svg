@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <rect width="192" height="192" fill="#1890ff"/>
+  <g fill="white">
+    <circle cx="96" cy="70" r="30"/>
+    <path d="M50 150 Q50 110 96 110 Q142 110 142 150 Z"/>
+    <ellipse cx="96" cy="155" rx="50" ry="8" opacity="0.3"/>
+  </g>
+  <circle cx="140" cy="55" r="25" fill="#52c41a"/>
+  <text x="140" y="62" text-anchor="middle" fill="white" font-size="24" font-weight="bold">💬</text>
+</svg>

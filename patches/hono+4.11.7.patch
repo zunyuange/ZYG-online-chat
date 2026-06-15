@@ -1,0 +1,16 @@
+diff --git a/node_modules/hono/dist/types/helper/streaming/sse.d.ts b/node_modules/hono/dist/types/helper/streaming/sse.d.ts
+index c4cf659..ebe05c0 100644
+--- a/node_modules/hono/dist/types/helper/streaming/sse.d.ts
++++ b/node_modules/hono/dist/types/helper/streaming/sse.d.ts
+@@ -1,4 +1,5 @@
+ import type { Context } from '../../context';
++import type { TypedResponse } from '../../types';
+ import { StreamingApi } from '../../utils/stream';
+ export interface SSEMessage {
+     data: string | Promise<string>;
+@@ -10,4 +11,4 @@ export declare class SSEStreamingApi extends StreamingApi {
+     constructor(writable: WritableStream, readable: ReadableStream);
+     writeSSE(message: SSEMessage): Promise<void>;
+ }
+-export declare const streamSSE: (c: Context, cb: (stream: SSEStreamingApi) => Promise<void>, onError?: (e: Error, stream: SSEStreamingApi) => Promise<void>) => Response;
++export declare const streamSSE: <T = unknown>(c: Context, cb: (stream: SSEStreamingApi) => Promise<void>, onError?: (e: Error, stream: SSEStreamingApi) => Promise<void>) => Response & TypedResponse<T>;
