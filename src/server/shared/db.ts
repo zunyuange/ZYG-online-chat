@@ -5,6 +5,7 @@
 
 import { createRequire } from 'node:module';
 import type { D1Database } from '@cloudflare/workers-types';
+import { hashPassword } from './crypto';
 
 // Lazy-loaded require - only created when needed in Node.js environment
 let _nodeRequire: typeof require | null = null;
@@ -308,18 +309,9 @@ export async function initializeSchema(): Promise<void> {
   await initializeDefaultAdmin(database);
 }
 
-async function hashPasswordForInit(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
 async function initializeDefaultAdmin(database: Database): Promise<void> {
   // Create or update default admin user with password 123456
-  const passwordHash = await hashPasswordForInit('123456');
+  const passwordHash = await hashPassword('123456');
   
   // Try to update existing admin user
   const existingAdmin = await database.get<{ id: number }>('SELECT id FROM admin_users WHERE username = ?', ['admin']);

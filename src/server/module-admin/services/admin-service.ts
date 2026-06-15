@@ -4,6 +4,7 @@
  */
 
 import { getDb } from '@server/shared/db';
+import { hashPassword } from '@server/shared/crypto';
 
 export interface StaffUser {
   id: number;
@@ -31,15 +32,6 @@ export interface UpdateUserInput {
   role?: string;
   status?: string;
   password?: string;
-}
-
-async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
 }
 
 export async function createUser(input: CreateUserInput): Promise<{ success: boolean; error?: string; userId?: number }> {

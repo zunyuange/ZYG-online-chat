@@ -4,6 +4,7 @@
  */
 
 import { getDb } from '@server/shared/db';
+import { hashPassword } from '@server/shared/crypto';
 
 export interface AdminUser {
   id: number;
@@ -16,29 +17,30 @@ export interface AdminUser {
   updated_at: number;
 }
 
-async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
 export async function verifyAdminPassword(username: string, password: string): Promise<AdminUser | null> {
-  const db = getDb();
-  const user = await db.get<AdminUser>('SELECT * FROM admin_users WHERE username = ? AND status = ?', [username, 'active']);
-  
-  if (!user) {
+  try {
+    const db = getDb();
+    const user = await db.get<AdminUser>('SELECT * FROM admin_users WHERE username = ? AND status = ?', [username, 'active']);
+    
+    if (!user) {
+      console.log('[AdminAuthService] User not found or inactive:', username);
+      return null;
+    }
+
+    const passwordHash = await hashPassword(password);
+    console.log('[AdminAuthService] Comparing passwords - stored:', user.password_hash, 'computed:', passwordHash);
+    
+    if (user.password_hash !== passwordHash) {
+      console.log('[AdminAuthService] Password mismatch for user:', username);
+      return null;
+    }
+
+    console.log('[AdminAuthService] Password verified for user:', username);
+    return user;
+  } catch (error) {
+    console.error('[AdminAuthService] verifyAdminPassword error:', error);
     return null;
   }
-
-  const passwordHash = await hashPassword(password);
-  if (user.password_hash !== passwordHash) {
-    return null;
-  }
-
-  return user;
 }
 
 export async function getAdminUserById(id: number): Promise<AdminUser | null> {
