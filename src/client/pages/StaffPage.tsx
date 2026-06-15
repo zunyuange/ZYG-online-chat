@@ -5,13 +5,18 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { MessageCircle, Users } from 'lucide-react';
+import { MessageCircle, Users, User, LogOut, Trash2 } from 'lucide-react';
 import { useStaffStore } from '@client/stores/staffStore';
 import { SessionList } from '@client/components/staff/SessionList';
 import { StaffChatWindow } from '@client/components/staff/StaffChatWindow';
 import { QueueList } from '@client/components/staff/QueueList';
 import { useAuth } from '@client/hooks/useAuth';
 import { LoginForm } from '@client/components/staff/LoginForm';
+
+interface UserInfo {
+  userId?: number;
+  username?: string;
+}
 
 // Check if device is mobile
 const isMobileDevice = (): boolean => {
@@ -66,12 +71,16 @@ export function StaffPage() {
     setInputMode,
     updateTopic,
     updateTaskStatus,
+    clearMessages,
   } = useStaffStore();
 
   // UI state for mobile
   const [isMobile, setIsMobile] = useState(false);
   const [showSessionList, setShowSessionList] = useState(false);
   const [showQueueList, setShowQueueList] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
   // Ref to prevent multiple initializations
   const dataLoadedRef = useRef(false);
@@ -101,6 +110,45 @@ export function StaffPage() {
     connectSSE();
     initFromUrl();
   }, [isAuthenticated, loadSessions, connectSSE, initFromUrl]);
+
+  // Get user info after authentication
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const fetchUserInfo = async () => {
+      try {
+        const response = await fetch('/api/auth/verify', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+          },
+        });
+        const result = await response.json();
+        if (result.success && result.valid) {
+          setUserInfo({
+            userId: result.userId,
+            username: result.username || '管理员',
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch user info:', error);
+      }
+    };
+
+    fetchUserInfo();
+  }, [isAuthenticated]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('staff_token');
+    localStorage.removeItem('staff_token_expires');
+    window.location.reload();
+  };
+
+  const handleClearMessages = () => {
+    if (currentSessionId) {
+      clearMessages(currentSessionId);
+      setShowClearConfirm(false);
+    }
+  };
 
   // Get current session info
   const currentSession = sessions.find((s) => s.id === currentSessionId) || null;
@@ -354,8 +402,131 @@ export function StaffPage() {
               </span>
             </div>
           )}
+          {/* User menu */}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: 'transparent',
+                border: '1px solid rgba(255,255,255,0.3)',
+                borderRadius: '16px',
+                color: '#fff',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '13px',
+              }}
+            >
+              <User size={14} />
+              <span>{userInfo?.username || '登录'}</span>
+            </button>
+            {showUserMenu && (
+              <div
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: '100%',
+                  marginTop: '8px',
+                  backgroundColor: '#fff',
+                  borderRadius: '8px',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+                  padding: '8px',
+                  minWidth: '120px',
+                  zIndex: 200,
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    color: '#666',
+                    fontSize: '13px',
+                    textAlign: 'left',
+                  }}
+                >
+                  <LogOut size={14} />
+                  退出登录
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Clear messages confirmation modal */}
+      {showClearConfirm && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setShowClearConfirm(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '12px',
+              padding: '24px',
+              minWidth: '320px',
+              maxWidth: '400px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 500 }}>
+              确认清空聊天记录
+            </h3>
+            <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#666' }}>
+              确定要清空当前会话的所有聊天记录吗？此操作不可恢复。
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #d9d9d9',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  backgroundColor: '#fff',
+                  color: '#666',
+                  fontSize: '14px',
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleClearMessages}
+                style={{
+                  padding: '8px 16px',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  backgroundColor: '#ff4d4f',
+                  color: '#fff',
+                  fontSize: '14px',
+                }}
+              >
+                确认清空
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Error toast */}
       {error && (
@@ -409,6 +580,7 @@ export function StaffPage() {
             onModeChange={setInputMode}
             onTopicChange={handleTopicChange}
             onStatusChange={handleStatusChange}
+            onClearMessages={() => setShowClearConfirm(true)}
           />
         </div>
       </div>

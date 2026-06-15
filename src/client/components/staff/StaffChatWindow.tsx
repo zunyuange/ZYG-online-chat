@@ -6,6 +6,7 @@ import type { Message, Session, InputMode, TaskStatus, ContentType } from '@shar
 import { MessageList } from '@client/components/chat/MessageList';
 import { MessageInput } from '@client/components/chat/MessageInput';
 import { TopicHeader } from '@client/components/chat/TopicHeader';
+import { Trash2 } from 'lucide-react';
 
 interface StaffChatWindowProps {
   session: Session | null;
@@ -21,6 +22,7 @@ interface StaffChatWindowProps {
   onModeChange?: (mode: InputMode) => void;
   onTopicChange?: (topic: string) => void;
   onStatusChange?: (status: TaskStatus) => void;
+  onClearMessages?: () => void;
 }
 
 export function StaffChatWindow({
@@ -37,6 +39,7 @@ export function StaffChatWindow({
   onModeChange,
   onTopicChange,
   onStatusChange,
+  onClearMessages,
 }: StaffChatWindowProps) {
   const containerStyle: React.CSSProperties = {
     display: 'flex',
@@ -102,19 +105,42 @@ export function StaffChatWindow({
             })}
           </span>
         </div>
-        {session.unreadByStaff > 0 && (
-          <span
-            style={{
-              backgroundColor: '#ff4d4f',
-              color: '#fff',
-              padding: '2px 8px',
-              borderRadius: '10px',
-              fontSize: '12px',
-            }}
-          >
-            {session.unreadByStaff} 条未读
-          </span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {session.unreadByStaff > 0 && (
+            <span
+              style={{
+                backgroundColor: '#ff4d4f',
+                color: '#fff',
+                padding: '2px 8px',
+                borderRadius: '10px',
+                fontSize: '12px',
+              }}
+            >
+              {session.unreadByStaff} 条未读
+            </span>
+          )}
+          {onClearMessages && messages.length > 0 && (
+            <button
+              onClick={onClearMessages}
+              style={{
+                padding: '4px 8px',
+                backgroundColor: 'transparent',
+                border: '1px solid #ff4d4f',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                color: '#ff4d4f',
+                fontSize: '12px',
+              }}
+              title="清空聊天记录"
+            >
+              <Trash2 size={12} />
+              清空
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Topic Header */}

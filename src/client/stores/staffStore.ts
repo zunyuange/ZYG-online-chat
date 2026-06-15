@@ -4,6 +4,7 @@
 
 import { create } from 'zustand';
 import type { Session, Message, ContentType, TaskStatus, InputMode } from '@shared/types';
+import { authFetch } from '@client/services/authFetch';
 
 interface SessionWithPreview extends Session {
   lastMessage?: {
@@ -77,7 +78,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      const response = await fetch('/api/staff/sessions?status=active');
+      const response = await authFetch('/api/staff/sessions?status=active');
       const result = await response.json();
 
       if (result.success) {
@@ -108,7 +109,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
     if (!messages.has(sessionId)) {
       try {
         const params = new URLSearchParams({ sessionId, limit: '20' });
-        const response = await fetch(`/api/staff/messages?${params}`);
+        const response = await authFetch(`/api/staff/messages?${params}`);
         const result = await response.json();
 
         if (result.success) {
@@ -154,7 +155,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
         limit: '20',
       });
 
-      const response = await fetch(`/api/staff/messages?${params}`);
+      const response = await authFetch(`/api/staff/messages?${params}`);
       const result = await response.json();
 
       if (result.success) {
@@ -182,7 +183,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
 
     try {
       // Refresh sessions list
-      const response = await fetch('/api/staff/sessions?status=active');
+      const response = await authFetch('/api/staff/sessions?status=active');
       const result = await response.json();
 
       if (result.success) {
@@ -194,7 +195,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
       // If we have a selected session, check for new messages
       if (currentSessionId) {
         const params = new URLSearchParams({ sessionId: currentSessionId, limit: '20' });
-        const msgResponse = await fetch(`/api/staff/messages?${params}`);
+        const msgResponse = await authFetch(`/api/staff/messages?${params}`);
         const msgResult = await msgResponse.json();
 
         if (msgResult.success && msgResult.data) {
@@ -223,7 +224,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
     set({ sending: true, error: null });
 
     try {
-      const response = await fetch('/api/staff/messages', {
+      const response = await authFetch('/api/staff/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -261,7 +262,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
       formData.append('file', file);
       formData.append('sessionId', currentSessionId);
 
-      const response = await fetch('/api/staff/upload', {
+      const response = await authFetch('/api/staff/upload', {
         method: 'POST',
         body: formData,
       });
@@ -285,7 +286,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
   // Mark session as read
   markAsRead: async (sessionId: string) => {
     try {
-      await fetch(`/api/staff/read/${sessionId}`, { method: 'PUT' });
+      await authFetch(`/api/staff/read/${sessionId}`, { method: 'PUT' });
 
       // Update local state
       const { sessions, messages, totalUnread } = get();
@@ -496,7 +497,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
   updateTopic: async (sessionId: string, topic: string) => {
     set({ error: null });
     try {
-      const response = await fetch(`/api/staff/sessions/${sessionId}/topic`, {
+      const response = await authFetch(`/api/staff/sessions/${sessionId}/topic`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic }),
@@ -519,7 +520,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
   updateTaskStatus: async (sessionId: string, status: TaskStatus) => {
     set({ error: null });
     try {
-      const response = await fetch(`/api/staff/sessions/${sessionId}/status`, {
+      const response = await authFetch(`/api/staff/sessions/${sessionId}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskStatus: status }),
@@ -530,6 +531,34 @@ export const useStaffStore = create<StaffState>((set, get) => ({
         get().updateSession(result.data);
       } else {
         set({ error: result.error || 'Failed to update status' });
+      }
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  },
+
+  // Clear all messages for current session
+  clearMessages: async (sessionId: string) => {
+    set({ error: null });
+    try {
+      const response = await authFetch(`/api/staff/messages/${sessionId}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        const newMessages = new Map(get().messages);
+        newMessages.set(sessionId, []);
+        set({ messages: newMessages });
+        
+        const newSessions = get().sessions.map((s) =>
+          s.id === sessionId ? { ...s, unreadByStaff: 0, unreadByVisitor: 0 } : s
+        );
+        set({ sessions: newSessions, totalUnread: get().totalUnread - get().sessions.find(s => s.id === sessionId)?.unreadByStaff });
+      } else {
+        set({ error: result.error || 'Failed to clear messages' });
       }
     } catch (error) {
       set({

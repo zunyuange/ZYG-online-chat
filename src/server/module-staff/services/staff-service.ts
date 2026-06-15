@@ -159,3 +159,29 @@ export async function getTotalUnreadCount(): Promise<number> {
   );
   return row?.total || 0;
 }
+
+/**
+ * Delete all messages for a session
+ */
+export async function deleteSessionMessages(sessionId: string): Promise<{ success: boolean; error?: string }> {
+  const db = getDb();
+  
+  try {
+    const session = await getSessionBase(sessionId);
+    if (!session) {
+      return { success: false, error: 'Session not found' };
+    }
+
+    await db.run('DELETE FROM messages WHERE session_id = ?', [sessionId]);
+    
+    await db.run(
+      'UPDATE sessions SET unread_by_visitor = 0, unread_by_staff = 0, updated_at = ? WHERE id = ?',
+      [Date.now(), sessionId]
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error('[StaffService] Delete messages error:', error);
+    return { success: false, error: 'Failed to delete messages' };
+  }
+}

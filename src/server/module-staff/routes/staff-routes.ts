@@ -304,6 +304,28 @@ staffRoutes.put('/sessions/:sessionId/status', async (c) => {
 });
 
 // ==========================================
+// Message Management Routes
+// ==========================================
+
+// Delete all messages for a session
+staffRoutes.delete('/messages/:sessionId', async (c) => {
+  try {
+    const sessionId = c.req.param('sessionId');
+    
+    const result = await staffService.deleteSessionMessages(sessionId);
+    
+    if (result.success) {
+      return c.json({ success: true, message: 'Messages deleted successfully' });
+    } else {
+      return c.json({ success: false, error: result.error }, 400);
+    }
+  } catch (error) {
+    console.error('Delete messages error:', error);
+    return c.json({ success: false, error: 'Failed to delete messages' }, 500);
+  }
+});
+
+// ==========================================
 // Queue Routes (Staff view)
 // ==========================================
 
