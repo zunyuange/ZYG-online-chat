@@ -28,35 +28,25 @@ jobs:
         run: |
           set -euo pipefail
 
-          DB_ID=$(npx wrangler d1 list --json | node -e '
+          DB_ID=$(npx wrangler d1 list --json 2>/dev/null | node -e '
             let input = "";
             process.stdin.on("data", c => input += c);
             process.stdin.on("end", () => {
-              const list = JSON.parse(input);
-              const db = Array.isArray(list) ? list.find(item => item.name === "zyg-online-chat-db") : null;
-              process.stdout.write(db?.uuid ?? "");
+              try {
+                const list = JSON.parse(input);
+                const db = Array.isArray(list) ? list.find(item => item.name === "zyg-online-chat-db") : null;
+                process.stdout.write(db?.uuid ?? "");
+              } catch (e) {
+                process.stdout.write("");
+              }
             });
           ')
 
           if [ -z "$DB_ID" ]; then
             echo "🆕 D1 database zyg-online-chat-db not found, creating..."
-            npx wrangler d1 create zyg-online-chat-db --json | node -e '
-              let input = "";
-              process.stdin.on("data", c => input += c);
-              process.stdin.on("end", () => {
-                const result = JSON.parse(input);
-                process.stdout.write(result.id ?? "");
-              });
-            '
-            DB_ID=$(npx wrangler d1 list --json | node -e '
-              let input = "";
-              process.stdin.on("data", c => input += c);
-              process.stdin.on("end", () => {
-                const list = JSON.parse(input);
-                const db = Array.isArray(list) ? list.find(item => item.name === "zyg-online-chat-db") : null;
-                process.stdout.write(db?.uuid ?? "");
-              });
-            ')
+            CREATE_OUTPUT=$(npx wrangler d1 create zyg-online-chat-db)
+            echo "$CREATE_OUTPUT"
+            DB_ID=$(echo "$CREATE_OUTPUT" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
           fi
 
           if [ -z "$DB_ID" ]; then
@@ -74,13 +64,17 @@ jobs:
         run: |
           set -euo pipefail
 
-          BUCKET_EXISTS=$(npx wrangler r2 bucket list --json | node -e '
+          BUCKET_EXISTS=$(npx wrangler r2 bucket list --json 2>/dev/null | node -e '
             let input = "";
             process.stdin.on("data", c => input += c);
             process.stdin.on("end", () => {
-              const list = JSON.parse(input);
-              const exists = Array.isArray(list) && list.some(item => item.name === "zyg-online-chat-uploads");
-              process.stdout.write(exists ? "true" : "false");
+              try {
+                const list = JSON.parse(input);
+                const exists = Array.isArray(list) && list.some(item => item.name === "zyg-online-chat-uploads");
+                process.stdout.write(exists ? "true" : "false");
+              } catch (e) {
+                process.stdout.write("false");
+              }
             });
           ')
 
@@ -94,28 +88,19 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Update wrangler.toml with DB ID
-        run: |
-          echo "Before update:"
-          cat wrangler.toml | grep database_id
-          
-          sed -i "s/CHANGE_ME_AUTOMATICALLY/${{ steps.create-db.outputs.db_id }}/g" wrangler.toml
-          
-          echo "After update:"
-          cat wrangler.toml | grep database_id
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
       - name: Build frontend
         run: npm run build
 
-      - name: Deploy Worker with updated config
+      - name: Deploy Worker with D1 ID via env var
         run: |
-          npx wrangler deploy --config wrangler.toml
+          echo "📦 Deploying Worker with database_id: $DB_ID"
+          npx wrangler deploy \
+            --d1=DB=zyg-online-chat-db \
+            --r2=BUCKET=zyg-online-chat-uploads
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DB_ID: ${{ steps.create-db.outputs.db_id }}
 
       - name: Upload optional secrets
         run: |

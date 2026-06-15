@@ -13,31 +13,5 @@ BARK_API = "https://api.day.app"
 STAFF_URL_BASE = "https://zyg-online-chat.workers.dev/staff"
 REQUIRE_AUTH = "false"
 
-[[d1_databases]]
-binding = "DB"
-database_name = "zyg-online-chat-db"
-database_id = "CHANGE_ME_AUTOMATICALLY"
-remote = true
-
-[[r2_buckets]]
-binding = "BUCKET"
-bucket_name = "zyg-online-chat-uploads"
-
 [build]
 command = "npm run build:worker"
-
-[env.production]
-name = "zyg-online-chat-prod"
-
-[env.production.vars]
-BARK_API = "https://api.day.app"
-STAFF_URL_BASE = "https://zyg-online-chat.workers.dev/staff"
-
-[env.production.d1_databases]
-binding = "DB"
-database_name = "zyg-online-chat-db"
-database_id = "CHANGE_ME_AUTOMATICALLY"
-
-[env.production.r2_buckets]
-binding = "BUCKET"
-bucket_name = "zyg-online-chat-uploads"
