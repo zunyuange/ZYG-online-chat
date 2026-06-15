@@ -12,6 +12,7 @@ import { chatRoutes } from './module-chat/routes/chat-routes';
 import { staffRoutes } from './module-staff/routes/staff-routes';
 import { authRoutes } from './module-auth/routes/auth-routes';
 import { adminRoutes } from './module-admin/routes/admin-routes';
+import { adminAuthRoutes, initAdminAuth } from './module-admin/routes/admin-auth-routes';
 import { robotRoutes } from './module-robot/routes/robot-routes';
 import { faqRoutes } from './module-faq/routes/faq-routes';
 import { evaluationRoutes } from './module-evaluation/routes/evaluation-routes';
@@ -33,6 +34,7 @@ interface Env {
   REQUIRE_AUTH?: string;
   STAFF_PASSWORD?: string;
   JWT_SECRET?: string;
+  ADMIN_JWT_SECRET?: string;
 }
 
 // MIME types for common file extensions
@@ -92,8 +94,13 @@ async function ensureInitialized(env: Env): Promise<void> {
     JWT_SECRET: env.JWT_SECRET,
   });
 
+  // Initialize Admin Auth service
+  initAdminAuth({
+    ADMIN_JWT_SECRET: env.ADMIN_JWT_SECRET,
+  });
+
   initialized = true;
-  console.log('[Worker] Initialized D1 database, R2 storage, Bark service, and Auth service');
+  console.log('[Worker] Initialized D1 database, R2 storage, Bark service, Auth service, and Admin Auth service');
 }
 
 // Serve uploaded files from R2
@@ -144,6 +151,7 @@ app.route('/api/chat', chatRoutes);
 app.route('/api/staff', staffRoutes);
 app.route('/api/auth', authRoutes);
 app.route('/api/admin', adminRoutes);
+app.route('/api/admin-auth', adminAuthRoutes);
 app.route('/api/robot', robotRoutes);
 app.route('/api/faq', faqRoutes);
 app.route('/api/evaluation', evaluationRoutes);

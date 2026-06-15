@@ -55,7 +55,7 @@ export function AdminPage() {
   }, []);
 
   const checkAuth = async () => {
-    const token = localStorage.getItem('staff_token');
+    const token = localStorage.getItem('admin_token');
     if (!token) {
       window.location.href = '/adminlogin';
       return;
@@ -65,8 +65,8 @@ export function AdminPage() {
 
   const loadUsers = async () => {
     try {
-      const token = localStorage.getItem('staff_token');
-      const response = await fetch('/api/admin/users', {
+      const token = localStorage.getItem('admin_token');
+      const response = await fetch('/api/admin-auth/users', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -114,8 +114,8 @@ export function AdminPage() {
   const handleDelete = async (id: number) => {
     setFormLoading(true);
     try {
-      const token = localStorage.getItem('staff_token');
-      const response = await fetch(`/api/admin/users/${id}`, {
+      const token = localStorage.getItem('admin_token');
+      const response = await fetch(`/api/admin-auth/users/${id}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -153,17 +153,16 @@ export function AdminPage() {
     setFormLoading(true);
 
     try {
-      const token = localStorage.getItem('staff_token');
+      const token = localStorage.getItem('admin_token');
       const url = editingUser 
-        ? `/api/admin/users/${editingUser.id}` 
-        : '/api/admin/users';
+        ? `/api/admin-auth/users/${editingUser.id}` 
+        : '/api/admin-auth/users';
       const method = editingUser ? 'PUT' : 'POST';
 
       const body: any = {
         username: formData.username,
         email: formData.email || undefined,
         name: formData.name || undefined,
-        role: formData.role,
       };
 
       if (editingUser && formData.password) {
@@ -197,8 +196,9 @@ export function AdminPage() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('staff_token');
-    localStorage.removeItem('staff_token_expires');
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_token_expires');
+    localStorage.removeItem('admin_username');
     window.location.href = '/adminlogin';
   };
 

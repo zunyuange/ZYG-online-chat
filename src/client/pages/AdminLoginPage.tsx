@@ -43,7 +43,7 @@ export function AdminLoginPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/admin-auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -54,8 +54,9 @@ export function AdminLoginPage() {
       const data = await response.json();
 
       if (data.success && data.token) {
-        localStorage.setItem('staff_token', data.token);
-        localStorage.setItem('staff_token_expires', data.expiresAt.toString());
+        localStorage.setItem('admin_token', data.token);
+        localStorage.setItem('admin_token_expires', data.expiresAt.toString());
+        localStorage.setItem('admin_username', data.username || '');
         // Redirect to admin page
         window.location.href = '/admin';
       } else {

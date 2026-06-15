@@ -277,4 +277,57 @@ export async function initializeSchema(): Promise<void> {
   await database.exec("CREATE INDEX IF NOT EXISTS staff_users_username_idx ON staff_users(username)");
   await database.exec("CREATE INDEX IF NOT EXISTS robot_knowledge_keyword_idx ON robot_knowledge(keyword)");
   await database.exec("CREATE INDEX IF NOT EXISTS evaluations_session_id_idx ON evaluations(session_id)");
+
+  // Create admin_users table for admin panel (separate from staff_users)
+  await database.exec(
+    "CREATE TABLE IF NOT EXISTS admin_users (" +
+    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+    "username TEXT NOT NULL UNIQUE, " +
+    "password_hash TEXT NOT NULL, " +
+    "email TEXT, " +
+    "name TEXT, " +
+    "status TEXT NOT NULL DEFAULT 'active', " +
+    "created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), " +
+    "updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))"
+  );
+
+  await database.exec("CREATE INDEX IF NOT EXISTS admin_users_username_idx ON admin_users(username)");
+
+  // Create admin_config table for system settings
+  await database.exec(
+    "CREATE TABLE IF NOT EXISTS admin_config (" +
+    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+    "key TEXT NOT NULL UNIQUE, " +
+    "value TEXT NOT NULL, " +
+    "description TEXT, " +
+    "created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), " +
+    "updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))"
+  );
+
+  // Initialize default admin user (username: admin, password: 123456)
+  await initializeDefaultAdmin(database);
+}
+
+async function hashPasswordForInit(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+async function initializeDefaultAdmin(database: Database): Promise<void> {
+  // Check if admin user already exists
+  const existingAdmin = await database.get<{ id: number }>('SELECT id FROM admin_users WHERE username = ?', ['admin']);
+  
+  if (!existingAdmin) {
+    // Create default admin user with password 123456
+    const passwordHash = await hashPasswordForInit('123456');
+    await database.run(
+      'INSERT INTO admin_users (username, password_hash, email, name, status) VALUES (?, ?, ?, ?, ?)',
+      ['admin', passwordHash, 'admin@example.com', '系统管理员', 'active']
+    );
+    console.log('[Database] Default admin user created: admin/123456');
+  }
 }
