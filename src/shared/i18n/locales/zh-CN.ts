@@ -76,6 +76,10 @@ export const zhCN = {
   please_enter_password: '请输入密码',
   login_success: '登录成功',
   login_failed: '登录失败',
+  login_desc: '请输入账号密码登录客服工作台',
+  logging_in: '登录中...',
+  remaining_attempts: '剩余尝试次数',
+  too_many_attempts: '尝试次数过多，请 10 分钟后重试',
   wrong_username_or_password: '用户名或密码错误',
   
   chat: '聊天',

@@ -76,6 +76,10 @@ export const enUS = {
   please_enter_password: 'Please enter password',
   login_success: 'Login successful',
   login_failed: 'Login failed',
+  login_desc: 'Please enter username and password to login',
+  logging_in: 'Logging in...',
+  remaining_attempts: 'Remaining attempts',
+  too_many_attempts: 'Too many attempts, please try again in 10 minutes',
   wrong_username_or_password: 'Wrong username or password',
   
   chat: 'Chat',

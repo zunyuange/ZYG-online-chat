@@ -11,7 +11,6 @@ import { SessionList } from '@client/components/staff/SessionList';
 import { StaffChatWindow } from '@client/components/staff/StaffChatWindow';
 import { QueueList } from '@client/components/staff/QueueList';
 import { useAuth } from '@client/hooks/useAuth';
-import { LoginForm } from '@client/components/staff/LoginForm';
 import { useI18n } from '@client/context/I18nContext';
 
 interface UserInfo {
@@ -226,16 +225,12 @@ export function StaffPage() {
     );
   }
 
-  // Show login form if authentication is required and not authenticated
+  // Redirect to login page if authentication is required and not authenticated
   if (requireAuth && !isAuthenticated) {
-    return (
-      <LoginForm
-        onLogin={login}
-        error={authError}
-        remainingAttempts={remainingAttempts}
-        isLoading={authLoading}
-      />
-    );
+    if (!authLoading) {
+      window.location.href = '/login';
+    }
+    return null;
   }
 
   // ============ STYLES (only used when authenticated) ============

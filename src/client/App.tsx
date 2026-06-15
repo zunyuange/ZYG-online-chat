@@ -8,9 +8,10 @@ import { useTodoStore } from './stores/todoStore';
 import type { Todo } from '@shared/types';
 import { ChatPage } from './pages/ChatPage';
 import { StaffPage } from './pages/StaffPage';
+import { LoginPage } from './pages/LoginPage';
 import { I18nProvider } from './context/I18nContext';
 
-type Page = 'todo' | 'chat' | 'staff';
+type Page = 'todo' | 'chat' | 'staff' | 'login';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>(() => {
@@ -18,6 +19,7 @@ function App() {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname;
       if (path === '/staff') return 'staff';
+      if (path === '/login') return 'login';
       if (path === '/chat' || path === '/') return 'chat';
     }
     return 'chat';
@@ -51,6 +53,7 @@ function App() {
     const handlePopState = () => {
       const path = window.location.pathname;
       if (path === '/staff') setCurrentPage('staff');
+      else if (path === '/login') setCurrentPage('login');
       else if (path === '/todo') setCurrentPage('todo');
       else setCurrentPage('chat');
     };
@@ -98,11 +101,19 @@ function App() {
     fontSize: '14px',
   });
 
-  // Render Chat or Staff page directly without navigation (full-page layouts)
+  // Render Chat, Login or Staff page directly without navigation (full-page layouts)
   if (currentPage === 'chat') {
     return (
       <I18nProvider>
         <ChatPage />
+      </I18nProvider>
+    );
+  }
+
+  if (currentPage === 'login') {
+    return (
+      <I18nProvider>
+        <LoginPage />
       </I18nProvider>
     );
   }
