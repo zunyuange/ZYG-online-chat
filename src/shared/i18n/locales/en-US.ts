@@ -136,4 +136,19 @@ export const enUS = {
   statistics: 'Statistics',
   reports: 'Reports',
   analytics: 'Analytics',
+  
+  // Admin
+  admin_panel: 'Admin Panel',
+  user_management: 'User Management',
+  add_user: 'Add User',
+  edit_user: 'Edit User',
+  delete_user: 'Delete User',
+  created_at: 'Created At',
+  optional: 'Optional',
+  enter_new_password: 'Enter new password',
+  please_enter_email: 'Please enter email',
+  inactive: 'Inactive',
+  operation_failed: 'Operation failed',
+  load_failed: 'Load failed',
+  delete_failed: 'Delete failed',
 };

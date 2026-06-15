@@ -9,9 +9,10 @@ import type { Todo } from '@shared/types';
 import { ChatPage } from './pages/ChatPage';
 import { StaffPage } from './pages/StaffPage';
 import { LoginPage } from './pages/LoginPage';
+import { AdminPage } from './pages/AdminPage';
 import { I18nProvider } from './context/I18nContext';
 
-type Page = 'todo' | 'chat' | 'staff' | 'login';
+type Page = 'todo' | 'chat' | 'staff' | 'login' | 'admin';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>(() => {
@@ -20,6 +21,7 @@ function App() {
       const path = window.location.pathname;
       if (path === '/staff') return 'staff';
       if (path === '/login') return 'login';
+      if (path === '/admin') return 'admin';
       if (path === '/chat' || path === '/') return 'chat';
     }
     return 'chat';
@@ -54,6 +56,7 @@ function App() {
       const path = window.location.pathname;
       if (path === '/staff') setCurrentPage('staff');
       else if (path === '/login') setCurrentPage('login');
+      else if (path === '/admin') setCurrentPage('admin');
       else if (path === '/todo') setCurrentPage('todo');
       else setCurrentPage('chat');
     };
@@ -101,7 +104,7 @@ function App() {
     fontSize: '14px',
   });
 
-  // Render Chat, Login or Staff page directly without navigation (full-page layouts)
+  // Render Chat, Login, Admin or Staff page directly without navigation (full-page layouts)
   if (currentPage === 'chat') {
     return (
       <I18nProvider>
@@ -114,6 +117,14 @@ function App() {
     return (
       <I18nProvider>
         <LoginPage />
+      </I18nProvider>
+    );
+  }
+
+  if (currentPage === 'admin') {
+    return (
+      <I18nProvider>
+        <AdminPage />
       </I18nProvider>
     );
   }

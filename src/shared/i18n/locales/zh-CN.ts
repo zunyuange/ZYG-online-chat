@@ -136,4 +136,19 @@ export const zhCN = {
   statistics: '统计',
   reports: '报表',
   analytics: '分析',
+  
+  // Admin
+  admin_panel: '管理后台',
+  user_management: '用户管理',
+  add_user: '添加用户',
+  edit_user: '编辑用户',
+  delete_user: '删除用户',
+  created_at: '创建时间',
+  optional: '选填',
+  enter_new_password: '输入新密码',
+  please_enter_email: '请输入邮箱',
+  inactive: '停用',
+  operation_failed: '操作失败',
+  load_failed: '加载失败',
+  delete_failed: '删除失败',
 };
