@@ -8,6 +8,7 @@ import { useTodoStore } from './stores/todoStore';
 import type { Todo } from '@shared/types';
 import { ChatPage } from './pages/ChatPage';
 import { StaffPage } from './pages/StaffPage';
+import { I18nProvider } from './context/I18nContext';
 
 type Page = 'todo' | 'chat' | 'staff';
 
@@ -99,11 +100,19 @@ function App() {
 
   // Render Chat or Staff page directly without navigation (full-page layouts)
   if (currentPage === 'chat') {
-    return <ChatPage />;
+    return (
+      <I18nProvider>
+        <ChatPage />
+      </I18nProvider>
+    );
   }
 
   if (currentPage === 'staff') {
-    return <StaffPage />;
+    return (
+      <I18nProvider>
+        <StaffPage />
+      </I18nProvider>
+    );
   }
 
   // Render Todo page

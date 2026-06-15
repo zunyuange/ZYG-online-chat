@@ -11,11 +11,11 @@ interface MessageInputProps {
   onUpload: (file: File) => void;
   sending: boolean;
   disabled?: boolean;
-  // 新增：模式切换相关
   inputMode?: InputMode;
   onModeChange?: (mode: InputMode) => void;
   showModeToggle?: boolean;
   isMobile?: boolean;
+  t?: (key: string) => string;
 }
 
 export function MessageInput({
@@ -27,6 +27,7 @@ export function MessageInput({
   onModeChange,
   showModeToggle = false,
   isMobile = false,
+  t = (key: string) => key,
 }: MessageInputProps) {
   const [text, setText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -66,7 +67,7 @@ export function MessageInput({
     const isFile = allowedFileTypes.includes(file.type) || allowedExtensions.includes(fileExt);
 
     if (!isImage && !isVideo && !isFile) {
-      alert('请选择图片、视频或支持的文件类型（CSV, ZIP, IPA, PDF, DOC, XLS等）');
+      alert(t('ext_error'));
       return;
     }
 
@@ -155,7 +156,7 @@ export function MessageInput({
     minWidth: isMobile ? '28px' : 'auto',
   });
 
-  const placeholder = inputMode === 'topic' ? '输入主题...' : '输入消息...';
+  const placeholder = inputMode === 'topic' ? t('please_enter') : t('please_enter_message');
 
   return (
     <form style={containerStyle} onSubmit={handleSubmit}>

@@ -20,7 +20,9 @@ interface ChatWindowProps {
   visitorName?: string;
   sseConnected?: boolean;
   usePolling?: boolean;
-  session?: Session | null; // 新增：会话信息（用于显示主题和状态）
+  session?: Session | null;
+  t?: (key: string) => string;
+  locale?: string;
 }
 
 export function ChatWindow({
@@ -37,6 +39,7 @@ export function ChatWindow({
   sseConnected,
   usePolling,
   session,
+  t = (key: string) => key,
 }: ChatWindowProps) {
   const containerStyle: React.CSSProperties = {
     display: 'flex',
@@ -72,9 +75,9 @@ export function ChatWindow({
   };
 
   const getStatusText = () => {
-    if (sseConnected) return '已连接';
-    if (usePolling) return '轮询中';
-    return '连接中...';
+    if (sseConnected) return t('service_online');
+    if (usePolling) return 'Polling...';
+    return 'Connecting...';
   };
 
   return (
@@ -118,6 +121,7 @@ export function ChatWindow({
         onSend={onSend}
         onUpload={onUpload}
         sending={sending}
+        t={t}
       />
     </div>
   );

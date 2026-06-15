@@ -5,13 +5,14 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { MessageCircle, Users, User, LogOut, Trash2 } from 'lucide-react';
+import { MessageCircle, Users, User, LogOut, Trash2, Globe } from 'lucide-react';
 import { useStaffStore } from '@client/stores/staffStore';
 import { SessionList } from '@client/components/staff/SessionList';
 import { StaffChatWindow } from '@client/components/staff/StaffChatWindow';
 import { QueueList } from '@client/components/staff/QueueList';
 import { useAuth } from '@client/hooks/useAuth';
 import { LoginForm } from '@client/components/staff/LoginForm';
+import { useI18n } from '@client/context/I18nContext';
 
 interface UserInfo {
   userId?: number;
@@ -36,6 +37,8 @@ const updateUrlSessionId = (sessionId: string | null) => {
 };
 
 export function StaffPage() {
+  const { t, locale, setLocale, supportedLocales } = useI18n();
+  
   // Authentication
   const {
     isLoading: authLoading,
@@ -304,9 +307,9 @@ export function StaffPage() {
   });
 
   const getStatusText = () => {
-    if (sseConnected) return '已连接';
-    if (usePolling) return '轮询中';
-    return '连接中...';
+    if (sseConnected) return t('service_online');
+    if (usePolling) return 'Polling...';
+    return 'Connecting...';
   };
 
   const errorStyle: React.CSSProperties = {
@@ -359,7 +362,7 @@ export function StaffPage() {
       {/* Header */}
       <div style={headerStyle}>
         <div style={{ fontSize: '18px', fontWeight: 500 }}>
-          客服中心
+          {t('service_title')}
         </div>
         <div style={statusStyle}>
           {/* Queue button */}
@@ -380,7 +383,7 @@ export function StaffPage() {
             title="查看任务队列"
           >
             <Users size={14} />
-            <span style={{ display: isMobile ? 'none' : 'inline' }}>队列</span>
+            <span style={{ display: isMobile ? 'none' : 'inline' }}>{t('queue')}</span>
           </button>
           <div style={statusItemStyle}>
             <span style={dotStyle(sseConnected, usePolling)}></span>
@@ -433,11 +436,33 @@ export function StaffPage() {
                   borderRadius: '8px',
                   boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
                   padding: '8px',
-                  minWidth: '120px',
+                  minWidth: '150px',
                   zIndex: 200,
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
+                <div style={{ padding: '8px 12px', borderBottom: '1px solid #f0f0f0', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '12px', color: '#999', marginBottom: '6px' }}>{t('choose_lang')}</div>
+                  <select
+                    value={locale}
+                    onChange={(e) => setLocale(e.target.value as any)}
+                    style={{
+                      width: '100%',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      border: '1px solid #d9d9d9',
+                      backgroundColor: '#fff',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                    }}
+                  >
+                    {supportedLocales.map((l) => (
+                      <option key={l.code} value={l.code}>
+                        {l.nativeName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <button
                   onClick={handleLogout}
                   style={{
@@ -456,7 +481,7 @@ export function StaffPage() {
                   }}
                 >
                   <LogOut size={14} />
-                  退出登录
+                  {t('logout')}
                 </button>
               </div>
             )}
@@ -489,10 +514,10 @@ export function StaffPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 500 }}>
-              确认清空聊天记录
+              {t('clear_messages')}
             </h3>
             <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#666' }}>
-              确定要清空当前会话的所有聊天记录吗？此操作不可恢复。
+              {t('confirm_clear')}
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button
@@ -507,7 +532,7 @@ export function StaffPage() {
                   fontSize: '14px',
                 }}
               >
-                取消
+                {t('cancel')}
               </button>
               <button
                 onClick={handleClearMessages}
@@ -521,7 +546,7 @@ export function StaffPage() {
                   fontSize: '14px',
                 }}
               >
-                确认清空
+                {t('confirm_clear')}
               </button>
             </div>
           </div>
