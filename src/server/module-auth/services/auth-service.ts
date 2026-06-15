@@ -55,12 +55,24 @@ export function initAuthService(env: {
 /**
  * Check if authentication is required
  */
-export function checkAuthRequired(): boolean {
+export async function checkAuthRequired(): Promise<boolean> {
   // If REQUIRE_AUTH is false, no auth needed
   if (!_requireAuth) {
     return false;
   }
-  // If no password is configured, no auth needed
+  
+  // Check if there are staff users in database
+  try {
+    const { listUsers } = await import('@server/module-admin/services/admin-service');
+    const users = await listUsers();
+    if (users.length > 0) {
+      return true;
+    }
+  } catch (error) {
+    console.log('[AuthService] Database check failed:', error);
+  }
+  
+  // If no password is configured and no database users, no auth needed
   if (!_staffPassword) {
     return false;
   }
@@ -274,7 +286,8 @@ export interface VerifyResult {
  */
 export async function login(username: string, password: string, clientIp: string): Promise<LoginResult> {
   // Check if auth is required
-  if (!checkAuthRequired()) {
+  const authRequired = await checkAuthRequired();
+  if (!authRequired) {
     // No auth required, generate token anyway for push notifications
     const token = await generateToken();
     return {
@@ -336,7 +349,8 @@ export async function login(username: string, password: string, clientIp: string
  */
 export async function verifyToken(token: string): Promise<VerifyResult> {
   // Check if auth is required
-  if (!checkAuthRequired()) {
+  const authRequired = await checkAuthRequired();
+  if (!authRequired) {
     return { valid: true };
   }
 

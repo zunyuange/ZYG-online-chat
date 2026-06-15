@@ -17,8 +17,8 @@ export const authRoutes = new Hono();
  * GET /api/auth/check
  * Check if authentication is required for this deployment
  */
-authRoutes.get('/check', (c) => {
-  const requireAuth = checkAuthRequired();
+authRoutes.get('/check', async (c) => {
+  const requireAuth = await checkAuthRequired();
   return c.json({
     success: true,
     requireAuth,
