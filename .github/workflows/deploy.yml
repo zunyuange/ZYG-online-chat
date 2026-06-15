@@ -1,17 +1,18 @@
-name: Deploy to Cloudflare
+name: Deploy to Cloudflare Workers
 
 on:
   push:
     branches:
       - main
+      - master
   workflow_dispatch:
 
 jobs:
-  deploy-worker:
+  deploy:
     runs-on: ubuntu-latest
-    name: Deploy Worker API
+    name: Deploy
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Node.js
@@ -23,153 +24,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Ensure D1 database exists
-        id: create-db
-        run: |
-          set -euo pipefail
-
-          DB_ID=$(npx wrangler d1 list --json 2>/dev/null | node -e '
-            let input = "";
-            process.stdin.on("data", c => input += c);
-            process.stdin.on("end", () => {
-              try {
-                const list = JSON.parse(input);
-                const db = Array.isArray(list) ? list.find(item => item.name === "zyg-online-chat-db") : null;
-                process.stdout.write(db?.uuid ?? "");
-              } catch (e) {
-                process.stdout.write("");
-              }
-            });
-          ')
-
-          if [ -z "$DB_ID" ]; then
-            echo "🆕 D1 database zyg-online-chat-db not found, creating..."
-            CREATE_OUTPUT=$(npx wrangler d1 create zyg-online-chat-db)
-            echo "$CREATE_OUTPUT"
-            DB_ID=$(echo "$CREATE_OUTPUT" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
-          fi
-
-          if [ -z "$DB_ID" ]; then
-            echo "❌ Failed to resolve D1 database id"
-            exit 1
-          fi
-
-          echo "✅ Using D1 database id: $DB_ID"
-          echo "db_id=$DB_ID" >> $GITHUB_OUTPUT
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Ensure R2 bucket exists
-        run: |
-          set -euo pipefail
-
-          BUCKET_EXISTS=$(npx wrangler r2 bucket list --json 2>/dev/null | node -e '
-            let input = "";
-            process.stdin.on("data", c => input += c);
-            process.stdin.on("end", () => {
-              try {
-                const list = JSON.parse(input);
-                const exists = Array.isArray(list) && list.some(item => item.name === "zyg-online-chat-uploads");
-                process.stdout.write(exists ? "true" : "false");
-              } catch (e) {
-                process.stdout.write("false");
-              }
-            });
-          ')
-
-          if [ "$BUCKET_EXISTS" = "false" ]; then
-            echo "🆕 R2 bucket zyg-online-chat-uploads not found, creating..."
-            npx wrangler r2 bucket create zyg-online-chat-uploads
-          else
-            echo "✅ R2 bucket zyg-online-chat-uploads already exists"
-          fi
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Build frontend
-        run: npm run build
-
-      - name: Deploy Worker with D1 ID via env var
-        run: |
-          echo "📦 Deploying Worker with database_id: $DB_ID"
-          npx wrangler deploy \
-            --d1=DB=zyg-online-chat-db \
-            --r2=BUCKET=zyg-online-chat-uploads
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          DB_ID: ${{ steps.create-db.outputs.db_id }}
-
-      - name: Upload optional secrets
-        run: |
-          if [ -n "${{ secrets.BARK_KEY }}" ]; then
-            echo "🔐 Uploading BARK_KEY..."
-            npx wrangler secret put BARK_KEY <<< "${{ secrets.BARK_KEY }}"
-          else
-            echo "⏭️  Skipping BARK_KEY"
-          fi
-
-          if [ -n "${{ secrets.STAFF_PASSWORD }}" ]; then
-            echo "🔐 Uploading STAFF_PASSWORD..."
-            npx wrangler secret put STAFF_PASSWORD <<< "${{ secrets.STAFF_PASSWORD }}"
-          else
-            echo "⏭️  Skipping STAFF_PASSWORD"
-          fi
-
-          if [ -n "${{ secrets.JWT_SECRET }}" ]; then
-            echo "🔐 Uploading JWT_SECRET..."
-            npx wrangler secret put JWT_SECRET <<< "${{ secrets.JWT_SECRET }}"
-          else
-            echo "⏭️  Skipping JWT_SECRET"
-          fi
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-  deploy-pages:
-    needs: deploy-worker
-    runs-on: ubuntu-latest
-    name: Deploy Pages Frontend
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
         with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build frontend
-        run: npm run build
-
-      - name: Ensure Pages project exists
-        run: |
-          if npx wrangler pages project list 2>/dev/null | grep -q "zyg-online-chat"; then
-            echo "✅ Pages project 'zyg-online-chat' exists"
-          else
-            echo "🆕 Creating Pages project 'zyg-online-chat'"
-            npx wrangler pages project create zyg-online-chat --production-branch main
-          fi
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Deploy to Pages
-        run: |
-          npx wrangler pages deploy dist --project-name=zyg-online-chat
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Success
-        run: |
-          echo "✅ 部署完成！"
-          echo "📍 Pages: https://zyg-online-chat.pages.dev"
-          echo "📍 Worker: https://zyg-online-chat.workers.dev"
-          echo "💡 使用 GitHub Secrets 配置自定义域名"
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: 89d33e8baa4ff32eb2def95cff00e91b

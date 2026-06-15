@@ -1,17 +1,44 @@
 name = "zyg-online-chat"
 main = "src/server/index.worker.ts"
-compatibility_date = "2025-09-27"
+compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
-workers_dev = true
 
 [assets]
 directory = "./dist"
 binding = "ASSETS"
 
+# Environment variables
 [vars]
 BARK_API = "https://api.day.app"
-STAFF_URL_BASE = "https://zyg-online-chat.workers.dev/staff"
+STAFF_URL_BASE = "https://zyg-online-chat.dyyz1993.workers.dev/staff"
+# Auth: Cloudflare Workers deployment does not require password (public demo)
 REQUIRE_AUTH = "false"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "zyg-online-chat-db"
+database_id = "91fad6d8-e535-4bc0-95fc-2b69c32c7d22"
+
+# R2 bucket for file uploads
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "zyg-online-chat-uploads"
 
 [build]
 command = "npm run build:worker"
+
+[env.production]
+name = "zyg-online-chat-prod"
+
+[env.production.vars]
+BARK_API = "https://api.day.app"
+STAFF_URL_BASE = "https://zyg-online-chat.dyyz1993.workers.dev/staff"
+
+[env.production.d1_databases]
+binding = "DB"
+database_name = "zyg-online-chat-db"
+database_id = "22d3de4b-18a7-4571-b6b7-3393fdf50a91"
+
+[env.production.r2_buckets]
+binding = "BUCKET"
+bucket_name = "zyg-online-chat-uploads"

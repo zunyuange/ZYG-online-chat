@@ -99,7 +99,7 @@ npm test
 
 1. **创建 D1 数据库**
 ```bash
-wrangler d1 create online-chat-db
+wrangler d1 create zyg-online-chat-db
 ```
 
 2. **创建 R2 存储桶**
