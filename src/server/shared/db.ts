@@ -318,12 +318,21 @@ async function hashPasswordForInit(password: string): Promise<string> {
 }
 
 async function initializeDefaultAdmin(database: Database): Promise<void> {
-  // Check if admin user already exists
+  // Create or update default admin user with password 123456
+  const passwordHash = await hashPasswordForInit('123456');
+  
+  // Try to update existing admin user
   const existingAdmin = await database.get<{ id: number }>('SELECT id FROM admin_users WHERE username = ?', ['admin']);
   
-  if (!existingAdmin) {
-    // Create default admin user with password 123456
-    const passwordHash = await hashPasswordForInit('123456');
+  if (existingAdmin) {
+    // Update existing admin user with correct password
+    await database.run(
+      'UPDATE admin_users SET password_hash = ?, email = ?, name = ?, status = ?, updated_at = ? WHERE username = ?',
+      [passwordHash, 'admin@example.com', '系统管理员', 'active', Date.now(), 'admin']
+    );
+    console.log('[Database] Default admin user updated: admin/123456');
+  } else {
+    // Create new admin user
     await database.run(
       'INSERT INTO admin_users (username, password_hash, email, name, status) VALUES (?, ?, ?, ?, ?)',
       ['admin', passwordHash, 'admin@example.com', '系统管理员', 'active']
