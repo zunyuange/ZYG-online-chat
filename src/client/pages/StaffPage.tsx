@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { MessageCircle, Users, User, LogOut, Trash2, Globe, Shield } from 'lucide-react';
+import { MessageCircle, Users, User, LogOut, Trash2, Globe } from 'lucide-react';
 import { useStaffStore } from '@client/stores/staffStore';
 import { SessionList } from '@client/components/staff/SessionList';
 import { StaffChatWindow } from '@client/components/staff/StaffChatWindow';
@@ -103,7 +103,7 @@ export function StaffPage() {
   useEffect(() => {
     if (requireAuth && !isAuthenticated && !authLoading) {
       // Use replace to prevent going back to staff page after logout
-      window.location.replace('/login');
+      window.location.replace('/stafflogin');
     }
   }, [requireAuth, isAuthenticated, authLoading]);
 
@@ -436,26 +436,6 @@ export function StaffPage() {
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <button
-                  onClick={() => window.location.href = '/admin'}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    color: '#1890ff',
-                    fontSize: '13px',
-                    textAlign: 'left',
-                  }}
-                >
-                  <Shield size={14} />
-                  {t('admin')}
-                </button>
                 <div style={{ padding: '8px 12px', borderBottom: '1px solid #f0f0f0', marginBottom: '4px' }}>
                   <div style={{ fontSize: '12px', color: '#999', marginBottom: '6px' }}>{t('choose_lang')}</div>
                   <select

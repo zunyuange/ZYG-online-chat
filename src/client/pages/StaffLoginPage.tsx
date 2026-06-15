@@ -1,25 +1,18 @@
 /**
- * Login Page Component
- * Standalone login page for staff authentication
+ * Staff Login Page - Customer Service Login
+ * Standalone login page for staff/authentication
  */
 
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { useI18n } from '../context/I18nContext';
 
-interface LoginResult {
-  success: boolean;
-  error?: string;
-  remainingAttempts?: number;
-}
-
-export function LoginPage() {
+export function StaffLoginPage() {
   const { t, locale, setLocale } = useI18n();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
-  const [requireAuth, setRequireAuth] = useState<boolean>(true);
 
   const supportedLocales = [
     { code: 'zh-CN', nativeName: '中文' },
@@ -37,13 +30,12 @@ export function LoginPage() {
       if (!data.requireAuth) {
         window.location.href = '/staff';
       }
-      setRequireAuth(data.requireAuth);
     } catch {
-      setRequireAuth(true);
+      // Continue to login page
     }
   };
 
-  const handleLogin = async (e: FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password.trim()) return;
 
@@ -64,6 +56,7 @@ export function LoginPage() {
       if (data.success && data.token) {
         localStorage.setItem('staff_token', data.token);
         localStorage.setItem('staff_token_expires', data.expiresAt.toString());
+        // Redirect to staff page
         window.location.href = '/staff';
       } else {
         setError(data.error || t('login_failed'));
@@ -81,7 +74,7 @@ export function LoginPage() {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
     padding: '20px',
   };
 
@@ -130,7 +123,7 @@ export function LoginPage() {
     fontSize: '16px',
     fontWeight: 600,
     color: '#fff',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
     border: 'none',
     borderRadius: '10px',
     cursor: isLoading || remainingAttempts === 0 ? 'not-allowed' : 'pointer',
@@ -177,6 +170,15 @@ export function LoginPage() {
     cursor: 'pointer',
   };
 
+  const linkStyle: React.CSSProperties = {
+    display: 'block',
+    textAlign: 'center',
+    marginTop: '16px',
+    color: '#11998e',
+    fontSize: '14px',
+    textDecoration: 'none',
+  };
+
   return (
     <div style={containerStyle}>
       <select
@@ -192,7 +194,7 @@ export function LoginPage() {
       </select>
 
       <div style={cardStyle}>
-        <h1 style={titleStyle}>🔐 {t('service_title')}</h1>
+        <h1 style={titleStyle}>💬 {t('service_login_title')}</h1>
         <p style={subtitleStyle}>{t('login_desc')}</p>
 
         <form onSubmit={handleLogin}>
@@ -267,21 +269,28 @@ export function LoginPage() {
           </button>
         </form>
 
+        <a href="/admin" style={linkStyle}>
+          {t('go_to_admin')}
+        </a>
+
         <style>{`
           @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
           }
           input:focus {
-            border-color: #667eea !important;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2) !important;
+            border-color: #11998e !important;
+            box-shadow: 0 0 0 3px rgba(17, 153, 142, 0.2) !important;
           }
           button:not(:disabled):hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 8px 20px rgba(17, 153, 142, 0.4);
           }
           button:not(:disabled):active {
             transform: translateY(0);
+          }
+          a:hover {
+            text-decoration: underline;
           }
         `}</style>
       </div>

@@ -57,7 +57,7 @@ export function AdminPage() {
   const checkAuth = async () => {
     const token = localStorage.getItem('staff_token');
     if (!token) {
-      window.location.href = '/login';
+      window.location.href = '/adminlogin';
       return;
     }
     loadUsers();
@@ -199,7 +199,7 @@ export function AdminPage() {
   const handleLogout = () => {
     localStorage.removeItem('staff_token');
     localStorage.removeItem('staff_token_expires');
-    window.location.href = '/login';
+    window.location.href = '/adminlogin';
   };
 
   // Styles

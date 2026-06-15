@@ -138,8 +138,12 @@ export const enUS = {
   analytics: 'Analytics',
   
   // Admin
+  admin_login_title: 'Admin Login',
+  service_login_title: 'Staff Login',
   admin_panel: 'Admin Panel',
   user_management: 'User Management',
+  go_to_staff: 'Go to Staff Panel',
+  go_to_admin: 'Go to Admin Panel',
   add_user: 'Add User',
   edit_user: 'Edit User',
   delete_user: 'Delete User',

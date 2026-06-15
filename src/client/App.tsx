@@ -8,11 +8,12 @@ import { useTodoStore } from './stores/todoStore';
 import type { Todo } from '@shared/types';
 import { ChatPage } from './pages/ChatPage';
 import { StaffPage } from './pages/StaffPage';
-import { LoginPage } from './pages/LoginPage';
+import { StaffLoginPage } from './pages/StaffLoginPage';
+import { AdminLoginPage } from './pages/AdminLoginPage';
 import { AdminPage } from './pages/AdminPage';
 import { I18nProvider } from './context/I18nContext';
 
-type Page = 'todo' | 'chat' | 'staff' | 'login' | 'admin';
+type Page = 'todo' | 'chat' | 'staff' | 'stafflogin' | 'admin' | 'adminlogin';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>(() => {
@@ -20,7 +21,8 @@ function App() {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname;
       if (path === '/staff') return 'staff';
-      if (path === '/login') return 'login';
+      if (path === '/stafflogin') return 'stafflogin';
+      if (path === '/adminlogin') return 'adminlogin';
       if (path === '/admin') return 'admin';
       if (path === '/chat' || path === '/') return 'chat';
     }
@@ -55,7 +57,8 @@ function App() {
     const handlePopState = () => {
       const path = window.location.pathname;
       if (path === '/staff') setCurrentPage('staff');
-      else if (path === '/login') setCurrentPage('login');
+      else if (path === '/stafflogin') setCurrentPage('stafflogin');
+      else if (path === '/adminlogin') setCurrentPage('adminlogin');
       else if (path === '/admin') setCurrentPage('admin');
       else if (path === '/todo') setCurrentPage('todo');
       else setCurrentPage('chat');
@@ -113,10 +116,18 @@ function App() {
     );
   }
 
-  if (currentPage === 'login') {
+  if (currentPage === 'stafflogin') {
     return (
       <I18nProvider>
-        <LoginPage />
+        <StaffLoginPage />
+      </I18nProvider>
+    );
+  }
+
+  if (currentPage === 'adminlogin') {
+    return (
+      <I18nProvider>
+        <AdminLoginPage />
       </I18nProvider>
     );
   }

@@ -138,8 +138,12 @@ export const zhCN = {
   analytics: '分析',
   
   // Admin
+  admin_login_title: '管理后台登录',
+  service_login_title: '客服工作台登录',
   admin_panel: '管理后台',
   user_management: '用户管理',
+  go_to_staff: '前往客服工作台',
+  go_to_admin: '前往管理后台',
   add_user: '添加用户',
   edit_user: '编辑用户',
   delete_user: '删除用户',
