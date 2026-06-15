@@ -10,7 +10,7 @@ binding = "ASSETS"
 # Environment variables
 [vars]
 BARK_API = "https://api.day.app"
-STAFF_URL_BASE = "https://zyg-online-chat.dyyz1993.workers.dev/staff"
+STAFF_URL_BASE = "https://zyg-online-chat.linzihai.workers.dev/staff"
 # Auth: Cloudflare Workers deployment does not require password (public demo)
 REQUIRE_AUTH = "false"
 
