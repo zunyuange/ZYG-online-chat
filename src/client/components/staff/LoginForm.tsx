@@ -1,25 +1,26 @@
 /**
  * Login Form Component
- * Password input form for staff authentication
+ * Username and password input form for staff authentication
  */
 
 import { useState, FormEvent } from 'react';
 import type { LoginResult } from '../../hooks/useAuth';
 
 interface LoginFormProps {
-  onLogin: (password: string) => Promise<LoginResult>;
+  onLogin: (username: string, password: string) => Promise<LoginResult>;
   error: string | null;
   remainingAttempts: number | null;
   isLoading: boolean;
 }
 
 export function LoginForm({ onLogin, error, remainingAttempts, isLoading }: LoginFormProps) {
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (password.trim()) {
-      await onLogin(password.trim());
+      await onLogin(username.trim(), password.trim());
     }
   };
 
@@ -57,7 +58,7 @@ export function LoginForm({ onLogin, error, remainingAttempts, isLoading }: Logi
   };
 
   const inputContainerStyle: React.CSSProperties = {
-    marginBottom: '24px',
+    marginBottom: '16px',
   };
 
   const inputStyle: React.CSSProperties = {
@@ -115,7 +116,7 @@ export function LoginForm({ onLogin, error, remainingAttempts, isLoading }: Logi
     <div style={containerStyle}>
       <div style={cardStyle}>
         <h1 style={titleStyle}>🔐 客服后台</h1>
-        <p style={subtitleStyle}>请输入密码访问客服工作台</p>
+        <p style={subtitleStyle}>请输入账号密码登录客服工作台</p>
 
         <form onSubmit={handleSubmit}>
           {error && (
@@ -137,13 +138,24 @@ export function LoginForm({ onLogin, error, remainingAttempts, isLoading }: Logi
 
           <div style={inputContainerStyle}>
             <input
+              type="text"
+              placeholder="用户名"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              disabled={isLoading}
+              style={inputStyle}
+              autoFocus
+            />
+          </div>
+
+          <div style={inputContainerStyle}>
+            <input
               type="password"
-              placeholder="请输入密码"
+              placeholder="密码"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={isLoading}
               style={inputStyle}
-              autoFocus
             />
           </div>
 

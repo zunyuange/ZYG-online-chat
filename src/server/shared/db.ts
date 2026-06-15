@@ -193,7 +193,22 @@ export async function initializeSchema(): Promise<void> {
     "FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE)"
   );
 
+  // Create staff_users table for multi-user authentication
+  await database.exec(
+    "CREATE TABLE IF NOT EXISTS staff_users (" +
+    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+    "username TEXT NOT NULL UNIQUE, " +
+    "password_hash TEXT NOT NULL, " +
+    "email TEXT, " +
+    "name TEXT, " +
+    "role TEXT NOT NULL DEFAULT 'staff', " +
+    "status TEXT NOT NULL DEFAULT 'active', " +
+    "created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), " +
+    "updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))"
+  );
+
   // Create indexes
   await database.exec("CREATE INDEX IF NOT EXISTS messages_session_id_idx ON messages(session_id)");
   await database.exec("CREATE INDEX IF NOT EXISTS messages_created_at_idx ON messages(created_at)");
+  await database.exec("CREATE INDEX IF NOT EXISTS staff_users_username_idx ON staff_users(username)");
 }

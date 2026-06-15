@@ -1,6 +1,7 @@
 /**
  * Authentication Service
  * Handles password verification, token generation, and IP rate limiting
+ * Supports both legacy single-password auth and multi-user database auth
  */
 
 // Configuration
@@ -25,6 +26,8 @@ const ipRateLimit = new Map<string, RateLimitEntry>();
 
 interface TokenPayload {
   role: 'staff';
+  userId?: number;
+  username?: string;
   iat: number;
   exp: number;
 }
@@ -183,10 +186,12 @@ async function simpleHash(message: string, secret: string): Promise<string> {
 /**
  * Generate JWT token
  */
-async function generateToken(): Promise<string> {
+async function generateToken(userId?: number, username?: string): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const payload: TokenPayload = {
     role: 'staff',
+    userId,
+    username,
     iat: now,
     exp: now + TOKEN_EXPIRATION_SECONDS,
   };
@@ -249,6 +254,8 @@ export interface LoginResult {
   expiresAt?: number;
   error?: string;
   remainingAttempts?: number;
+  userId?: number;
+  username?: string;
 }
 
 /**
@@ -257,12 +264,15 @@ export interface LoginResult {
 export interface VerifyResult {
   valid: boolean;
   error?: string;
+  userId?: number;
+  username?: string;
 }
 
 /**
- * Login with password
+ * Login with username and password
+ * Supports both legacy single-password mode and multi-user database mode
  */
-export async function login(password: string, clientIp: string): Promise<LoginResult> {
+export async function login(username: string, password: string, clientIp: string): Promise<LoginResult> {
   // Check if auth is required
   if (!checkAuthRequired()) {
     // No auth required, generate token anyway for push notifications
@@ -283,22 +293,41 @@ export async function login(password: string, clientIp: string): Promise<LoginRe
     };
   }
 
-  // Verify password
-  if (password !== _staffPassword) {
-    recordFailedAttempt(clientIp);
+  try {
+    const { verifyPassword } = await import('@server/module-admin/services/admin-service');
+    
+    const user = await verifyPassword(username, password);
+    
+    if (user) {
+      // Database user authentication successful
+      const token = await generateToken(user.id, user.username);
+      return {
+        success: true,
+        token,
+        expiresAt: Math.floor(Date.now() / 1000) + TOKEN_EXPIRATION_SECONDS,
+        userId: user.id,
+        username: user.username,
+      };
+    }
+  } catch (error) {
+    console.log('[AuthService] Database auth not available, falling back to legacy mode');
+  }
+
+  // Legacy single-password mode fallback
+  if (_staffPassword && password === _staffPassword) {
+    const token = await generateToken();
     return {
-      success: false,
-      error: '密码错误',
-      remainingAttempts: getRemainingAttempts(clientIp),
+      success: true,
+      token,
+      expiresAt: Math.floor(Date.now() / 1000) + TOKEN_EXPIRATION_SECONDS,
     };
   }
 
-  // Generate token
-  const token = await generateToken();
+  recordFailedAttempt(clientIp);
   return {
-    success: true,
-    token,
-    expiresAt: Math.floor(Date.now() / 1000) + TOKEN_EXPIRATION_SECONDS,
+    success: false,
+    error: '用户名或密码错误',
+    remainingAttempts: getRemainingAttempts(clientIp),
   };
 }
 
@@ -316,7 +345,7 @@ export async function verifyToken(token: string): Promise<VerifyResult> {
     return { valid: false, error: 'Token 无效或已过期' };
   }
 
-  return { valid: true };
+  return { valid: true, userId: payload.userId, username: payload.username };
 }
 
 /**

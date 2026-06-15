@@ -92,8 +92,8 @@ export function useAuth() {
     clearTokenHelper();
   }, []);
 
-  // Login with password
-  const login = useCallback(async (password: string): Promise<LoginResult> => {
+  // Login with username and password
+  const login = useCallback(async (username: string, password: string): Promise<LoginResult> => {
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
     try {
@@ -102,7 +102,7 @@ export function useAuth() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ username, password }),
       });
 
       const data = await response.json();

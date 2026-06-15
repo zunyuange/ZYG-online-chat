@@ -104,7 +104,7 @@ wrangler d1 create zyg-online-chat-db
 
 2. **创建 R2 存储桶**
 ```bash
-wrangler r2 bucket create online-chat-uploads
+wrangler r2 bucket create zyg-online-chat-uploads
 ```
 
 3. **更新 wrangler.toml**

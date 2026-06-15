@@ -11,6 +11,7 @@ import { apiRoutes } from './module-todos/routes/todos-routes';
 import { chatRoutes } from './module-chat/routes/chat-routes';
 import { staffRoutes } from './module-staff/routes/staff-routes';
 import { authRoutes } from './module-auth/routes/auth-routes';
+import { adminRoutes } from './module-admin/routes/admin-routes';
 import { initializeD1Db } from './shared/db';
 import { initializeR2Storage } from './shared/storage';
 import { initBarkService } from './services/bark-service';
@@ -139,6 +140,7 @@ app.route('/api', apiRoutes);
 app.route('/api/chat', chatRoutes);
 app.route('/api/staff', staffRoutes);
 app.route('/api/auth', authRoutes);
+app.route('/api/admin', adminRoutes);
 
 // Health check
 app.get('/health', (c) => {

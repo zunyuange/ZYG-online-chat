@@ -65,7 +65,7 @@ wrangler login
 ### 3. 创建 D1 数据库
 
 ```bash
-wrangler d1 create  zyg-online-chat-db
+wrangler d1 create zyg-online-chat-db
 ```
 
 记录返回的 `database_id`，稍后需要填入 `wrangler.toml`。
@@ -73,7 +73,7 @@ wrangler d1 create  zyg-online-chat-db
 ### 4. 创建 R2 存储桶
 
 ```bash
-wrangler r2 bucket create  zyg-online-chat-uploads
+wrangler r2 bucket create online-chat-uploads
 ```
 
 ---
@@ -83,7 +83,7 @@ wrangler r2 bucket create  zyg-online-chat-uploads
 ### wrangler.toml
 
 ```toml
-name = " zyg-online-chat"
+name = "zyg-online-chat"
 main = "src/server/index.worker.ts"
 compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
@@ -101,13 +101,13 @@ STAFF_URL_BASE = "https://your-app.workers.dev/staff"
 # D1 数据库绑定
 [[d1_databases]]
 binding = "DB"
-database_name = " zyg-online-chat-db"
+database_name = "zyg-online-chat-db"
 database_id = "your-database-id"  # 替换为你的 D1 ID
 
 # R2 存储桶绑定
 [[r2_buckets]]
 binding = "BUCKET"
-bucket_name = " zyg-online-chat-uploads"
+bucket_name = "zyg-online-chat-uploads"
 
 # 构建命令
 [build]
@@ -115,7 +115,7 @@ command = "npm run build:worker"
 
 # 生产环境配置
 [env.production]
-name = " zyg-online-chat-prod"
+name = "zyg-online-chat-prod"
 
 [env.production.vars]
 BARK_API = "https://api.day.app"

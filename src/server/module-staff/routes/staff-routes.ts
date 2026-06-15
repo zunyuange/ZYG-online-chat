@@ -9,8 +9,28 @@ import * as chatService from '@server/module-chat/services/chat-service';
 import * as uploadService from '@server/module-chat/services/upload-service';
 import * as sseService from '@server/module-chat/services/sse-service';
 import * as queueService from '@server/module-chat/services/queue-service';
+import { verifyToken } from '@server/module-auth/services/auth-service';
 
 export const staffRoutes = new Hono();
+
+async function requireAuth(c: any, next: any) {
+  const authHeader = c.req.header('Authorization');
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return c.json({ success: false, error: '未提供认证令牌' }, 401);
+  }
+
+  const token = authHeader.substring(7);
+  const result = await verifyToken(token);
+
+  if (!result.valid) {
+    return c.json({ success: false, error: result.error || 'Token 无效' }, 401);
+  }
+
+  await next();
+}
+
+staffRoutes.use('*', requireAuth);
 
 // ==========================================
 // Session Routes

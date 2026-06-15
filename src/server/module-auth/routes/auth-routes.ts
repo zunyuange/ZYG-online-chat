@@ -27,12 +27,12 @@ authRoutes.get('/check', (c) => {
 
 /**
  * POST /api/auth/login
- * Login with password
+ * Login with username and password
  */
 authRoutes.post('/login', async (c) => {
   try {
     const body = await c.req.json();
-    const { password } = body;
+    const { username, password } = body;
 
     if (!password) {
       return c.json({
@@ -42,13 +42,15 @@ authRoutes.post('/login', async (c) => {
     }
 
     const clientIp = getClientIp(c.req.raw.headers);
-    const result = await login(password, clientIp);
+    const result = await login(username || '', password, clientIp);
 
     if (result.success) {
       return c.json({
         success: true,
         token: result.token,
         expiresAt: result.expiresAt,
+        userId: result.userId,
+        username: result.username,
       });
     } else {
       return c.json({
@@ -88,6 +90,8 @@ authRoutes.get('/verify', async (c) => {
     return c.json({
       success: true,
       valid: true,
+      userId: result.userId,
+      username: result.username,
     });
   } else {
     return c.json({

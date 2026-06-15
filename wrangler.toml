@@ -11,8 +11,8 @@ binding = "ASSETS"
 [vars]
 BARK_API = "https://api.day.app"
 STAFF_URL_BASE = "https://zyg-online-chat.linzihai.workers.dev/staff"
-# Auth: Cloudflare Workers deployment does not require password (public demo)
-REQUIRE_AUTH = "false"
+# Auth: Require login for staff panel
+REQUIRE_AUTH = "true"
 
 [[d1_databases]]
 binding = "DB"
