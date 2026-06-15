@@ -72,10 +72,10 @@ ZYG-online-chat 采用 **Pages + Worker 混合架构**：
 ### 步骤 4：验证部署
 
 部署完成后访问：
-- Pages: `https://online-chat.pages.dev`
-- Worker: `https://online-chat.workers.dev`
-- 用户端: `https://online-chat.pages.dev/chat`
-- 客服端: `https://online-chat.pages.dev/staff`
+- Pages: `https://zyg-online-chat.pages.dev`
+- Worker: `https://zyg-online-chat.workers.dev`
+- 用户端: `https://zyg-online-chat.pages.dev/chat`
+- 客服端: `https://zyg-online-chat.pages.dev/staff`
 
 ---
 
@@ -136,14 +136,14 @@ npm install
 ### 步骤 2：创建 D1 数据库
 
 ```bash
-wrangler d1 create online-chat-db
+wrangler d1 create zyg-online-chat-db
 # 记录返回的 database_id
 ```
 
 ### 步骤 3：创建 R2 存储桶
 
 ```bash
-wrangler r2 bucket create online-chat-uploads
+wrangler r2 bucket create zyg-online-chat-uploads
 ```
 
 ### 步骤 4：更新 wrangler.toml
@@ -153,7 +153,7 @@ wrangler r2 bucket create online-chat-uploads
 ```toml
 [[d1_databases]]
 binding = "DB"
-database_name = "online-chat-db"
+database_name = "zyg-online-chat-db"
 database_id = "你的数据库ID"
 ```
 
@@ -175,8 +175,8 @@ wrangler deploy
 ### 步骤 7：部署 Pages
 
 ```bash
-wrangler pages project create online-chat --production-branch main
-wrangler pages deploy dist --project-name=online-chat
+wrangler pages project create zyg-online-chat --production-branch main
+wrangler pages deploy dist --project-name=zyg-online-chat
 ```
 
 ---

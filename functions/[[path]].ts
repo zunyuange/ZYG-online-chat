@@ -20,7 +20,7 @@ export const onRequest: PagesFunction = async (context) => {
 	}
 
 	const isLocalDev = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
-	const workerUrl = isLocalDev ? 'http://localhost:8787' : 'https://online-chat.workers.dev';
+	const workerUrl = isLocalDev ? 'http://localhost:8787' : 'https://zyg-online-chat.workers.dev';
 
 	try {
 		const forwardUrl = new URL(pathname + url.search, workerUrl);

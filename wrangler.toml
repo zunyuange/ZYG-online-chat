@@ -1,4 +1,4 @@
-name = "online-chat"
+name = "zyg-online-chat"
 main = "src/server/index.worker.ts"
 compatibility_date = "2025-09-27"
 compatibility_flags = ["nodejs_compat"]
@@ -10,34 +10,34 @@ binding = "ASSETS"
 
 [vars]
 BARK_API = "https://api.day.app"
-STAFF_URL_BASE = "https://online-chat.workers.dev/staff"
+STAFF_URL_BASE = "https://zyg-online-chat.workers.dev/staff"
 REQUIRE_AUTH = "false"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "online-chat-db"
+database_name = "zyg-online-chat-db"
 database_id = "CHANGE_ME_AUTOMATICALLY"
 remote = true
 
 [[r2_buckets]]
 binding = "BUCKET"
-bucket_name = "online-chat-uploads"
+bucket_name = "zyg-online-chat-uploads"
 
 [build]
 command = "npm run build:worker"
 
 [env.production]
-name = "online-chat-prod"
+name = "zyg-online-chat-prod"
 
 [env.production.vars]
 BARK_API = "https://api.day.app"
-STAFF_URL_BASE = "https://online-chat.workers.dev/staff"
+STAFF_URL_BASE = "https://zyg-online-chat.workers.dev/staff"
 
 [env.production.d1_databases]
 binding = "DB"
-database_name = "online-chat-db"
+database_name = "zyg-online-chat-db"
 database_id = "CHANGE_ME_AUTOMATICALLY"
 
 [env.production.r2_buckets]
 binding = "BUCKET"
-bucket_name = "online-chat-uploads"
+bucket_name = "zyg-online-chat-uploads"

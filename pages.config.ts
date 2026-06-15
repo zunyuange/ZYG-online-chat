@@ -1,5 +1,5 @@
 export default {
-	projectName: 'online-chat',
+	projectName: 'zyg-online-chat',
 	build: {
 		command: 'npm run build',
 		outputDir: 'dist'
