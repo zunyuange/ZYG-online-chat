@@ -56,12 +56,17 @@ export function initAuthService(env: {
  * Check if authentication is required
  */
 export async function checkAuthRequired(): Promise<boolean> {
-  // If REQUIRE_AUTH is false, no auth needed
-  if (!_requireAuth) {
+  // If REQUIRE_AUTH is explicitly set to false, no auth needed
+  if (_requireAuth === false) {
     return false;
   }
   
-  // Check if there are staff users in database
+  // If REQUIRE_AUTH is explicitly set to true, always require auth
+  if (_requireAuth === true) {
+    return true;
+  }
+  
+  // Default behavior: check if there are staff users in database
   try {
     const { listUsers } = await import('@server/module-admin/services/admin-service');
     const users = await listUsers();

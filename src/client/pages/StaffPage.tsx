@@ -99,6 +99,14 @@ export function StaffPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Handle redirect to login when not authenticated
+  useEffect(() => {
+    if (requireAuth && !isAuthenticated && !authLoading) {
+      // Use replace to prevent going back to staff page after logout
+      window.location.replace('/login');
+    }
+  }, [requireAuth, isAuthenticated, authLoading]);
+
   // Load sessions, connect SSE and check URL params only after authentication
   useEffect(() => {
     // Only load data when authenticated and not already loaded
@@ -200,7 +208,7 @@ export function StaffPage() {
 
   // ============ CONDITIONAL RETURNS AFTER ALL HOOKS ============
 
-  // Show loading state
+  // Show loading state while checking authentication
   if (authLoading) {
     return (
       <div style={{
@@ -223,14 +231,6 @@ export function StaffPage() {
         </div>
       </div>
     );
-  }
-
-  // Redirect to login page if authentication is required and not authenticated
-  if (requireAuth && !isAuthenticated) {
-    if (!authLoading) {
-      window.location.href = '/login';
-    }
-    return null;
   }
 
   // ============ STYLES (only used when authenticated) ============

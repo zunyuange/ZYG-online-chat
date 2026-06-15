@@ -230,9 +230,9 @@ export default {
       return app.fetch(request, env, ctx);
     }
 
-    // For SPA routes (chat, staff, todo), serve the root index
-    const isSpaRoute = path === '/chat' || path === '/staff' || path === '/todo' ||
-        path.startsWith('/chat/') || path.startsWith('/staff/');
+    // For SPA routes (chat, staff, login, todo), serve the root index
+    const isSpaRoute = path === '/chat' || path === '/staff' || path === '/login' || path === '/todo' ||
+        path.startsWith('/chat/') || path.startsWith('/staff/') || path.startsWith('/login/');
 
     // ASSETS is injected by wrangler for Workers Sites
     if (env.ASSETS) {
