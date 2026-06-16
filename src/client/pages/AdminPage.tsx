@@ -1219,7 +1219,7 @@ export function AdminPage() {
       <div style={headerStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Shield size={24} />
-          <span style={{ fontSize: '18px', fontWeight: 500 }}>{t('admin_panel')}</span>
+          <span style={{ fontSize: '18px', fontWeight: 500 }}>{settings.siteName || t('admin_panel')}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <select
