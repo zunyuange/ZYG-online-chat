@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { useI18n } from '../context/I18nContext';
-import { useSiteSettings } from '../hooks/useSiteSettings';
+import { useSiteSettings } from '@client/hooks/useSiteSettings';
 
 export function AdminLoginPage() {
   const { t, locale, setLocale } = useI18n();

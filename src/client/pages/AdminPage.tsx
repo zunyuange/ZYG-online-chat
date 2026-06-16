@@ -10,7 +10,7 @@ import {
   Home, Key, Globe
 } from 'lucide-react';
 import { useI18n } from '../context/I18nContext';
-import { useSiteSettings } from '../hooks/useSiteSettings';
+import { useSiteSettings } from '@client/hooks/useSiteSettings';
 
 type TabType = 'dashboard' | 'staff' | 'admin' | 'roles' | 'settings';
 
