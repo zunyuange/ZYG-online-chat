@@ -144,6 +144,8 @@ export async function deleteUser(id: number): Promise<{ success: boolean; error?
 
 export async function verifyPassword(username: string, password: string): Promise<StaffUser | null> {
   const db = getDb();
+  console.log('[AdminService] verifyPassword called for username:', username);
+  
   // Allow login for users with status 'active' or empty status (backward compatibility)
   const user = await db.get<StaffUser>(
     'SELECT * FROM staff_users WHERE username = ? AND (status = ? OR status IS NULL OR status = "")', 
@@ -151,13 +153,20 @@ export async function verifyPassword(username: string, password: string): Promis
   );
   
   if (!user) {
+    console.log('[AdminService] User not found:', username);
     return null;
   }
 
+  console.log('[AdminService] User found:', user.username);
   const passwordHash = await hashPassword(password);
+  console.log('[AdminService] Input password hash:', passwordHash);
+  console.log('[AdminService] Stored password hash:', user.password_hash);
+  
   if (user.password_hash !== passwordHash) {
+    console.log('[AdminService] Password mismatch');
     return null;
   }
 
+  console.log('[AdminService] Password verified successfully');
   return user;
 }
