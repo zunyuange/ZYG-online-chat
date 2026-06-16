@@ -99,9 +99,9 @@ export async function getSessionWithPreview(sessionId: string): Promise<{
 }
 
 /**
- * List sessions with last message preview
+ * List sessions with last message preview (filtered by business)
  */
-export async function listSessionsWithPreview(status?: SessionStatus): Promise<
+export async function listSessionsWithPreview(status?: SessionStatus, businessId?: number): Promise<
   (Session & {
     lastMessage?: {
       content: string;
@@ -110,7 +110,7 @@ export async function listSessionsWithPreview(status?: SessionStatus): Promise<
     };
   })[]
 > {
-  const sessions = await listSessionsBase(status);
+  const sessions = await listSessionsBase(status, businessId);
 
   if (sessions.length === 0) {
     return [];
@@ -151,13 +151,19 @@ export async function listSessionsWithPreview(status?: SessionStatus): Promise<
 }
 
 /**
- * Get total unread count across all sessions
+ * Get total unread count across all sessions (filtered by business)
  */
-export async function getTotalUnreadCount(): Promise<number> {
+export async function getTotalUnreadCount(businessId?: number): Promise<number> {
   const db = getDb();
-  const row = await db.get<UnreadCountRow>(
-    "SELECT SUM(unread_by_staff) as total FROM sessions WHERE status = 'active'"
-  );
+  let query = "SELECT SUM(unread_by_staff) as total FROM sessions WHERE status = 'active'";
+  const params: unknown[] = [];
+  
+  if (businessId) {
+    query += ' AND business_id = ?';
+    params.push(businessId);
+  }
+  
+  const row = await db.get<UnreadCountRow>(query, params);
   return row?.total || 0;
 }
 
@@ -203,32 +209,49 @@ interface StaffStatistics {
   avg_response_time: number;
 }
 
-export async function getStaffStatistics(): Promise<StaffStatistics> {
+export async function getStaffStatistics(businessId?: number): Promise<StaffStatistics> {
   const db = getDb();
   const now = Date.now();
   const todayStart = new Date().setHours(0, 0, 0, 0);
   
+  let sessionFilter = businessId ? `WHERE business_id = ${businessId}` : '';
+  let messageFilter = '';
+  let messageParams: unknown[] = [todayStart];
+  
+  if (businessId) {
+    messageFilter = ' AND s.business_id = ?';
+    messageParams.push(businessId);
+  }
+  
   // Get basic counts
-  const totalSessions = await db.get<{ count: number }>('SELECT COUNT(*) as count FROM sessions');
-  const activeSessions = await db.get<{ count: number }>("SELECT COUNT(*) as count FROM sessions WHERE status = 'active'");
-  const todaySessions = await db.get<{ count: number }>(
-    'SELECT COUNT(*) as count FROM sessions WHERE created_at >= ?',
-    [todayStart]
+  const totalSessions = await db.get<{ count: number }>(
+    `SELECT COUNT(*) as count FROM sessions ${sessionFilter}`
   );
-  const totalVisitors = await db.get<{ count: number }>('SELECT COUNT(DISTINCT visitor_id) as count FROM sessions');
+  const activeSessions = await db.get<{ count: number }>(
+    `SELECT COUNT(*) as count FROM sessions ${businessId ? 'WHERE' : 'WHERE'} business_id = ? AND status = 'active'`,
+    [businessId || 1]
+  );
+  const todaySessions = await db.get<{ count: number }>(
+    `SELECT COUNT(*) as count FROM sessions WHERE created_at >= ? ${businessId ? 'AND business_id = ?' : ''}`,
+    businessId ? [todayStart, businessId] : [todayStart]
+  );
+  const totalVisitors = await db.get<{ count: number }>(
+    `SELECT COUNT(DISTINCT visitor_id) as count FROM sessions ${sessionFilter}`
+  );
   
   // Queue statistics
   const waitingCount = await db.get<{ count: number }>(
     "SELECT COUNT(*) as count FROM queue WHERE state = 'waiting'"
   );
   const talkingCount = await db.get<{ count: number }>(
-    "SELECT COUNT(*) as count FROM sessions WHERE status = 'active' AND service_id > 0"
+    `SELECT COUNT(*) as count FROM sessions WHERE status = 'active' AND service_id > 0 ${businessId ? 'AND business_id = ?' : ''}`,
+    businessId ? [businessId] : []
   );
   
   // Today messages count
   const todayMessages = await db.get<{ count: number }>(
-    'SELECT COUNT(*) as count FROM messages WHERE created_at >= ?',
-    [todayStart]
+    `SELECT COUNT(*) as count FROM messages m JOIN sessions s ON m.session_id = s.id WHERE m.created_at >= ?${messageFilter}`,
+    messageParams
   );
 
   return {
@@ -263,7 +286,7 @@ interface VisitorInfo {
   created_at: number;
 }
 
-export async function getVisitorList(state?: string, groupid?: string): Promise<VisitorInfo[]> {
+export async function getVisitorList(state?: string, groupid?: string, businessId?: number): Promise<VisitorInfo[]> {
   const db = getDb();
   
   let query = `
@@ -278,6 +301,11 @@ export async function getVisitorList(state?: string, groupid?: string): Promise<
   `;
   
   const params: unknown[] = [];
+  
+  if (businessId) {
+    query += ' AND s.business_id = ?';
+    params.push(businessId);
+  }
   
   if (state) {
     query += ' AND s.state = ?';

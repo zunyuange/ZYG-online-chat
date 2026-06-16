@@ -28,6 +28,11 @@ async function requireAuth(c: any, next: any) {
     return c.json({ success: false, error: result.error || 'Token 无效' }, 401);
   }
 
+  // Attach businessId to context for downstream use
+  if (result.businessId) {
+    c.set('businessId', result.businessId);
+  }
+
   await next();
 }
 
@@ -41,7 +46,8 @@ staffRoutes.use('*', requireAuth);
 staffRoutes.get('/sessions', async (c) => {
   try {
     const status = c.req.query('status') as 'active' | 'closed' | undefined;
-    const sessions = await staffService.listSessionsWithPreview(status);
+    const businessId = c.get('businessId');
+    const sessions = await staffService.listSessionsWithPreview(status, businessId);
     return c.json({ success: true, data: sessions });
   } catch (error) {
     console.error('List sessions error:', error);
@@ -67,7 +73,8 @@ staffRoutes.get('/sessions/:sessionId', async (c) => {
 // Get total unread count
 staffRoutes.get('/unread', async (c) => {
   try {
-    const count = await staffService.getTotalUnreadCount();
+    const businessId = c.get('businessId');
+    const count = await staffService.getTotalUnreadCount(businessId);
     return c.json({ success: true, data: { count } });
   } catch (error) {
     console.error('Get unread count error:', error);
@@ -348,7 +355,8 @@ staffRoutes.get('/queue', async (c) => {
 // Get staff dashboard statistics
 staffRoutes.get('/statistics', async (c) => {
   try {
-    const stats = await staffService.getStaffStatistics();
+    const businessId = c.get('businessId');
+    const stats = await staffService.getStaffStatistics(businessId);
     return c.json({ success: true, data: stats });
   } catch (error) {
     console.error('Get statistics error:', error);
@@ -361,7 +369,8 @@ staffRoutes.get('/visitors', async (c) => {
   try {
     const state = c.req.query('state') as string | undefined;
     const groupid = c.req.query('groupid') as string | undefined;
-    const visitors = await staffService.getVisitorList(state, groupid);
+    const businessId = c.get('businessId');
+    const visitors = await staffService.getVisitorList(state, groupid, businessId);
     return c.json({ success: true, data: visitors });
   } catch (error) {
     console.error('Get visitor list error:', error);

@@ -28,6 +28,7 @@ interface TokenPayload {
   role: 'staff';
   userId?: number;
   username?: string;
+  businessId?: number;
   iat: number;
   exp: number;
 }
@@ -203,12 +204,13 @@ async function simpleHash(message: string, secret: string): Promise<string> {
 /**
  * Generate JWT token
  */
-async function generateToken(userId?: number, username?: string): Promise<string> {
+async function generateToken(userId?: number, username?: string, businessId?: number): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const payload: TokenPayload = {
     role: 'staff',
     userId,
     username,
+    businessId,
     iat: now,
     exp: now + TOKEN_EXPIRATION_SECONDS,
   };
@@ -251,8 +253,8 @@ async function verifyTokenSignature(token: string): Promise<TokenPayload | null>
       return null;
     }
 
-    // Check role
-    if (payload.role !== 'staff') {
+    // Check role (allow both staff and admin)
+    if (payload.role !== 'staff' && payload.role !== 'admin') {
       return null;
     }
 
@@ -283,6 +285,7 @@ export interface VerifyResult {
   error?: string;
   userId?: number;
   username?: string;
+  businessId?: number;
 }
 
 /**
@@ -323,7 +326,7 @@ export async function login(username: string, password: string, clientIp: string
     
     if (user) {
       // Database user authentication successful
-      const token = await generateToken(user.id, user.username);
+      const token = await generateToken(user.id, user.username, (user as any).business_id);
       return {
         success: true,
         token,
@@ -371,7 +374,7 @@ export async function verifyToken(token: string): Promise<VerifyResult> {
     return { valid: false, error: 'Token 无效或已过期' };
   }
 
-  return { valid: true, userId: payload.userId, username: payload.username };
+  return { valid: true, userId: payload.userId, username: payload.username, businessId: payload.businessId };
 }
 
 /**

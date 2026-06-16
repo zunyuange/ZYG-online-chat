@@ -23,6 +23,11 @@ const getUrlBusiness = (): string | null => {
 const updateUrlSessionId = (sessionId: string): void => {
   const url = new URL(window.location.href);
   url.searchParams.set('s', sessionId);
+  // Preserve business parameter if present
+  const business = getUrlBusiness();
+  if (business) {
+    url.searchParams.set('business', business);
+  }
   window.history.replaceState({}, '', url.toString());
 };
 

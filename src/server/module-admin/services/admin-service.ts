@@ -8,6 +8,7 @@ import { hashPassword } from '@server/shared/crypto';
 
 export interface StaffUser {
   id: number;
+  business_id: number;
   username: string;
   password_hash: string;
   email: string | null;
