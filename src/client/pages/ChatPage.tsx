@@ -93,37 +93,9 @@ export function ChatPage() {
     color: '#999',
   };
 
-  const headerStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '10px 16px',
-    backgroundColor: '#fff',
-    borderBottom: '1px solid #e8e8e8',
-  };
-
-  const langSelectStyle: React.CSSProperties = {
-    padding: '4px 8px',
-    borderRadius: '4px',
-    border: '1px solid #d9d9d9',
-    backgroundColor: '#fff',
-    cursor: 'pointer',
-    fontSize: '12px',
-  };
-
   if (!session && loading) {
     return (
       <div style={pageStyle}>
-        <div style={headerStyle}>
-          <span>{t('service_title')}</span>
-          <select value={locale} onChange={(e) => setLocale(e.target.value as any)} style={langSelectStyle}>
-            {supportedLocales.map((l) => (
-              <option key={l.code} value={l.code}>
-                {l.nativeName}
-              </option>
-            ))}
-          </select>
-        </div>
         <div style={loadingStyle}>
           {t('hello')} {t('tip_waiting')}
         </div>
@@ -133,18 +105,6 @@ export function ChatPage() {
 
   return (
     <div style={pageStyle}>
-      {/* Header with language selector */}
-      <div style={headerStyle}>
-        <span>{t('service_title')}</span>
-        <select value={locale} onChange={(e) => setLocale(e.target.value as any)} style={langSelectStyle}>
-          {supportedLocales.map((l) => (
-            <option key={l.code} value={l.code}>
-              {l.nativeName}
-            </option>
-          ))}
-        </select>
-      </div>
-
       {/* Error toast */}
       {error && (
         <div style={errorStyle}>
@@ -181,6 +141,8 @@ export function ChatPage() {
         session={session}
         t={t}
         locale={locale}
+        setLocale={setLocale}
+        supportedLocales={supportedLocales}
       />
 
       {/* PWA Install Prompt */}

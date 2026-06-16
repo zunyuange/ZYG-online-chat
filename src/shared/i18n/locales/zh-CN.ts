@@ -1,5 +1,6 @@
 export const zhCN = {
   hello: '您好！',
+  select_language: '选择语言',
   service_offline: '客服已经下线',
   service_online: '客服上线',
   say_is_off: '该会话已经关闭',

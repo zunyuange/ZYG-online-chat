@@ -1,5 +1,6 @@
 export const enUS = {
   hello: 'Hello!',
+  select_language: 'Select Language',
   service_offline: 'Service is offline',
   service_online: 'Service is online',
   say_is_off: 'This session has been closed',
