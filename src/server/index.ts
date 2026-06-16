@@ -84,7 +84,13 @@ const app = new Hono()
     origin: ['http://localhost:3010', 'http://localhost:5173'],
     credentials: true,
   }))
-  // Public settings endpoint (no auth required)
+  // API routes
+  .route('/api', apiRoutes)
+  .route('/api/chat', chatRoutes)
+  .route('/api/staff', staffRoutes)
+  .route('/api/admin', adminRoutes)
+  .route('/api/admin-auth', adminAuthRoutes)
+  // Public settings endpoint (no auth required) - MUST BE AFTER other /api routes
   .get('/api/site-settings', async (c) => {
     try {
       const db = await import('./shared/db').then(m => m.getDb());
@@ -104,12 +110,6 @@ const app = new Hono()
       return c.json({ success: false, error: '获取设置失败' }, 500);
     }
   })
-  // API routes
-  .route('/api', apiRoutes)
-  .route('/api/chat', chatRoutes)
-  .route('/api/staff', staffRoutes)
-  .route('/api/admin', adminRoutes)
-  .route('/api/admin-auth', adminAuthRoutes)
   // Health check
   .get('/health', (c) => {
     return c.json({ status: 'ok', timestamp: new Date().toISOString() });
