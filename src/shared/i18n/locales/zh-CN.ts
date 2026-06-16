@@ -29,7 +29,7 @@ export const zhCN = {
   evaluate_score: '请评分',
   mobile_error: '手机格式不正确',
   name_error: '请填写姓名',
-  save_ok: '提交成功,请等待客服回复',
+  save_ok: '保存成功',
   save_error: '提交失败',
   robot_error: [
     '我不太明白您的意思,您可以换一个问题试试',

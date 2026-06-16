@@ -130,6 +130,10 @@ export function AdminPage() {
     checkAuth();
   }, []);
 
+  useEffect(() => {
+    document.title = settings.siteName || t('admin_panel');
+  }, [settings.siteName, t]);
+
   const checkAuth = async () => {
     const token = localStorage.getItem('admin_token');
     if (!token) {
