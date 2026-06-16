@@ -19,10 +19,65 @@ export const authRoutes = new Hono();
  */
 authRoutes.get('/check', async (c) => {
   const requireAuth = await checkAuthRequired();
+  
+  // Test database connection
+  let dbStatus = 'unknown';
+  let userCount = 0;
+  try {
+    const { listUsers } = await import('@server/module-admin/services/admin-service');
+    const users = await listUsers();
+    userCount = users.length;
+    dbStatus = 'connected';
+  } catch (error) {
+    dbStatus = `error: ${error}`;
+  }
+  
   return c.json({
     success: true,
     requireAuth,
+    dbStatus,
+    userCount,
   });
+});
+
+/**
+ * GET /api/auth/test-login
+ * Test login credentials (for debugging)
+ */
+authRoutes.get('/test-login', async (c) => {
+  const username = c.req.query('username');
+  const password = c.req.query('password');
+  
+  if (!username || !password) {
+    return c.json({
+      success: false,
+      error: 'Please provide username and password as query parameters',
+    }, 400);
+  }
+  
+  try {
+    const { verifyPassword } = await import('@server/module-admin/services/admin-service');
+    const user = await verifyPassword(username, password);
+    
+    if (user) {
+      return c.json({
+        success: true,
+        message: 'Login successful',
+        user: { id: user.id, username: user.username, name: user.name },
+      });
+    } else {
+      return c.json({
+        success: false,
+        message: 'Username or password incorrect',
+      });
+    }
+  } catch (error) {
+    return c.json({
+      success: false,
+      message: 'Error during authentication',
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 });
 
 /**
