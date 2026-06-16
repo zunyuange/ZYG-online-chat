@@ -5,11 +5,14 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { MessageCircle, Users, User, LogOut, Trash2, Globe } from 'lucide-react';
+import { MessageCircle, Users, User, LogOut, Trash2, Globe, Code2, Settings } from 'lucide-react';
 import { useStaffStore } from '@client/stores/staffStore';
 import { SessionList } from '@client/components/staff/SessionList';
 import { StaffChatWindow } from '@client/components/staff/StaffChatWindow';
 import { QueueList } from '@client/components/staff/QueueList';
+import { StaffManagement } from '@client/components/staff/StaffManagement';
+import { StaffCode } from '@client/components/staff/StaffCode';
+import { StaffSettings } from '@client/components/staff/StaffSettings';
 import { useAuth } from '@client/hooks/useAuth';
 import { useSiteSettings } from '@client/hooks/useSiteSettings';
 import { useI18n } from '@client/context/I18nContext';
@@ -85,6 +88,7 @@ export function StaffPage() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [currentPage, setCurrentPage] = useState<'home' | 'staff' | 'code' | 'settings'>('home');
 
   // Ref to prevent multiple initializations
   const dataLoadedRef = useRef(false);
@@ -352,6 +356,27 @@ export function StaffPage() {
     display: showSessionList ? 'block' : 'none',
   };
 
+  // Navigation tabs style
+  const navTabStyle: React.CSSProperties = {
+    display: 'flex',
+    borderBottom: '1px solid #e8e8e8',
+    backgroundColor: '#fff',
+  };
+
+  const navTabItemStyle = (active: boolean): React.CSSProperties => ({
+    padding: '12px 24px',
+    borderBottom: active ? '2px solid #1890ff' : '2px solid transparent',
+    backgroundColor: active ? '#f0f5ff' : 'transparent',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    fontSize: '14px',
+    color: active ? '#1890ff' : '#666',
+    fontWeight: active ? 500 : 400,
+    transition: 'all 0.2s',
+  });
+
   // ============ MAIN RENDER ============
 
   return (
@@ -486,6 +511,38 @@ export function StaffPage() {
         </div>
       </div>
 
+      {/* Navigation Tabs */}
+      <div style={navTabStyle}>
+        <div
+          onClick={() => setCurrentPage('home')}
+          style={navTabItemStyle(currentPage === 'home')}
+        >
+          <MessageCircle size={16} />
+          <span>首页</span>
+        </div>
+        <div
+          onClick={() => setCurrentPage('staff')}
+          style={navTabItemStyle(currentPage === 'staff')}
+        >
+          <Users size={16} />
+          <span>客服管理</span>
+        </div>
+        <div
+          onClick={() => setCurrentPage('code')}
+          style={navTabItemStyle(currentPage === 'code')}
+        >
+          <Code2 size={16} />
+          <span>代码</span>
+        </div>
+        <div
+          onClick={() => setCurrentPage('settings')}
+          style={navTabItemStyle(currentPage === 'settings')}
+        >
+          <Settings size={16} />
+          <span>设置</span>
+        </div>
+      </div>
+
       {/* Clear messages confirmation modal */}
       {showClearConfirm && (
         <div
@@ -571,40 +628,66 @@ export function StaffPage() {
 
       {/* Main content */}
       <div style={mainStyle}>
-        {/* Overlay (mobile only) */}
-        {isMobile && (
-          <div style={overlayStyle} onClick={() => setShowSessionList(false)} />
+        {/* Home page - Chat interface */}
+        {currentPage === 'home' && (
+          <>
+            {/* Overlay (mobile only) */}
+            {isMobile && (
+              <div style={overlayStyle} onClick={() => setShowSessionList(false)} />
+            )}
+
+            {/* Sidebar - Session List */}
+            <div style={sidebarStyle}>
+              <SessionList
+                sessions={sessions}
+                currentSessionId={currentSessionId}
+                onSelect={handleSelectSession}
+                loading={loading}
+              />
+            </div>
+
+            {/* Chat Window */}
+            <div style={contentStyle}>
+              <StaffChatWindow
+                session={currentSession}
+                messages={currentMessages}
+                hasMore={currentHasMore}
+                loading={messagesLoading}
+                sending={sending}
+                inputMode={inputMode}
+                isMobile={isMobile}
+                onLoadMore={loadMoreMessages}
+                onSend={handleSend}
+                onUpload={handleUpload}
+                onModeChange={setInputMode}
+                onTopicChange={handleTopicChange}
+                onStatusChange={handleStatusChange}
+                onClearMessages={() => setShowClearConfirm(true)}
+              />
+            </div>
+          </>
         )}
 
-        {/* Sidebar - Session List */}
-        <div style={sidebarStyle}>
-          <SessionList
-            sessions={sessions}
-            currentSessionId={currentSessionId}
-            onSelect={handleSelectSession}
-            loading={loading}
-          />
-        </div>
+        {/* Staff management page */}
+        {currentPage === 'staff' && (
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <StaffManagement />
+          </div>
+        )}
 
-        {/* Chat Window */}
-        <div style={contentStyle}>
-          <StaffChatWindow
-            session={currentSession}
-            messages={currentMessages}
-            hasMore={currentHasMore}
-            loading={messagesLoading}
-            sending={sending}
-            inputMode={inputMode}
-            isMobile={isMobile}
-            onLoadMore={loadMoreMessages}
-            onSend={handleSend}
-            onUpload={handleUpload}
-            onModeChange={setInputMode}
-            onTopicChange={handleTopicChange}
-            onStatusChange={handleStatusChange}
-            onClearMessages={() => setShowClearConfirm(true)}
-          />
-        </div>
+        {/* Code page */}
+        {currentPage === 'code' && (
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <StaffCode />
+          </div>
+        )}
+
+        {/* Settings page */}
+        {currentPage === 'settings' && (
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <StaffSettings />
+          </div>
+        )}
       </div>
 
       {/* Floating button (mobile only) */}

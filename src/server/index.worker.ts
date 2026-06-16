@@ -10,6 +10,7 @@ import type { D1Database, R2Bucket, Fetcher } from '@cloudflare/workers-types';
 import { apiRoutes } from './module-todos/routes/todos-routes';
 import { chatRoutes } from './module-chat/routes/chat-routes';
 import { staffRoutes } from './module-staff/routes/staff-routes';
+import { businessRoutes } from './module-business/routes/business-routes';
 import { authRoutes } from './module-auth/routes/auth-routes';
 import { adminRoutes } from './module-admin/routes/admin-routes';
 import { adminAuthRoutes, initAdminAuth } from './module-admin/routes/admin-auth-routes';
@@ -215,6 +216,7 @@ app.get('/api/site-setting', async (c) => {
 app.route('/api', apiRoutes);
 app.route('/api/chat', chatRoutes);
 app.route('/api/staff', staffRoutes);
+app.route('/api/business', businessRoutes);
 app.route('/api/auth', authRoutes);
 app.route('/api/admin', adminRoutes);
 app.route('/api/admin-auth', adminAuthRoutes);

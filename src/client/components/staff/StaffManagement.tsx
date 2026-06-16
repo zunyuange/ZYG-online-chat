@@ -1,0 +1,480 @@
+import { useState, useEffect } from 'react';
+import { UserPlus, Trash2, Edit2, Save, X, Eye, EyeOff } from 'lucide-react';
+
+interface StaffUser {
+  id: number;
+  business_id: number;
+  username: string;
+  email: string | null;
+  name: string | null;
+  role: string;
+  status: string;
+  created_at: number;
+  updated_at: number;
+}
+
+interface CreateUserModal {
+  show: boolean;
+  editing?: StaffUser | null;
+}
+
+export function StaffManagement() {
+  const [users, setUsers] = useState<StaffUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState<CreateUserModal>({ show: false });
+  const [formData, setFormData] = useState({
+    username: '',
+    password: '',
+    name: '',
+    email: '',
+    role: 'staff',
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/staff/users', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+        },
+      });
+      const result = await response.json();
+      if (result.success) {
+        setUsers(result.data);
+      } else {
+        console.error('Failed to fetch users:', result.error);
+      }
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenModal = (user?: StaffUser) => {
+    if (user) {
+      setFormData({
+        username: user.username,
+        password: '',
+        name: user.name || '',
+        email: user.email || '',
+        role: user.role,
+      });
+      setModal({ show: true, editing: user });
+    } else {
+      setFormData({
+        username: '',
+        password: '',
+        name: '',
+        email: '',
+        role: 'staff',
+      });
+      setModal({ show: true, editing: null });
+    }
+  };
+
+  const handleCloseModal = () => {
+    setModal({ show: false, editing: null });
+    setMessage('');
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.username || !formData.password) {
+      setMessage('用户名和密码不能为空');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/staff/users', {
+        method: modal.editing ? 'PUT' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+        },
+        body: JSON.stringify(formData),
+      });
+      const result = await response.json();
+      if (result.success) {
+        setMessage(modal.editing ? '更新成功' : '创建成功');
+        fetchUsers();
+        setTimeout(() => {
+          handleCloseModal();
+        }, 1000);
+      } else {
+        setMessage(result.error || '操作失败');
+      }
+    } catch (error) {
+      setMessage('操作失败');
+      console.error('Failed to submit:', error);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('确定要删除这个账号吗？')) return;
+
+    try {
+      const response = await fetch(`/api/staff/users/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+        },
+      });
+      const result = await response.json();
+      if (result.success) {
+        fetchUsers();
+      } else {
+        alert(result.error || '删除失败');
+      }
+    } catch (error) {
+      console.error('Failed to delete:', error);
+      alert('删除失败');
+    }
+  };
+
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleString('zh-CN');
+  };
+
+  if (loading) {
+    return (
+      <div style={{ padding: '24px', textAlign: 'center' }}>
+        <div className="animate-spin" style={{
+          width: '40px',
+          height: '40px',
+          border: '3px solid #e5e7eb',
+          borderTopColor: '#3b82f6',
+          borderRadius: '50%',
+          margin: '0 auto 16px',
+        }}></div>
+        <p style={{ color: '#6b7280' }}>加载中...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: '24px', height: '100%', overflowY: 'auto' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <h2 style={{ fontSize: '20px', fontWeight: 500, margin: 0 }}>客服账号管理</h2>
+        <button
+          onClick={() => handleOpenModal()}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 16px',
+            backgroundColor: '#1890ff',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px',
+          }}
+        >
+          <UserPlus size={18} />
+          添加账号
+        </button>
+      </div>
+
+      {/* User List */}
+      <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ backgroundColor: '#fafafa' }}>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '14px', fontWeight: 500, color: '#666', borderBottom: '1px solid #e8e8e8' }}>用户名</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '14px', fontWeight: 500, color: '#666', borderBottom: '1px solid #e8e8e8' }}>姓名</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '14px', fontWeight: 500, color: '#666', borderBottom: '1px solid #e8e8e8' }}>邮箱</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '14px', fontWeight: 500, color: '#666', borderBottom: '1px solid #e8e8e8' }}>角色</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '14px', fontWeight: 500, color: '#666', borderBottom: '1px solid #e8e8e8' }}>状态</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '14px', fontWeight: 500, color: '#666', borderBottom: '1px solid #e8e8e8' }}>创建时间</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '14px', fontWeight: 500, color: '#666', borderBottom: '1px solid #e8e8e8' }}>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.length === 0 ? (
+              <tr>
+                <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#999' }}>
+                  暂无账号
+                </td>
+              </tr>
+            ) : (
+              users.map((user) => (
+                <tr key={user.id} style={{ borderBottom: '1px solid #e8e8e8' }}>
+                  <td style={{ padding: '12px 16px', fontSize: '14px' }}>{user.username}</td>
+                  <td style={{ padding: '12px 16px', fontSize: '14px' }}>{user.name || '-'}</td>
+                  <td style={{ padding: '12px 16px', fontSize: '14px' }}>{user.email || '-'}</td>
+                  <td style={{ padding: '12px 16px', fontSize: '14px' }}>
+                    <span style={{
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      backgroundColor: user.role === 'admin' ? '#fff7e6' : '#f6ffed',
+                      color: user.role === 'admin' ? '#d46b08' : '#52c41a',
+                    }}>
+                      {user.role === 'admin' ? '管理员' : '客服'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px 16px', fontSize: '14px' }}>
+                    <span style={{
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      backgroundColor: user.status === 'active' ? '#f6ffed' : '#fff2f0',
+                      color: user.status === 'active' ? '#52c41a' : '#ff4d4f',
+                    }}>
+                      {user.status === 'active' ? '启用' : '禁用'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px 16px', fontSize: '14px', color: '#999' }}>
+                    {formatDate(user.created_at)}
+                  </td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => handleOpenModal(user)}
+                        style={{
+                          padding: '4px 8px',
+                          border: 'none',
+                          backgroundColor: '#f5f5f5',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          color: '#666',
+                        }}
+                        title="编辑"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(user.id)}
+                        style={{
+                          padding: '4px 8px',
+                          border: 'none',
+                          backgroundColor: '#fff2f0',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          color: '#ff4d4f',
+                        }}
+                        title="删除"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Modal */}
+      {modal.show && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: '8px',
+            padding: '24px',
+            width: '90%',
+            maxWidth: '480px',
+            position: 'relative',
+          }}>
+            <button
+              onClick={handleCloseModal}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                border: 'none',
+                backgroundColor: 'transparent',
+                cursor: 'pointer',
+                color: '#999',
+              }}
+            >
+              <X size={20} />
+            </button>
+
+            <h3 style={{ fontSize: '18px', fontWeight: 500, marginBottom: '24px' }}>
+              {modal.editing ? '编辑账号' : '添加账号'}
+            </h3>
+
+            {message && (
+              <div style={{
+                padding: '12px',
+                borderRadius: '4px',
+                marginBottom: '16px',
+                backgroundColor: message.includes('成功') ? '#f6ffed' : '#fff2f0',
+                color: message.includes('成功') ? '#52c41a' : '#ff4d4f',
+                fontSize: '14px',
+              }}>
+                {message}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>用户名 *</label>
+                <input
+                  type="text"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  disabled={!!modal.editing}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #d9d9d9',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box',
+                    backgroundColor: modal.editing ? '#f5f5f5' : '#fff',
+                  }}
+                  placeholder="请输入用户名"
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                  密码 {modal.editing ? '(留空则不修改)' : '*'}
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      paddingRight: '40px',
+                      border: '1px solid #d9d9d9',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                      boxSizing: 'border-box',
+                    }}
+                    placeholder="请输入密码"
+                  />
+                  <button
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      cursor: 'pointer',
+                      color: '#999',
+                    }}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>姓名</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #d9d9d9',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box',
+                  }}
+                  placeholder="请输入姓名"
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>邮箱</label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #d9d9d9',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box',
+                  }}
+                  placeholder="请输入邮箱"
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>角色</label>
+                <select
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #d9d9d9',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <option value="staff">客服</option>
+                  <option value="admin">管理员</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '16px' }}>
+                <button
+                  onClick={handleCloseModal}
+                  style={{
+                    padding: '8px 16px',
+                    border: '1px solid #d9d9d9',
+                    borderRadius: '4px',
+                    backgroundColor: '#fff',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                  }}
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    border: 'none',
+                    borderRadius: '4px',
+                    backgroundColor: '#1890ff',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                  }}
+                >
+                  <Save size={16} />
+                  {modal.editing ? '保存' : '创建'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

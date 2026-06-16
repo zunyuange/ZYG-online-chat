@@ -215,6 +215,9 @@ export async function initializeSchema(): Promise<void> {
     "state TEXT NOT NULL DEFAULT 'open', " +
     "max_staff_count INTEGER NOT NULL DEFAULT 10, " +
     "lang TEXT NOT NULL DEFAULT 'zh-CN', " +
+    "enable_auto_trans INTEGER NOT NULL DEFAULT 0, " +
+    "bd_trans_appid TEXT, " +
+    "bd_trans_secret TEXT, " +
     "created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), " +
     "updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))"
   );
