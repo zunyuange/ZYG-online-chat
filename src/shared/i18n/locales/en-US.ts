@@ -2,6 +2,15 @@ export const enUS = {
   hello: 'Hello!',
   select_language: 'Select Language',
   service_offline: 'Service is offline',
+  // Task status
+  status_requirement_discussion: 'Requirement Discussion',
+  status_requirement_confirmed: 'Requirement Confirmed',
+  status_in_progress: 'In Progress',
+  status_delivered: 'Delivered',
+  status_reviewed: 'Reviewed',
+  // Other
+  complete: 'Complete',
+  start_conversation: 'Start conversation!',
   service_online: 'Service is online',
   say_is_off: 'This session has been closed',
   data_error: 'Incomplete data',

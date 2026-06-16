@@ -15,6 +15,7 @@ interface TopicHeaderProps {
   onTopicChange?: (topic: string) => void;
   onStatusChange?: (status: TaskStatus) => void;
   compact?: boolean; // 紧凑模式（用户端使用）
+  t?: (key: string) => string;
 }
 
 export function TopicHeader({
@@ -25,12 +26,18 @@ export function TopicHeader({
   onTopicChange,
   onStatusChange,
   compact = false,
+  t = (key: string) => key,
 }: TopicHeaderProps) {
   const [expanded, setExpanded] = useState(!compact);
   const [isEditing, setIsEditing] = useState(false);
   const [editTopic, setEditTopic] = useState(session.topic || '');
 
-  const currentStatusLabel = TASK_STATUS_LIST.find((s) => s.status === session.taskStatus)?.label || '需求讨论';
+  const getStatusLabel = (status: TaskStatus): string => {
+    const statusKey = `status_${status}`;
+    return t(statusKey) || TASK_STATUS_LIST.find((s) => s.status === status)?.label || status;
+  };
+
+  const currentStatusLabel = getStatusLabel(session.taskStatus);
 
   // 获取当前状态的索引
   const currentIndex = TASK_STATUS_LIST.findIndex((s) => s.status === session.taskStatus);
@@ -209,6 +216,7 @@ export function TopicHeader({
             currentStatus={session.taskStatus}
             onChange={onStatusChange}
             editable={editable}
+            t={t}
           />
 
           {/* Queue info in expanded view */}

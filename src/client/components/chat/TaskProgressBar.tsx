@@ -9,9 +9,10 @@ interface TaskProgressBarProps {
   currentStatus: TaskStatus;
   onChange?: (status: TaskStatus) => void;
   editable?: boolean;
+  t?: (key: string) => string;
 }
 
-export function TaskProgressBar({ currentStatus, onChange, editable = false }: TaskProgressBarProps) {
+export function TaskProgressBar({ currentStatus, onChange, editable = false, t = (key: string) => key }: TaskProgressBarProps) {
   const currentIndex = TASK_STATUS_LIST.findIndex((s) => s.status === currentStatus);
 
   const containerStyle: React.CSSProperties = {
@@ -87,7 +88,7 @@ export function TaskProgressBar({ currentStatus, onChange, editable = false }: T
               }}
             >
               <div style={circleStyle(isActive, isPast)}>{index + 1}</div>
-              <span style={labelStyle(isActive)}>{step.label}</span>
+              <span style={labelStyle(isActive)}>{t(`status_${step.status}`) || step.label}</span>
             </div>
             {index < TASK_STATUS_LIST.length - 1 && (
               <div style={lineStyle(isPast || isActive)} />

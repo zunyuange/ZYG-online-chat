@@ -12,6 +12,7 @@ interface MessageListProps {
   loading: boolean;
   isOwn: (message: Message) => boolean;
   onLoadMore: () => void;
+  t?: (key: string) => string;
 }
 
 export function MessageList({
@@ -20,6 +21,7 @@ export function MessageList({
   loading,
   isOwn,
   onLoadMore,
+  t = (key: string) => key,
 }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollHeightRef = useRef(0);
@@ -139,7 +141,7 @@ export function MessageList({
     return (
       <div style={containerStyle}>
         <div style={emptyStyle}>
-          开始对话吧！
+          {t('start_conversation')}
         </div>
       </div>
     );

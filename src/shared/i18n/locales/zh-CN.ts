@@ -2,6 +2,15 @@ export const zhCN = {
   hello: '您好！',
   select_language: '选择语言',
   service_offline: '客服已经下线',
+  // Task status
+  status_requirement_discussion: '需求讨论',
+  status_requirement_confirmed: '需求确认',
+  status_in_progress: '执行中',
+  status_delivered: '交付',
+  status_reviewed: '评价',
+  // Other
+  complete: '完成',
+  start_conversation: '开始对话吧!',
   service_online: '客服上线',
   say_is_off: '该会话已经关闭',
   data_error: '数据不完整',
