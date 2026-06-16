@@ -412,7 +412,7 @@ async function initializeDefaultAdmin(database: Database): Promise<void> {
   // Create or update default admin user with password 123456
   const passwordHash = await hashPassword('123456');
   
-  // Try to update existing admin user
+  // Initialize admin_users table with default admin user
   const existingAdmin = await database.get<{ id: number }>('SELECT id FROM admin_users WHERE username = ?', ['admin']);
   
   if (existingAdmin) {
@@ -421,14 +421,33 @@ async function initializeDefaultAdmin(database: Database): Promise<void> {
       'UPDATE admin_users SET password_hash = ?, email = ?, name = ?, status = ?, updated_at = ? WHERE username = ?',
       [passwordHash, 'admin@example.com', '系统管理员', 'active', Date.now(), 'admin']
     );
-    console.log('[Database] Default admin user updated: admin/123456');
+    console.log('[Database] Default admin user updated: admin/123456 (admin_users)');
   } else {
     // Create new admin user
     await database.run(
       'INSERT INTO admin_users (username, password_hash, email, name, status) VALUES (?, ?, ?, ?, ?)',
       ['admin', passwordHash, 'admin@example.com', '系统管理员', 'active']
     );
-    console.log('[Database] Default admin user created: admin/123456');
+    console.log('[Database] Default admin user created: admin/123456 (admin_users)');
+  }
+  
+  // Also initialize staff_users table with default admin user (for staff login)
+  const existingStaff = await database.get<{ id: number }>('SELECT id FROM staff_users WHERE username = ?', ['admin']);
+  
+  if (existingStaff) {
+    // Update existing staff user with correct password
+    await database.run(
+      'UPDATE staff_users SET password_hash = ?, email = ?, name = ?, role = ?, status = ?, updated_at = ? WHERE username = ?',
+      [passwordHash, 'admin@example.com', '系统管理员', 'staff', 'active', Date.now(), 'admin']
+    );
+    console.log('[Database] Default admin user updated: admin/123456 (staff_users)');
+  } else {
+    // Create new staff user
+    await database.run(
+      'INSERT INTO staff_users (username, password_hash, email, name, role, status) VALUES (?, ?, ?, ?, ?, ?)',
+      ['admin', passwordHash, 'admin@example.com', '系统管理员', 'staff', 'active']
+    );
+    console.log('[Database] Default admin user created: admin/123456 (staff_users)');
   }
 }
 

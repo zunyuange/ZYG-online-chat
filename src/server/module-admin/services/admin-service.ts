@@ -148,7 +148,7 @@ export async function verifyPassword(username: string, password: string): Promis
   
   // Allow login for users with status 'active' or empty status (backward compatibility)
   const user = await db.get<StaffUser>(
-    'SELECT * FROM staff_users WHERE username = ? AND (status = ? OR status IS NULL OR status = "")', 
+    "SELECT * FROM staff_users WHERE username = ? AND (status = ? OR status IS NULL OR status = '')", 
     [username, 'active']
   );
   

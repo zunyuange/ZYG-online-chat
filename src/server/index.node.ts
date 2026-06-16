@@ -171,3 +171,6 @@ start().catch((err) => {
   console.error('Failed to start server:', err);
   process.exit(1);
 });
+
+// Export for Hono dev server
+export default app;
