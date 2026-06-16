@@ -18,6 +18,11 @@ import { apiRoutes } from './module-todos/routes/todos-routes';
 import { chatRoutes } from './module-chat/routes/chat-routes';
 import { staffRoutes } from './module-staff/routes/staff-routes';
 import { authRoutes } from './module-auth/routes/auth-routes';
+import { adminRoutes } from './module-admin/routes/admin-routes';
+import { adminAuthRoutes, initAdminAuth } from './module-admin/routes/admin-auth-routes';
+import { robotRoutes } from './module-robot/routes/robot-routes';
+import { faqRoutes } from './module-faq/routes/faq-routes';
+import { evaluationRoutes } from './module-evaluation/routes/evaluation-routes';
 import { initAuthService } from './module-auth/services/auth-service';
 
 // Load environment variables from .env.local, .env
@@ -95,6 +100,11 @@ app.route('/api', apiRoutes);
 app.route('/api/chat', chatRoutes);
 app.route('/api/staff', staffRoutes);
 app.route('/api/auth', authRoutes);
+app.route('/api/admin', adminRoutes);
+app.route('/api/admin-auth', adminAuthRoutes);
+app.route('/api/robot', robotRoutes);
+app.route('/api/faq', faqRoutes);
+app.route('/api/evaluation', evaluationRoutes);
 
 // Health check
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
@@ -138,6 +148,12 @@ async function start(): Promise<void> {
     JWT_SECRET: process.env.JWT_SECRET,
   });
   console.log('[Node] Auth service initialized');
+
+  // Initialize Admin Auth service from environment variables
+  initAdminAuth({
+    ADMIN_JWT_SECRET: process.env.ADMIN_JWT_SECRET,
+  });
+  console.log('[Node] Admin Auth service initialized');
 
   console.log('[Node] Starting server...');
   serve({
