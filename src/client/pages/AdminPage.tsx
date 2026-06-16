@@ -98,6 +98,16 @@ export function AdminPage() {
     permissions: [],
   });
   const [formError, setFormError] = useState<string | null>(null);
+  
+  const [settings, setSettings] = useState<{
+    siteName: string;
+    defaultLanguage: string;
+    enableAuth: boolean;
+  }>({
+    siteName: '在线客服系统',
+    defaultLanguage: 'zh-CN',
+    enableAuth: true,
+  });
   const [formLoading, setFormLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
@@ -134,21 +144,32 @@ export function AdminPage() {
     try {
       const token = localStorage.getItem('admin_token');
       
-      const [adminRes, staffRes, roleRes] = await Promise.all([
+      const [adminRes, staffRes, roleRes, settingsRes] = await Promise.all([
         fetch('/api/admin-auth/users', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/admin/staff-users', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/admin/roles', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/admin/settings', { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
-      const [adminData, staffData, roleData] = await Promise.all([
+      const [adminData, staffData, roleData, settingsData] = await Promise.all([
         adminRes.json(),
         staffRes.json(),
         roleRes.json(),
+        settingsRes.json(),
       ]);
 
       if (adminData.success) setAdminUsers(adminData.data);
       if (staffData.success) setStaffUsers(staffData.data);
       if (roleData.success) setRoles(roleData.data);
+      
+      if (settingsData.success) {
+        const data = settingsData.data;
+        setSettings({
+          siteName: data.siteName?.value || data.site_name?.value || '在线客服系统',
+          defaultLanguage: data.defaultLanguage?.value || data.default_language?.value || 'zh-CN',
+          enableAuth: (data.enableAuth?.value || data.enable_auth?.value || 'true') === 'true',
+        });
+      }
 
       setStatistics({
         adminCount: adminData.success ? adminData.data.length : 0,
@@ -168,6 +189,37 @@ export function AdminPage() {
     localStorage.removeItem('admin_token_expires');
     localStorage.removeItem('admin_username');
     window.location.href = '/adminlogin';
+  };
+
+  const handleSaveSettings = async () => {
+    setFormLoading(true);
+    try {
+      const token = localStorage.getItem('admin_token');
+      const response = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          site_name: settings.siteName,
+          default_language: settings.defaultLanguage,
+          enable_auth: settings.enableAuth.toString(),
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(t('save_ok'));
+      } else {
+        setError(data.error || t('operation_failed'));
+      }
+    } catch (err) {
+      setError(t('operation_failed'));
+    } finally {
+      setFormLoading(false);
+    }
   };
 
   // Admin User Management
@@ -1040,36 +1092,42 @@ export function AdminPage() {
                   <td style={tdStyle}>{new Date(role.created_at).toLocaleDateString()}</td>
                   <td style={tdStyle}>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <button 
-                        onClick={() => handleEditRole(role)} 
-                        style={buttonStyle('default')}
-                        title={t('edit')}
-                      >
-                        <Edit size={14} />
-                      </button>
-                      {deleteConfirm === role.id ? (
+                      {role.is_system ? (
+                        <span style={{ color: '#999', fontSize: '12px' }}>{t('system_role')}</span>
+                      ) : (
                         <>
                           <button 
-                            onClick={() => handleDeleteRole(role.id)} 
-                            style={buttonStyle('danger')}
-                          >
-                            <Check size={14} />
-                          </button>
-                          <button 
-                            onClick={() => setDeleteConfirm(null)} 
+                            onClick={() => handleEditRole(role)} 
                             style={buttonStyle('default')}
+                            title={t('edit')}
                           >
-                            <X size={14} />
+                            <Edit size={14} />
                           </button>
+                          {deleteConfirm === role.id ? (
+                            <>
+                              <button 
+                                onClick={() => handleDeleteRole(role.id)} 
+                                style={buttonStyle('danger')}
+                              >
+                                <Check size={14} />
+                              </button>
+                              <button 
+                                onClick={() => setDeleteConfirm(null)} 
+                                style={buttonStyle('default')}
+                              >
+                                <X size={14} />
+                              </button>
+                            </>
+                          ) : (
+                            <button 
+                              onClick={() => setDeleteConfirm(role.id)} 
+                              style={buttonStyle('danger')}
+                              title={t('delete')}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </>
-                      ) : (
-                        <button 
-                          onClick={() => setDeleteConfirm(role.id)} 
-                          style={buttonStyle('danger')}
-                          title={t('delete')}
-                        >
-                          <Trash2 size={14} />
-                        </button>
                       )}
                     </div>
                   </td>
@@ -1094,7 +1152,8 @@ export function AdminPage() {
             <label style={labelStyle}>{t('site_name')}</label>
             <input 
               type="text" 
-              defaultValue="在线客服系统" 
+              value={settings.siteName}
+              onChange={(e) => setSettings(prev => ({ ...prev, siteName: e.target.value }))}
               style={inputStyle}
               placeholder={t('enter_site_name')}
             />
@@ -1102,7 +1161,11 @@ export function AdminPage() {
           
           <div>
             <label style={labelStyle}>{t('default_language')}</label>
-            <select style={inputStyle}>
+            <select 
+              value={settings.defaultLanguage}
+              onChange={(e) => setSettings(prev => ({ ...prev, defaultLanguage: e.target.value }))}
+              style={inputStyle}
+            >
               <option value="zh-CN">中文</option>
               <option value="en-US">English</option>
             </select>
@@ -1112,19 +1175,37 @@ export function AdminPage() {
             <label style={labelStyle}>{t('enable_auth')}</label>
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input type="radio" name="auth" defaultChecked />
+                <input 
+                  type="radio" 
+                  name="auth" 
+                  checked={settings.enableAuth}
+                  onChange={() => setSettings(prev => ({ ...prev, enableAuth: true }))}
+                />
                 {t('yes')}
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input type="radio" name="auth" />
+                <input 
+                  type="radio" 
+                  name="auth" 
+                  checked={!settings.enableAuth}
+                  onChange={() => setSettings(prev => ({ ...prev, enableAuth: false }))}
+                />
                 {t('no')}
               </label>
             </div>
           </div>
 
           <div style={{ marginTop: '24px' }}>
-            <button style={buttonStyle('primary')}>
-              {t('save_settings')}
+            <button 
+              onClick={handleSaveSettings}
+              disabled={formLoading}
+              style={{ 
+                ...buttonStyle('primary'),
+                opacity: formLoading ? 0.6 : 1,
+                cursor: formLoading ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {formLoading ? t('saving') : t('save_settings')}
             </button>
           </div>
         </div>

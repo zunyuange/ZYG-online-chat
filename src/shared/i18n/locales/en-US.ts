@@ -202,6 +202,7 @@ export const enUS = {
   delete_role: 'Delete Role',
   enter_role_name: 'Enter role name',
   enter_role_description: 'Enter role description',
+  system_role: 'System Role',
   
   // Settings
   site_name: 'Site Name',

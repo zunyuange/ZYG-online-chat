@@ -305,8 +305,26 @@ export async function initializeSchema(): Promise<void> {
     "updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))"
   );
 
+  // Create roles table for role-based access control
+  await database.exec(
+    "CREATE TABLE IF NOT EXISTS roles (" +
+    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+    "name TEXT NOT NULL UNIQUE, " +
+    "description TEXT, " +
+    "permissions TEXT NOT NULL DEFAULT '[]', " +
+    "is_system INTEGER NOT NULL DEFAULT 0, " +
+    "status TEXT NOT NULL DEFAULT 'active', " +
+    "created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), " +
+    "updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))"
+  );
+
+  await database.exec("CREATE INDEX IF NOT EXISTS roles_name_idx ON roles(name)");
+
   // Initialize default admin user (username: admin, password: 123456)
   await initializeDefaultAdmin(database);
+  
+  // Initialize default roles
+  await initializeDefaultRoles(database);
 }
 
 async function initializeDefaultAdmin(database: Database): Promise<void> {
@@ -330,5 +348,35 @@ async function initializeDefaultAdmin(database: Database): Promise<void> {
       ['admin', passwordHash, 'admin@example.com', '系统管理员', 'active']
     );
     console.log('[Database] Default admin user created: admin/123456');
+  }
+}
+
+async function initializeDefaultRoles(database: Database): Promise<void> {
+  // All permissions
+  const allPermissions = JSON.stringify([
+    'admin_view',
+    'admin_edit',
+    'staff_view',
+    'staff_edit',
+    'role_view',
+    'role_edit',
+    'settings'
+  ]);
+
+  // Create super admin role (system role, cannot be edited or deleted)
+  const existingSuperAdmin = await database.get<{ id: number }>('SELECT id FROM roles WHERE name = ?', ['超级管理员']);
+  
+  if (existingSuperAdmin) {
+    await database.run(
+      'UPDATE roles SET description = ?, permissions = ?, is_system = ?, status = ?, updated_at = ? WHERE name = ?',
+      ['系统默认超级管理员，拥有所有权限', allPermissions, 1, 'active', Date.now(), '超级管理员']
+    );
+    console.log('[Database] Default super admin role updated');
+  } else {
+    await database.run(
+      'INSERT INTO roles (name, description, permissions, is_system, status) VALUES (?, ?, ?, ?, ?)',
+      ['超级管理员', '系统默认超级管理员，拥有所有权限', allPermissions, 1, 'active']
+    );
+    console.log('[Database] Default super admin role created');
   }
 }

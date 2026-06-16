@@ -202,6 +202,7 @@ export const zhCN = {
   delete_role: '删除角色',
   enter_role_name: '请输入角色名称',
   enter_role_description: '请输入角色描述',
+  system_role: '系统角色',
   
   // Settings
   site_name: '站点名称',
