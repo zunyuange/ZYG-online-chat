@@ -339,3 +339,250 @@ staffRoutes.get('/queue', async (c) => {
     return c.json({ success: false, error: 'Failed to get queue list' }, 500);
   }
 });
+
+// ==========================================
+// Statistics Routes (统计数据)
+// ==========================================
+
+// Get staff dashboard statistics
+staffRoutes.get('/statistics', async (c) => {
+  try {
+    const stats = await staffService.getStaffStatistics();
+    return c.json({ success: true, data: stats });
+  } catch (error) {
+    console.error('Get statistics error:', error);
+    return c.json({ success: false, error: 'Failed to get statistics' }, 500);
+  }
+});
+
+// Get visitor list
+staffRoutes.get('/visitors', async (c) => {
+  try {
+    const state = c.req.query('state') as string | undefined;
+    const groupid = c.req.query('groupid') as string | undefined;
+    const visitors = await staffService.getVisitorList(state, groupid);
+    return c.json({ success: true, data: visitors });
+  } catch (error) {
+    console.error('Get visitor list error:', error);
+    return c.json({ success: false, error: 'Failed to get visitor list' }, 500);
+  }
+});
+
+// ==========================================
+// Quick Replies Routes (常用语管理)
+// ==========================================
+
+// Get quick replies (sentences)
+staffRoutes.get('/sentences', async (c) => {
+  try {
+    const sentences = await staffService.getSentences();
+    return c.json({ success: true, data: sentences });
+  } catch (error) {
+    console.error('Get sentences error:', error);
+    return c.json({ success: false, error: 'Failed to get sentences' }, 500);
+  }
+});
+
+// Add a new sentence
+staffRoutes.post('/sentences', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { content, tag, lang } = body;
+
+    if (!content) {
+      return c.json({ success: false, error: 'Content is required' }, 400);
+    }
+
+    const sentence = await staffService.addSentence({ content, tag, lang });
+    return c.json({ success: true, data: sentence });
+  } catch (error) {
+    console.error('Add sentence error:', error);
+    return c.json({ success: false, error: 'Failed to add sentence' }, 500);
+  }
+});
+
+// Update a sentence
+staffRoutes.put('/sentences/:id', async (c) => {
+  try {
+    const id = parseInt(c.req.param('id'), 10);
+    const body = await c.req.json();
+    const { content, tag, state } = body;
+
+    const sentence = await staffService.updateSentence(id, { content, tag, state });
+    if (!sentence) {
+      return c.json({ success: false, error: 'Sentence not found' }, 404);
+    }
+
+    return c.json({ success: true, data: sentence });
+  } catch (error) {
+    console.error('Update sentence error:', error);
+    return c.json({ success: false, error: 'Failed to update sentence' }, 500);
+  }
+});
+
+// Delete a sentence
+staffRoutes.delete('/sentences/:id', async (c) => {
+  try {
+    const id = parseInt(c.req.param('id'), 10);
+    const result = await staffService.deleteSentence(id);
+
+    if (!result) {
+      return c.json({ success: false, error: 'Sentence not found' }, 404);
+    }
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Delete sentence error:', error);
+    return c.json({ success: false, error: 'Failed to delete sentence' }, 500);
+  }
+});
+
+// ==========================================
+// Offline Messages Routes (留言管理)
+// ==========================================
+
+// Get offline messages
+staffRoutes.get('/offline-messages', async (c) => {
+  try {
+    const messages = await staffService.getOfflineMessages();
+    return c.json({ success: true, data: messages });
+  } catch (error) {
+    console.error('Get offline messages error:', error);
+    return c.json({ success: false, error: 'Failed to get offline messages' }, 500);
+  }
+});
+
+// Update offline message status
+staffRoutes.put('/offline-messages/:id', async (c) => {
+  try {
+    const id = parseInt(c.req.param('id'), 10);
+    const body = await c.req.json();
+    const { status } = body;
+
+    const message = await staffService.updateOfflineMessageStatus(id, status);
+    if (!message) {
+      return c.json({ success: false, error: 'Message not found' }, 404);
+    }
+
+    return c.json({ success: true, data: message });
+  } catch (error) {
+    console.error('Update offline message error:', error);
+    return c.json({ success: false, error: 'Failed to update offline message' }, 500);
+  }
+});
+
+// ==========================================
+// Visitor Blacklist Routes (黑名单管理)
+// ==========================================
+
+// Add visitor to blacklist
+staffRoutes.post('/blacklist', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { visitorId, reason } = body;
+
+    if (!visitorId) {
+      return c.json({ success: false, error: 'Visitor ID is required' }, 400);
+    }
+
+    const result = await staffService.addToBlacklist(visitorId, reason);
+    return c.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Add to blacklist error:', error);
+    return c.json({ success: false, error: 'Failed to add to blacklist' }, 500);
+  }
+});
+
+// Remove visitor from blacklist
+staffRoutes.delete('/blacklist/:visitorId', async (c) => {
+  try {
+    const visitorId = c.req.param('visitorId');
+    const result = await staffService.removeFromBlacklist(visitorId);
+
+    if (!result) {
+      return c.json({ success: false, error: 'Visitor not found in blacklist' }, 404);
+    }
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Remove from blacklist error:', error);
+    return c.json({ success: false, error: 'Failed to remove from blacklist' }, 500);
+  }
+});
+
+// Get blacklist
+staffRoutes.get('/blacklist', async (c) => {
+  try {
+    const blacklist = await staffService.getBlacklist();
+    return c.json({ success: true, data: blacklist });
+  } catch (error) {
+    console.error('Get blacklist error:', error);
+    return c.json({ success: false, error: 'Failed to get blacklist' }, 500);
+  }
+});
+
+// ==========================================
+// Transfer Session Routes (转接客服)
+// ==========================================
+
+// Get available staff for transfer
+staffRoutes.get('/transfer/staff', async (c) => {
+  try {
+    const currentStaffId = c.req.query('excludeStaffId');
+    const staff = await staffService.getAvailableStaffForTransfer(currentStaffId);
+    return c.json({ success: true, data: staff });
+  } catch (error) {
+    console.error('Get available staff error:', error);
+    return c.json({ success: false, error: 'Failed to get available staff' }, 500);
+  }
+});
+
+// Transfer session to another staff
+staffRoutes.post('/transfer/:sessionId', async (c) => {
+  try {
+    const sessionId = c.req.param('sessionId');
+    const body = await c.req.json();
+    const { targetStaffId, reason } = body;
+
+    if (!targetStaffId) {
+      return c.json({ success: false, error: 'Target staff ID is required' }, 400);
+    }
+
+    const result = await staffService.transferSession(sessionId, parseInt(targetStaffId, 10), reason);
+    if (!result.success) {
+      return c.json({ success: false, error: result.error }, 400);
+    }
+
+    return c.json({ success: true, message: 'Transfer successful' });
+  } catch (error) {
+    console.error('Transfer session error:', error);
+    return c.json({ success: false, error: 'Failed to transfer session' }, 500);
+  }
+});
+
+// ==========================================
+// Evaluation Routes (评价管理)
+// ==========================================
+
+// Get evaluation settings
+staffRoutes.get('/evaluation-settings', async (c) => {
+  try {
+    const settings = await staffService.getEvaluationSettings();
+    return c.json({ success: true, data: settings });
+  } catch (error) {
+    console.error('Get evaluation settings error:', error);
+    return c.json({ success: false, error: 'Failed to get evaluation settings' }, 500);
+  }
+});
+
+// Update evaluation settings
+staffRoutes.put('/evaluation-settings', async (c) => {
+  try {
+    const body = await c.req.json();
+    const settings = await staffService.updateEvaluationSettings(body);
+    return c.json({ success: true, data: settings });
+  } catch (error) {
+    console.error('Update evaluation settings error:', error);
+    return c.json({ success: false, error: 'Failed to update evaluation settings' }, 500);
+  }
+});

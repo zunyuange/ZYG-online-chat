@@ -185,3 +185,379 @@ export async function deleteSessionMessages(sessionId: string): Promise<{ succes
     return { success: false, error: 'Failed to delete messages' };
   }
 }
+
+// ==========================================
+// Statistics Functions (统计数据)
+// ==========================================
+
+interface StaffStatistics {
+  total_sessions: number;
+  active_sessions: number;
+  today_sessions: number;
+  total_visitors: number;
+  online_visitors: number;
+  waiting_count: number;
+  talking_count: number;
+  today_messages: number;
+  avg_response_time: number;
+}
+
+export async function getStaffStatistics(): Promise<StaffStatistics> {
+  const db = getDb();
+  const now = Date.now();
+  const todayStart = new Date().setHours(0, 0, 0, 0);
+  
+  // Get basic counts
+  const totalSessions = await db.get<{ count: number }>('SELECT COUNT(*) as count FROM sessions');
+  const activeSessions = await db.get<{ count: number }>("SELECT COUNT(*) as count FROM sessions WHERE status = 'active'");
+  const todaySessions = await db.get<{ count: number }>(
+    'SELECT COUNT(*) as count FROM sessions WHERE created_at >= ?',
+    [todayStart]
+  );
+  const totalVisitors = await db.get<{ count: number }>('SELECT COUNT(DISTINCT visitor_id) as count FROM sessions');
+  
+  // Queue statistics
+  const waitingCount = await db.get<{ count: number }>(
+    "SELECT COUNT(*) as count FROM queue WHERE state = 'waiting'"
+  );
+  const talkingCount = await db.get<{ count: number }>(
+    "SELECT COUNT(*) as count FROM sessions WHERE status = 'active' AND service_id > 0"
+  );
+  
+  // Today messages count
+  const todayMessages = await db.get<{ count: number }>(
+    'SELECT COUNT(*) as count FROM messages WHERE created_at >= ?',
+    [todayStart]
+  );
+
+  return {
+    total_sessions: totalSessions?.count || 0,
+    active_sessions: activeSessions?.count || 0,
+    today_sessions: todaySessions?.count || 0,
+    total_visitors: totalVisitors?.count || 0,
+    online_visitors: activeSessions?.count || 0,
+    waiting_count: waitingCount?.count || 0,
+    talking_count: talkingCount?.count || 0,
+    today_messages: todayMessages?.count || 0,
+    avg_response_time: 0,
+  };
+}
+
+// ==========================================
+// Visitor List Functions (访客列表)
+// ==========================================
+
+interface VisitorInfo {
+  visitor_id: string;
+  visitor_name: string;
+  avatar: string;
+  ip: string;
+  from_url: string;
+  device: string;
+  lang: string;
+  state: string;
+  service_name: string;
+  group_name: string;
+  last_message_at: number;
+  created_at: number;
+}
+
+export async function getVisitorList(state?: string, groupid?: string): Promise<VisitorInfo[]> {
+  const db = getDb();
+  
+  let query = `
+    SELECT DISTINCT s.visitor_id, s.visitor_name, s.avatar, s.ip, s.from_url, 
+           s.device, s.lang, s.state, s.last_message_at, s.created_at,
+           ss.name as service_name,
+           sg.name as group_name
+    FROM sessions s
+    LEFT JOIN staff_users ss ON s.service_id = ss.id
+    LEFT JOIN staff_groups sg ON s.groupid = sg.id
+    WHERE 1=1
+  `;
+  
+  const params: unknown[] = [];
+  
+  if (state) {
+    query += ' AND s.state = ?';
+    params.push(state);
+  }
+  
+  if (groupid) {
+    query += ' AND s.groupid = ?';
+    params.push(parseInt(groupid, 10));
+  }
+  
+  query += ' ORDER BY s.last_message_at DESC';
+  
+  const rows = await db.all<VisitorInfo>(query, params);
+  return rows;
+}
+
+// ==========================================
+// Quick Replies (Sentence) Functions (常用语)
+// ==========================================
+
+interface Sentence {
+  id: number;
+  content: string;
+  staff_id: number;
+  tag: string;
+  state: string;
+  lang: string;
+  created_at: number;
+}
+
+export async function getSentences(): Promise<Sentence[]> {
+  const db = getDb();
+  const sentences = await db.all<Sentence>(
+    "SELECT * FROM sentences WHERE state = 'using' ORDER BY created_at DESC"
+  );
+  return sentences;
+}
+
+export async function addSentence(data: { content: string; tag?: string; lang?: string }): Promise<Sentence> {
+  const db = getDb();
+  const now = Date.now();
+  
+  const result = await db.run(
+    'INSERT INTO sentences (content, tag, lang, created_at) VALUES (?, ?, ?, ?)',
+    [data.content, data.tag || '', data.lang || 'zh-CN', now]
+  );
+  
+  const sentence = await db.get<Sentence>(
+    'SELECT * FROM sentences WHERE id = ?',
+    [result.lastInsertRowid]
+  );
+  
+  return sentence!;
+}
+
+export async function updateSentence(id: number, data: { content?: string; tag?: string; state?: string }): Promise<Sentence | null> {
+  const db = getDb();
+  
+  const updates: string[] = [];
+  const params: unknown[] = [];
+  
+  if (data.content !== undefined) {
+    updates.push('content = ?');
+    params.push(data.content);
+  }
+  if (data.tag !== undefined) {
+    updates.push('tag = ?');
+    params.push(data.tag);
+  }
+  if (data.state !== undefined) {
+    updates.push('state = ?');
+    params.push(data.state);
+  }
+  
+  if (updates.length === 0) {
+    return db.get<Sentence>('SELECT * FROM sentences WHERE id = ?', [id]);
+  }
+  
+  params.push(id);
+  await db.run(`UPDATE sentences SET ${updates.join(', ')} WHERE id = ?`, params);
+  
+  return db.get<Sentence>('SELECT * FROM sentences WHERE id = ?', [id]);
+}
+
+export async function deleteSentence(id: number): Promise<boolean> {
+  const db = getDb();
+  const result = await db.run('DELETE FROM sentences WHERE id = ?', [id]);
+  return result.changes > 0;
+}
+
+// ==========================================
+// Offline Messages Functions (留言管理)
+// ==========================================
+
+interface OfflineMessage {
+  id: number;
+  visitor_id: string;
+  name: string;
+  mobile: string;
+  email: string;
+  content: string;
+  ip: string;
+  from_url: string;
+  status: string;
+  created_at: number;
+}
+
+export async function getOfflineMessages(): Promise<OfflineMessage[]> {
+  const db = getDb();
+  const messages = await db.all<OfflineMessage>(
+    'SELECT * FROM offline_messages ORDER BY created_at DESC'
+  );
+  return messages;
+}
+
+export async function updateOfflineMessageStatus(id: number, status: string): Promise<OfflineMessage | null> {
+  const db = getDb();
+  await db.run(
+    'UPDATE offline_messages SET status = ? WHERE id = ?',
+    [status, id]
+  );
+  return db.get<OfflineMessage>('SELECT * FROM offline_messages WHERE id = ?', [id]);
+}
+
+// ==========================================
+// Blacklist Functions (黑名单管理)
+// ==========================================
+
+interface BlacklistEntry {
+  id: number;
+  visitor_id: string;
+  reason: string;
+  created_at: number;
+}
+
+export async function addToBlacklist(visitorId: string, reason?: string): Promise<BlacklistEntry> {
+  const db = getDb();
+  const now = Date.now();
+  
+  await db.run(
+    'INSERT OR REPLACE INTO visitor_blacklist (visitor_id, reason, created_at) VALUES (?, ?, ?)',
+    [visitorId, reason || '', now]
+  );
+  
+  const entry = await db.get<BlacklistEntry>(
+    'SELECT * FROM visitor_blacklist WHERE visitor_id = ?',
+    [visitorId]
+  );
+  
+  return entry!;
+}
+
+export async function removeFromBlacklist(visitorId: string): Promise<boolean> {
+  const db = getDb();
+  const result = await db.run(
+    'DELETE FROM visitor_blacklist WHERE visitor_id = ?',
+    [visitorId]
+  );
+  return result.changes > 0;
+}
+
+export async function getBlacklist(): Promise<BlacklistEntry[]> {
+  const db = getDb();
+  const entries = await db.all<BlacklistEntry>(
+    'SELECT * FROM visitor_blacklist ORDER BY created_at DESC'
+  );
+  return entries;
+}
+
+// ==========================================
+// Transfer Session Functions (转接客服)
+// ==========================================
+
+interface StaffInfo {
+  id: number;
+  username: string;
+  name: string;
+  avatar: string;
+  status: string;
+}
+
+export async function getAvailableStaffForTransfer(excludeStaffId?: string): Promise<StaffInfo[]> {
+  const db = getDb();
+  
+  let query = 'SELECT id, username, name, avatar, status FROM staff_users WHERE status = ?';
+  const params: unknown[] = ['active'];
+  
+  if (excludeStaffId) {
+    query += ' AND id != ?';
+    params.push(parseInt(excludeStaffId, 10));
+  }
+  
+  query += ' ORDER BY name ASC';
+  
+  const staff = await db.all<StaffInfo>(query, params);
+  return staff;
+}
+
+export async function transferSession(sessionId: string, targetStaffId: number, reason?: string): Promise<{ success: boolean; error?: string }> {
+  const db = getDb();
+  const now = Date.now();
+  
+  try {
+    // Update session with new staff
+    await db.run(
+      'UPDATE sessions SET service_id = ?, updated_at = ? WHERE id = ?',
+      [targetStaffId, now, sessionId]
+    );
+    
+    // Log the transfer
+    console.log(`[StaffService] Session ${sessionId} transferred to staff ${targetStaffId}. Reason: ${reason || 'N/A'}`);
+    
+    return { success: true };
+  } catch (error) {
+    console.error('[StaffService] Transfer session error:', error);
+    return { success: false, error: 'Failed to transfer session' };
+  }
+}
+
+// ==========================================
+// Evaluation Settings Functions (评价设置)
+// ==========================================
+
+interface EvaluationSetting {
+  id: number;
+  business_id: number;
+  title: string;
+  questions: string;
+  word_switch: string;
+  word_title: string;
+}
+
+export async function getEvaluationSettings(): Promise<EvaluationSetting | null> {
+  const db = getDb();
+  const setting = await db.get<EvaluationSetting>(
+    'SELECT * FROM evaluation_setting LIMIT 1'
+  );
+  return setting;
+}
+
+export async function updateEvaluationSettings(data: {
+  title?: string;
+  questions?: string;
+  word_switch?: string;
+  word_title?: string;
+}): Promise<EvaluationSetting> {
+  const db = getDb();
+  const now = Date.now();
+  
+  const existing = await getEvaluationSettings();
+  
+  if (existing) {
+    const updates: string[] = ['updated_at = ?'];
+    const params: unknown[] = [now];
+    
+    if (data.title !== undefined) {
+      updates.push('title = ?');
+      params.push(data.title);
+    }
+    if (data.questions !== undefined) {
+      updates.push('questions = ?');
+      params.push(data.questions);
+    }
+    if (data.word_switch !== undefined) {
+      updates.push('word_switch = ?');
+      params.push(data.word_switch);
+    }
+    if (data.word_title !== undefined) {
+      updates.push('word_title = ?');
+      params.push(data.word_title);
+    }
+    
+    params.push(existing.id);
+    await db.run(`UPDATE evaluation_setting SET ${updates.join(', ')} WHERE id = ?`, params);
+  } else {
+    await db.run(
+      'INSERT INTO evaluation_setting (title, questions, word_switch, word_title, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+      [data.title || '', data.questions || '[]', data.word_switch || 'close', data.word_title || '', now, now]
+    );
+  }
+  
+  return (await getEvaluationSettings())!;
+}
