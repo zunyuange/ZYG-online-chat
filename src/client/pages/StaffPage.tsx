@@ -11,6 +11,7 @@ import { SessionList } from '@client/components/staff/SessionList';
 import { StaffChatWindow } from '@client/components/staff/StaffChatWindow';
 import { QueueList } from '@client/components/staff/QueueList';
 import { useAuth } from '@client/hooks/useAuth';
+import { useSiteSettings } from '@client/hooks/useSiteSettings';
 import { useI18n } from '@client/context/I18nContext';
 
 interface UserInfo {
@@ -37,6 +38,7 @@ const updateUrlSessionId = (sessionId: string | null) => {
 
 export function StaffPage() {
   const { t, locale, setLocale, supportedLocales } = useI18n();
+  const { siteName } = useSiteSettings();
   
   // Authentication
   const {
@@ -357,7 +359,7 @@ export function StaffPage() {
       {/* Header */}
       <div style={headerStyle}>
         <div style={{ fontSize: '18px', fontWeight: 500 }}>
-          {t('service_title')}
+          {siteName || t('service_title')}
         </div>
         <div style={statusStyle}>
           {/* Queue button */}

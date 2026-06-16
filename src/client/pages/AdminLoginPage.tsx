@@ -5,9 +5,11 @@
 
 import { useState, useEffect } from 'react';
 import { useI18n } from '../context/I18nContext';
+import { useSiteSettings } from '../hooks/useSiteSettings';
 
 export function AdminLoginPage() {
   const { t, locale, setLocale } = useI18n();
+  const { siteName } = useSiteSettings();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -195,7 +197,7 @@ export function AdminLoginPage() {
       </select>
 
       <div style={cardStyle}>
-        <h1 style={titleStyle}>🔐 {t('admin_login_title')}</h1>
+        <h1 style={titleStyle}>🔐 {siteName || t('admin_login_title')}</h1>
         <p style={subtitleStyle}>{t('login_desc')}</p>
 
         <form onSubmit={handleLogin}>

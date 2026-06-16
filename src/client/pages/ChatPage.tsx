@@ -8,9 +8,11 @@ import { useChatStore } from '@client/stores/chatStore';
 import { ChatWindow } from '@client/components/chat/ChatWindow';
 import { PWAInstallPrompt } from '@client/components/chat/PWAInstallPrompt';
 import { useI18n } from '@client/context/I18nContext';
+import { useSiteSettings } from '@client/hooks/useSiteSettings';
 
 export function ChatPage() {
   const { t, locale, setLocale, supportedLocales } = useI18n();
+  const { siteName } = useSiteSettings();
   
   const {
     session,
@@ -134,7 +136,7 @@ export function ChatPage() {
         onSend={handleSend}
         onUpload={handleUpload}
         isOwn={(message) => message.senderType === 'visitor'}
-        title={t('service_title')}
+        title={siteName || t('service_title')}
         visitorName={session?.visitorName}
         sseConnected={sseConnected}
         usePolling={usePolling}

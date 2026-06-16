@@ -10,6 +10,7 @@ import {
   Home, Key, Globe
 } from 'lucide-react';
 import { useI18n } from '../context/I18nContext';
+import { useSiteSettings } from '../hooks/useSiteSettings';
 
 type TabType = 'dashboard' | 'staff' | 'admin' | 'roles' | 'settings';
 
@@ -65,6 +66,7 @@ interface RoleFormData {
 
 export function AdminPage() {
   const { t, locale, setLocale } = useI18n();
+  const { siteName: globalSiteName } = useSiteSettings();
   
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [adminUsers, setAdminUsers] = useState<UserData[]>([]);
@@ -129,10 +131,6 @@ export function AdminPage() {
   useEffect(() => {
     checkAuth();
   }, []);
-
-  useEffect(() => {
-    document.title = settings.siteName || t('admin_panel');
-  }, [settings.siteName, t]);
 
   const checkAuth = async () => {
     const token = localStorage.getItem('admin_token');
@@ -1223,7 +1221,7 @@ export function AdminPage() {
       <div style={headerStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Shield size={24} />
-          <span style={{ fontSize: '18px', fontWeight: 500 }}>{settings.siteName || t('admin_panel')}</span>
+          <span style={{ fontSize: '18px', fontWeight: 500 }}>{settings.siteName || globalSiteName || t('admin_panel')}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <select
