@@ -20,7 +20,7 @@ export const enUS = {
   group_service_offline: 'All agents in this category are offline',
   session_close: 'This session has been closed',
   save_file_error: 'Please check storage configuration',
-  offline: 'The other party is offline',
+  other_offline: 'The other party is offline',
   question_delete: 'This question has been deleted',
   ext_error: 'File format not supported',
   illegal_img_error: 'Illegal image file',

@@ -20,7 +20,7 @@ export const zhCN = {
   group_service_offline: '该分类客服都不在线',
   session_close: '该会话已经关闭',
   save_file_error: '请检查存储介质配置信息',
-  offline: '对方不在线',
+  other_offline: '对方不在线',
   question_delete: '该问题已经被删除',
   ext_error: '不支持该文件格式',
   illegal_img_error: '非法图片文件',
