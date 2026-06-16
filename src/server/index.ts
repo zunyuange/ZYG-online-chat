@@ -84,13 +84,7 @@ const app = new Hono()
     origin: ['http://localhost:3010', 'http://localhost:5173'],
     credentials: true,
   }))
-  // API routes
-  .route('/api', apiRoutes)
-  .route('/api/chat', chatRoutes)
-  .route('/api/staff', staffRoutes)
-  .route('/api/admin', adminRoutes)
-  .route('/api/admin-auth', adminAuthRoutes)
-  // Public settings endpoint (no auth required) - MUST BE AFTER other /api routes
+  // Public settings endpoint (no auth required) - MUST BE BEFORE /api routes
   .get('/api/site-settings', async (c) => {
     try {
       const db = await import('./shared/db').then(m => m.getDb());
@@ -110,6 +104,32 @@ const app = new Hono()
       return c.json({ success: false, error: '获取设置失败' }, 500);
     }
   })
+  // Alias for site-settings (singular form)
+  .get('/api/site-setting', async (c) => {
+    try {
+      const db = await import('./shared/db').then(m => m.getDb());
+      const configs = await db.all('SELECT key, value, description FROM admin_config');
+      
+      const settings: Record<string, any> = {};
+      configs.forEach((config: any) => {
+        settings[config.key] = {
+          value: config.value,
+          description: config.description,
+        };
+      });
+
+      return c.json({ success: true, data: settings });
+    } catch (error) {
+      console.error('[Public] Get site setting error:', error);
+      return c.json({ success: false, error: '获取设置失败' }, 500);
+    }
+  })
+  // API routes
+  .route('/api', apiRoutes)
+  .route('/api/chat', chatRoutes)
+  .route('/api/staff', staffRoutes)
+  .route('/api/admin', adminRoutes)
+  .route('/api/admin-auth', adminAuthRoutes)
   // Health check
   .get('/health', (c) => {
     return c.json({ status: 'ok', timestamp: new Date().toISOString() });
