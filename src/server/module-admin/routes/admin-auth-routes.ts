@@ -202,11 +202,13 @@ adminAuthRoutes.post('/login', async (c) => {
     const body = await c.req.json();
     const { username, password } = body;
 
+    console.log('[AdminAuth] Login attempt - username:', username);
+
     if (!username || !password) {
       return c.json({ success: false, error: '用户名和密码是必填项' }, 400);
     }
 
-    const clientIp = getClientIp(c.req.headers);
+    const clientIp = getClientIp(c.req.raw.headers);
 
     if (isRateLimited(clientIp)) {
       return c.json({
@@ -219,6 +221,7 @@ adminAuthRoutes.post('/login', async (c) => {
     const user = await adminAuthService.verifyAdminPassword(username, password);
 
     if (user) {
+      console.log('[AdminAuth] Login successful for user:', username);
       const token = await generateAdminToken(user.id, user.username);
       return c.json({
         success: true,
@@ -229,6 +232,7 @@ adminAuthRoutes.post('/login', async (c) => {
       });
     }
 
+    console.log('[AdminAuth] Login failed - user not found or password mismatch:', username);
     recordFailedAttempt(clientIp);
     return c.json({
       success: false,
@@ -237,7 +241,11 @@ adminAuthRoutes.post('/login', async (c) => {
     });
   } catch (error) {
     console.error('[AdminAuth] Login error:', error);
-    return c.json({ success: false, error: '登录失败' }, 500);
+    return c.json({ 
+      success: false, 
+      error: '登录失败',
+      details: error instanceof Error ? error.message : String(error)
+    }, 500);
   }
 });
 
