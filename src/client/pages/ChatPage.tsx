@@ -95,6 +95,9 @@ export function ChatPage() {
     color: '#999',
   };
 
+  // Use business name if available, otherwise fall back to siteName or default
+  const chatTitle = session?.businessName || siteName || t('service_title');
+
   if (!session && loading) {
     return (
       <div style={pageStyle}>
@@ -136,7 +139,7 @@ export function ChatPage() {
         onSend={handleSend}
         onUpload={handleUpload}
         isOwn={(message) => message.senderType === 'visitor'}
-        title={siteName || t('service_title')}
+        title={chatTitle}
         visitorName={session?.visitorName}
         sseConnected={sseConnected}
         usePolling={usePolling}

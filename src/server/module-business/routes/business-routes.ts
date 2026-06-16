@@ -4,12 +4,59 @@ import { verifyToken } from '@server/module-auth/services/auth-service';
 
 const businessRoutes = new Hono();
 
+// Get business by slug or id (public endpoint for chat page)
+businessRoutes.get('/:slug', async (c) => {
+  try {
+    const db = getDb();
+    const slug = c.req.param('slug');
+    
+    // Try to find by slug first
+    let business = await db.get(
+      'SELECT id, name, slug, logo, description, theme, state, max_staff_count, lang FROM businesses WHERE slug = ?',
+      [slug]
+    );
+    
+    // If not found, try by id
+    if (!business) {
+      const id = parseInt(slug, 10);
+      if (!isNaN(id)) {
+        business = await db.get(
+          'SELECT id, name, slug, logo, description, theme, state, max_staff_count, lang FROM businesses WHERE id = ?',
+          [id]
+        );
+      }
+    }
+
+    if (!business) {
+      return c.json({ success: false, error: 'Business not found' }, 404);
+    }
+
+    return c.json({ success: true, data: business });
+  } catch (error) {
+    console.error('Get business error:', error);
+    return c.json({ success: false, error: 'Failed to get business' }, 500);
+  }
+});
+
+// Get business info (default)
 businessRoutes.get('/info', async (c) => {
   try {
     const db = getDb();
-    const business = await db.get(
-      'SELECT id, name, slug, logo, description, theme, state, max_staff_count, lang FROM businesses WHERE id = 1'
-    );
+    const slug = c.req.query('slug');
+    
+    let business;
+    if (slug) {
+      // Get by slug
+      business = await db.get(
+        'SELECT id, name, slug, logo, description, theme, state, max_staff_count, lang FROM businesses WHERE slug = ?',
+        [slug]
+      );
+    } else {
+      // Get default business
+      business = await db.get(
+        'SELECT id, name, slug, logo, description, theme, state, max_staff_count, lang FROM businesses WHERE id = 1'
+      );
+    }
 
     if (!business) {
       return c.json({ success: false, error: 'Business not found' }, 404);
@@ -25,9 +72,19 @@ businessRoutes.get('/info', async (c) => {
 businessRoutes.get('/settings', async (c) => {
   try {
     const db = getDb();
-    const settings = await db.get(
-      'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang FROM businesses WHERE id = 1'
-    );
+    const slug = c.req.query('slug');
+    
+    let settings;
+    if (slug) {
+      settings = await db.get(
+        'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang FROM businesses WHERE slug = ?',
+        [slug]
+      );
+    } else {
+      settings = await db.get(
+        'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang FROM businesses WHERE id = 1'
+      );
+    }
 
     if (!settings) {
       return c.json({ success: false, error: 'Business not found' }, 404);

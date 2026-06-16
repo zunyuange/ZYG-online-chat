@@ -15,6 +15,11 @@ const getUrlSessionId = (): string | null => {
   return params.get('s');
 };
 
+const getUrlBusiness = (): string | null => {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('business');
+};
+
 const updateUrlSessionId = (sessionId: string): void => {
   const url = new URL(window.location.href);
   url.searchParams.set('s', sessionId);
@@ -78,11 +83,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const urlSessionId = getUrlSessionId();
       const sessionId = urlSessionId || localStorage.getItem(SESSION_ID_KEY);
       const visitorName = localStorage.getItem(VISITOR_NAME_KEY) || undefined;
+      const business = getUrlBusiness();
 
       const response = await fetch('/api/chat/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: sessionId || undefined, visitorName }),
+        body: JSON.stringify({ sessionId: sessionId || undefined, visitorName, business }),
       });
 
       const result = await response.json();

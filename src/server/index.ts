@@ -17,6 +17,7 @@ import { chatRoutes } from './module-chat/routes/chat-routes';
 import { staffRoutes } from './module-staff/routes/staff-routes';
 import { adminRoutes } from './module-admin/routes/admin-routes';
 import { adminAuthRoutes } from './module-admin/routes/admin-auth-routes';
+import { businessRoutes } from './module-business/routes/business-routes';
 
 // Note: @hono/zod-openapi is installed but openAPI helper is not used in this simple setup
 // If you need OpenAPI docs, you can add: import { openAPI } from '@hono/zod-openapi';
@@ -126,6 +127,7 @@ const app = new Hono()
   })
   // API routes
   .route('/api', apiRoutes)
+  .route('/api/business', businessRoutes)
   .route('/api/chat', chatRoutes)
   .route('/api/staff', staffRoutes)
   .route('/api/admin', adminRoutes)

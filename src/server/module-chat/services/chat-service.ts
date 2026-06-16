@@ -34,7 +34,9 @@ function generateVisitorName(): string {
 
 interface SessionRow {
   id: string;
+  visiter_id: string;
   visitor_name: string;
+  business_id: number;
   status: string;
   last_message_at: number | null;
   unread_by_visitor: number;
@@ -46,6 +48,15 @@ interface SessionRow {
   estimated_wait_minutes: number | null;
   created_at: number;
   updated_at: number;
+}
+
+interface BusinessRow {
+  id: number;
+  name: string;
+  slug: string;
+  theme: string;
+  state: string;
+  lang: string;
 }
 
 interface MessageRow {
@@ -61,10 +72,13 @@ interface MessageRow {
   created_at: number;
 }
 
-function mapRowToSession(row: SessionRow): Session {
+function mapRowToSession(row: SessionRow, business?: BusinessRow): Session {
   return {
     id: row.id,
     visitorName: row.visitor_name,
+    businessId: row.business_id,
+    businessSlug: business?.slug,
+    businessName: business?.name,
     status: row.status as SessionStatus,
     lastMessageAt: row.last_message_at ? new Date(row.last_message_at) : undefined,
     unreadByVisitor: row.unread_by_visitor || 0,
@@ -95,16 +109,56 @@ function mapRowToMessage(row: MessageRow): Message {
 }
 
 /**
+ * Get business by slug or id
+ */
+async function getBusinessBySlug(slug?: string): Promise<BusinessRow | null> {
+  const db = getDb();
+  
+  if (!slug) {
+    // Return default business
+    return db.get<BusinessRow>('SELECT * FROM businesses WHERE slug = ?', ['default']);
+  }
+  
+  // Try to find by slug first
+  const business = await db.get<BusinessRow>(
+    'SELECT * FROM businesses WHERE slug = ? AND state = ?',
+    [slug, 'open']
+  );
+  
+  if (business) {
+    return business;
+  }
+  
+  // Try by id
+  const id = parseInt(slug, 10);
+  if (!isNaN(id)) {
+    return db.get<BusinessRow>(
+      'SELECT * FROM businesses WHERE id = ? AND state = ?',
+      [id, 'open']
+    );
+  }
+  
+  return null;
+}
+
+/**
  * Create a new session or get existing one
  */
 export async function createOrGetSession(input: CreateSessionInput = {}): Promise<Session> {
   const db = getDb();
 
+  // Get business info based on slug or id
+  const business = await getBusinessBySlug(input.business);
+  const businessId = business?.id || 1;
+
+  // Generate visitor_id for the session
+  const visitorId = input.sessionId || randomUUID();
+
   // If sessionId provided, try to get existing session
   if (input.sessionId) {
-    const existing = await getSession(input.sessionId);
-    if (existing) {
-      return existing;
+    const row = await db.get<SessionRow>('SELECT * FROM sessions WHERE id = ?', [input.sessionId]);
+    if (row) {
+      return mapRowToSession(row, business || undefined);
     }
   }
 
@@ -114,26 +168,29 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
   const now = Date.now();
 
   await db.run(
-    `INSERT INTO sessions (id, visitor_name, status, task_status, created_at, updated_at)
-     VALUES (?, ?, 'active', 'requirement_discussion', ?, ?)`,
-    [sessionId, visitorName, now, now]
+    `INSERT INTO sessions (id, visiter_id, visitor_name, business_id, status, task_status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 'active', 'requirement_discussion', ?, ?)`,
+    [sessionId, visitorId, visitorName, businessId, now, now]
   );
 
-  const session = await getSession(sessionId);
-  if (!session) {
-    return {
-      id: sessionId,
-      visitorName,
-      status: 'active',
-      taskStatus: 'requirement_discussion',
-      unreadByVisitor: 0,
-      unreadByStaff: 0,
-      createdAt: new Date(now),
-      updatedAt: new Date(now),
-    };
+  const row = await db.get<SessionRow>('SELECT * FROM sessions WHERE id = ?', [sessionId]);
+  if (row) {
+    return mapRowToSession(row, business || undefined);
   }
 
-  return session;
+  return {
+    id: sessionId,
+    visitorName,
+    businessId,
+    businessSlug: business?.slug,
+    businessName: business?.name,
+    status: 'active',
+    taskStatus: 'requirement_discussion',
+    unreadByVisitor: 0,
+    unreadByStaff: 0,
+    createdAt: new Date(now),
+    updatedAt: new Date(now),
+  };
 }
 
 /**
@@ -142,26 +199,51 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
 export async function getSession(sessionId: string): Promise<Session | null> {
   const db = getDb();
   const row = await db.get<SessionRow>('SELECT * FROM sessions WHERE id = ?', [sessionId]);
-  return row ? mapRowToSession(row) : null;
+  if (!row) return null;
+  
+  // Get business info
+  const business = await db.get<BusinessRow>('SELECT * FROM businesses WHERE id = ?', [row.business_id]);
+  return mapRowToSession(row, business || undefined);
 }
 
 /**
- * List all sessions
+ * List all sessions (optionally filtered by business)
  */
-export async function listSessions(status?: 'active' | 'closed'): Promise<Session[]> {
+export async function listSessions(status?: 'active' | 'closed', businessId?: number): Promise<Session[]> {
   const db = getDb();
   let sql = 'SELECT * FROM sessions';
-  const params: string[] = [];
+  const params: (string | number)[] = [];
+  const conditions: string[] = [];
 
   if (status) {
-    sql += ' WHERE status = ?';
+    conditions.push('status = ?');
     params.push(status);
+  }
+
+  if (businessId) {
+    conditions.push('business_id = ?');
+    params.push(businessId);
+  }
+
+  if (conditions.length > 0) {
+    sql += ' WHERE ' + conditions.join(' AND ');
   }
 
   sql += ' ORDER BY last_message_at DESC NULLS LAST, created_at DESC';
 
   const rows = await db.all<SessionRow>(sql, params);
-  return rows.map(mapRowToSession);
+  
+  // Get all business info for sessions
+  const businessMap = new Map<number, BusinessRow>();
+  const businessIds = [...new Set(rows.map(r => r.business_id))];
+  for (const bid of businessIds) {
+    const business = await db.get<BusinessRow>('SELECT * FROM businesses WHERE id = ?', [bid]);
+    if (business) {
+      businessMap.set(bid, business);
+    }
+  }
+  
+  return rows.map(row => mapRowToSession(row, businessMap.get(row.business_id)));
 }
 
 /**

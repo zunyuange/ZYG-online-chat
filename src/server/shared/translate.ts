@@ -6,13 +6,51 @@ export interface TranslationResult {
   error?: string;
 }
 
-export async function translateText(text: string, targetLang: string = 'zh-CN'): Promise<TranslationResult> {
+/**
+ * Get business translation config by slug or id
+ */
+async function getBusinessTranslationConfig(businessSlug?: string): Promise<{
+  enable_auto_trans: number;
+  bd_trans_appid: string | null;
+  bd_trans_secret: string | null;
+  default_lang: string;
+  lang: string;
+} | null> {
   const db = getDb();
   
-  try {
-    const business = await db.get(
-      'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang FROM businesses WHERE id = 1'
+  if (!businessSlug) {
+    // Return default business config
+    return db.get(
+      'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang, lang FROM businesses WHERE slug = ?',
+      ['default']
     );
+  }
+  
+  // Try to find by slug first
+  const business = await db.get(
+    'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang, lang FROM businesses WHERE slug = ? AND state = ?',
+    [businessSlug, 'open']
+  );
+  
+  if (business) {
+    return business;
+  }
+  
+  // Try by id
+  const id = parseInt(businessSlug, 10);
+  if (!isNaN(id)) {
+    return db.get(
+      'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang, lang FROM businesses WHERE id = ? AND state = ?',
+      [id, 'open']
+    );
+  }
+  
+  return null;
+}
+
+export async function translateText(text: string, targetLang: string = 'zh-CN', businessSlug?: string): Promise<TranslationResult> {
+  try {
+    const business = await getBusinessTranslationConfig(businessSlug);
 
     if (!business || business.enable_auto_trans !== 1) {
       return { success: false, error: 'Auto translation is not enabled' };

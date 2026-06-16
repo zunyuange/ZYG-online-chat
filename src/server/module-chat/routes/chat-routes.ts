@@ -23,6 +23,7 @@ chatRoutes.post('/session', async (c) => {
     const input = {
       visitorName: body.visitorName,
       sessionId: body.sessionId,
+      business: body.business, // 商家标识(slug)
     };
 
     const session = await chatService.createOrGetSession(input);

@@ -166,6 +166,7 @@ export async function initializeSchema(): Promise<void> {
     "id TEXT PRIMARY KEY, " +
     "visiter_id TEXT NOT NULL, " +
     "visitor_name TEXT NOT NULL, " +
+    "business_id INTEGER NOT NULL DEFAULT 1, " +
     "service_id INTEGER DEFAULT 0, " +
     "groupid INTEGER DEFAULT 0, " +
     "status TEXT NOT NULL DEFAULT 'active', " +
@@ -184,7 +185,8 @@ export async function initializeSchema(): Promise<void> {
     "device TEXT, " +
     "lang TEXT DEFAULT 'cn', " +
     "created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), " +
-    "updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))"
+    "updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), " +
+    "FOREIGN KEY (business_id) REFERENCES businesses(id))"
   );
 
   // Create messages table
@@ -395,6 +397,7 @@ export async function initializeSchema(): Promise<void> {
   await database.exec("CREATE INDEX IF NOT EXISTS robot_knowledge_keyword_idx ON robot_knowledge(keyword)");
   await database.exec("CREATE INDEX IF NOT EXISTS evaluations_session_id_idx ON evaluations(session_id)");
   await database.exec("CREATE INDEX IF NOT EXISTS sessions_visiter_id_idx ON sessions(visiter_id)");
+  await database.exec("CREATE INDEX IF NOT EXISTS sessions_business_id_idx ON sessions(business_id)");
   await database.exec("CREATE INDEX IF NOT EXISTS sentences_staff_id_idx ON sentences(staff_id)");
   await database.exec("CREATE INDEX IF NOT EXISTS offline_messages_created_at_idx ON offline_messages(created_at)");
   await database.exec("CREATE INDEX IF NOT EXISTS queue_visiter_id_idx ON queue(visiter_id)");

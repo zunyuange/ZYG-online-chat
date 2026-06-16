@@ -60,6 +60,9 @@ export type InputMode = 'chat' | 'topic';
 export interface Session {
   id: string;
   visitorName: string;
+  businessId?: number; // 商家ID
+  businessSlug?: string; // 商家标识(slug)
+  businessName?: string; // 商家名称
   status: SessionStatus;
   lastMessageAt?: Date;
   unreadByVisitor: number;
@@ -90,6 +93,7 @@ export interface Message {
 export interface CreateSessionInput {
   visitorName?: string;
   sessionId?: string;
+  business?: string; // 商家标识(slug)
 }
 
 export interface SendMessageInput {
