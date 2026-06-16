@@ -15,6 +15,8 @@ import { fileURLToPath } from 'node:url';
 import { apiRoutes } from './module-todos/routes/todos-routes';
 import { chatRoutes } from './module-chat/routes/chat-routes';
 import { staffRoutes } from './module-staff/routes/staff-routes';
+import { adminRoutes } from './module-admin/routes/admin-routes';
+import { adminAuthRoutes } from './module-admin/routes/admin-auth-routes';
 
 // Note: @hono/zod-openapi is installed but openAPI helper is not used in this simple setup
 // If you need OpenAPI docs, you can add: import { openAPI } from '@hono/zod-openapi';
@@ -86,6 +88,8 @@ const app = new Hono()
   .route('/api', apiRoutes)
   .route('/api/chat', chatRoutes)
   .route('/api/staff', staffRoutes)
+  .route('/api/admin', adminRoutes)
+  .route('/api/admin-auth', adminAuthRoutes)
   // Health check
   .get('/health', (c) => {
     return c.json({ status: 'ok', timestamp: new Date().toISOString() });
