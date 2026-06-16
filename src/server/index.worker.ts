@@ -16,7 +16,7 @@ import { adminAuthRoutes, initAdminAuth } from './module-admin/routes/admin-auth
 import { robotRoutes } from './module-robot/routes/robot-routes';
 import { faqRoutes } from './module-faq/routes/faq-routes';
 import { evaluationRoutes } from './module-evaluation/routes/evaluation-routes';
-import { initializeD1Db } from './shared/db';
+import { initializeD1Db, getDb } from './shared/db';
 import { initializeR2Storage } from './shared/storage';
 import { initBarkService } from './services/bark-service';
 import { initAuthService } from './module-auth/services/auth-service';
@@ -68,39 +68,59 @@ const app = new Hono<{ Bindings: Env }>();
 
 // Initialize on first request
 let initialized = false;
+let initError: Error | null = null;
 
 async function ensureInitialized(env: Env): Promise<void> {
   if (initialized) return;
-
-  // Initialize D1 database (this also initializes schema)
-  await initializeD1Db(env.DB);
-
-  // Initialize R2 storage if available
-  if (env.BUCKET) {
-    initializeR2Storage(env.BUCKET);
+  if (initError) {
+    throw initError;
   }
 
-  // Initialize Bark service with environment variables
-  initBarkService({
-    BARK_KEY: env.BARK_KEY,
-    BARK_API: env.BARK_API,
-    STAFF_URL_BASE: env.STAFF_URL_BASE,
-  });
+  try {
+    // Initialize D1 database (this also initializes schema)
+    console.log('[Worker] Initializing D1 database...');
+    await initializeD1Db(env.DB);
+    console.log('[Worker] D1 database initialized');
 
-  // Initialize Auth service
-  initAuthService({
-    REQUIRE_AUTH: env.REQUIRE_AUTH,
-    STAFF_PASSWORD: env.STAFF_PASSWORD,
-    JWT_SECRET: env.JWT_SECRET,
-  });
+    // Initialize R2 storage if available
+    if (env.BUCKET) {
+      console.log('[Worker] Initializing R2 storage...');
+      initializeR2Storage(env.BUCKET);
+      console.log('[Worker] R2 storage initialized');
+    }
 
-  // Initialize Admin Auth service
-  initAdminAuth({
-    ADMIN_JWT_SECRET: env.ADMIN_JWT_SECRET,
-  });
+    // Initialize Bark service with environment variables
+    console.log('[Worker] Initializing Bark service...');
+    initBarkService({
+      BARK_KEY: env.BARK_KEY,
+      BARK_API: env.BARK_API,
+      STAFF_URL_BASE: env.STAFF_URL_BASE,
+    });
+    console.log('[Worker] Bark service initialized');
 
-  initialized = true;
-  console.log('[Worker] Initialized D1 database, R2 storage, Bark service, Auth service, and Admin Auth service');
+    // Initialize Auth service
+    console.log('[Worker] Initializing Auth service...');
+    initAuthService({
+      REQUIRE_AUTH: env.REQUIRE_AUTH,
+      STAFF_PASSWORD: env.STAFF_PASSWORD,
+      JWT_SECRET: env.JWT_SECRET,
+    });
+    console.log('[Worker] Auth service initialized');
+
+    // Initialize Admin Auth service
+    console.log('[Worker] Initializing Admin Auth service...');
+    initAdminAuth({
+      ADMIN_JWT_SECRET: env.ADMIN_JWT_SECRET,
+    });
+    console.log('[Worker] Admin Auth service initialized');
+
+    initialized = true;
+    console.log('[Worker] All services initialized successfully');
+  } catch (error) {
+    initError = error instanceof Error ? error : new Error(String(error));
+    console.error('[Worker] Initialization failed:', initError);
+    throw initError;
+  }
 }
 
 // Serve uploaded files from R2
@@ -148,7 +168,8 @@ app.use('*', async (c, next) => {
 // Public settings endpoint (no auth required) - MUST BE BEFORE /api routes
 app.get('/api/site-settings', async (c) => {
   try {
-    const db = await import('./shared/db').then(m => m.getDb());
+    console.log('[Public] Getting site settings...');
+    const db = getDb();
     const configs = await db.all('SELECT key, value, description FROM admin_config');
     
     const settings: Record<string, any> = {};
@@ -159,17 +180,19 @@ app.get('/api/site-settings', async (c) => {
       };
     });
 
+    console.log('[Public] Site settings retrieved successfully');
     return c.json({ success: true, data: settings });
   } catch (error) {
     console.error('[Public] Get site settings error:', error);
-    return c.json({ success: false, error: '获取设置失败' }, 500);
+    return c.json({ success: false, error: '获取设置失败', details: error instanceof Error ? error.message : String(error) }, 500);
   }
 });
 
 // Alias for site-settings (singular form)
 app.get('/api/site-setting', async (c) => {
   try {
-    const db = await import('./shared/db').then(m => m.getDb());
+    console.log('[Public] Getting site setting (singular)...');
+    const db = getDb();
     const configs = await db.all('SELECT key, value, description FROM admin_config');
     
     const settings: Record<string, any> = {};
@@ -180,10 +203,11 @@ app.get('/api/site-setting', async (c) => {
       };
     });
 
+    console.log('[Public] Site setting (singular) retrieved successfully');
     return c.json({ success: true, data: settings });
   } catch (error) {
     console.error('[Public] Get site setting error:', error);
-    return c.json({ success: false, error: '获取设置失败' }, 500);
+    return c.json({ success: false, error: '获取设置失败', details: error instanceof Error ? error.message : String(error) }, 500);
   }
 });
 

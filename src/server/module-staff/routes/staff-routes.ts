@@ -5,6 +5,7 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import * as staffService from '../services/staff-service';
+import { createStaffUser, listStaffUsers, deleteStaffUser } from '../services/staff-service';
 import * as chatService from '@server/module-chat/services/chat-service';
 import * as uploadService from '@server/module-chat/services/upload-service';
 import * as sseService from '@server/module-chat/services/sse-service';
@@ -584,5 +585,71 @@ staffRoutes.put('/evaluation-settings', async (c) => {
   } catch (error) {
     console.error('Update evaluation settings error:', error);
     return c.json({ success: false, error: 'Failed to update evaluation settings' }, 500);
+  }
+});
+
+// ==========================================
+// Staff User Management (Sub-accounts)
+// ==========================================
+
+// Create a new staff sub-account
+staffRoutes.post('/users', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { username, password, name, email, role } = body;
+
+    if (!username || !password) {
+      return c.json({ success: false, error: '用户名和密码不能为空' }, 400);
+    }
+
+    const result = await createStaffUser({
+      username,
+      password,
+      name,
+      email,
+      role,
+      businessId: 1, // Default to business 1 for now
+    });
+
+    if (!result.success) {
+      return c.json({ success: false, error: result.error }, 400);
+    }
+
+    return c.json({ success: true, data: result.data });
+  } catch (error) {
+    console.error('Create staff user error:', error);
+    return c.json({ success: false, error: 'Failed to create staff user' }, 500);
+  }
+});
+
+// List all staff users
+staffRoutes.get('/users', async (c) => {
+  try {
+    const businessId = parseInt(c.req.query('businessId') || '1', 10);
+    const users = await listStaffUsers(businessId);
+    return c.json({ success: true, data: users });
+  } catch (error) {
+    console.error('List staff users error:', error);
+    return c.json({ success: false, error: 'Failed to list staff users' }, 500);
+  }
+});
+
+// Delete a staff user
+staffRoutes.delete('/users/:id', async (c) => {
+  try {
+    const id = parseInt(c.req.param('id'), 10);
+    if (!id) {
+      return c.json({ success: false, error: 'Invalid user ID' }, 400);
+    }
+
+    const result = await deleteStaffUser(id);
+    if (!result.success) {
+      return c.json({ success: false, error: result.error }, 400);
+    }
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Delete staff user error:', error);
+    return c.json({ success: false, error: 'Failed to delete staff user' }, 500);
   }
 });

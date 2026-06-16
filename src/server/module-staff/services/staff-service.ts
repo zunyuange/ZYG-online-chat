@@ -13,6 +13,7 @@ export {
 
 import { getSession as getSessionBase, listSessions as listSessionsBase } from '@server/module-chat/services/chat-service';
 import { getDb } from '@server/shared/db';
+import { hashPassword } from '@server/shared/crypto';
 import type { Session, SessionStatus, TaskStatus } from '@shared/types';
 
 interface MessagePreviewRow {
@@ -560,4 +561,87 @@ export async function updateEvaluationSettings(data: {
   }
   
   return (await getEvaluationSettings())!;
+}
+
+// Staff user management
+export interface CreateStaffUserParams {
+  username: string;
+  password: string;
+  name?: string;
+  email?: string;
+  role?: string;
+  businessId?: number;
+}
+
+export interface StaffUser {
+  id: number;
+  business_id: number;
+  username: string;
+  email: string | null;
+  name: string | null;
+  role: string;
+  status: string;
+  created_at: number;
+  updated_at: number;
+}
+
+/**
+ * Create a new staff user (sub-account)
+ */
+export async function createStaffUser(params: CreateStaffUserParams): Promise<{ success: boolean; data?: StaffUser; error?: string }> {
+  const db = getDb();
+  const { username, password, name, email, role = 'staff', businessId = 1 } = params;
+
+  try {
+    // Check if username already exists
+    const existing = await db.get<{ id: number }>('SELECT id FROM staff_users WHERE username = ?', [username]);
+    if (existing) {
+      return { success: false, error: '用户名已存在' };
+    }
+
+    // Hash the password
+    const passwordHash = await hashPassword(password);
+
+    // Insert the new staff user
+    const result = await db.run(
+      'INSERT INTO staff_users (business_id, username, password_hash, name, email, role, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [businessId, username, passwordHash, name || '', email || '', role, 'active']
+    );
+
+    // Fetch the created user
+    const user = await db.get<StaffUser>(
+      'SELECT id, business_id, username, email, name, role, status, created_at, updated_at FROM staff_users WHERE id = ?',
+      [result.meta.last_row_id]
+    );
+
+    return { success: true, data: user! };
+  } catch (error) {
+    console.error('[StaffService] Create staff user error:', error);
+    return { success: false, error: error instanceof Error ? error.message : '创建失败' };
+  }
+}
+
+/**
+ * List all staff users for a business
+ */
+export async function listStaffUsers(businessId: number = 1): Promise<StaffUser[]> {
+  const db = getDb();
+  return await db.all<StaffUser>(
+    'SELECT id, business_id, username, email, name, role, status, created_at, updated_at FROM staff_users WHERE business_id = ? ORDER BY created_at DESC',
+    [businessId]
+  );
+}
+
+/**
+ * Delete a staff user
+ */
+export async function deleteStaffUser(id: number): Promise<{ success: boolean; error?: string }> {
+  const db = getDb();
+  try {
+    await db.run('DELETE FROM staff_users WHERE id = ?', [id]);
+    return { success: true };
+  } catch (error) {
+    console.error('[StaffService] Delete staff user error:', error);
+    return { success: false, error: error instanceof Error ? error.message : '删除失败' };
+  }
 }
