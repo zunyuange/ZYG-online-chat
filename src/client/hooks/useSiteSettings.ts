@@ -6,14 +6,8 @@ export interface SiteSettings {
   enableAuth: boolean;
 }
 
-const defaultSettings: SiteSettings = {
-  siteName: '在线客服系统',
-  defaultLanguage: 'zh-CN',
-  enableAuth: true,
-};
-
 export function useSiteSettings() {
-  const [settings, setSettings] = useState<SiteSettings>(defaultSettings);
+  const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,18 +16,19 @@ export function useSiteSettings() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch('/api/admin/settings');
+        const response = await fetch('/api/site-settings');
         const data = await response.json();
         
         if (data.success && data.data) {
           const siteData = data.data;
-          setSettings({
-            siteName: siteData.siteName?.value || siteData.site_name?.value || defaultSettings.siteName,
-            defaultLanguage: siteData.defaultLanguage?.value || siteData.default_language?.value || defaultSettings.defaultLanguage,
-            enableAuth: (siteData.enableAuth?.value || siteData.enable_auth?.value || 'true') === 'true',
-          });
+          const newSettings: SiteSettings = {
+            siteName: siteData.site_name?.value || '在线客服系统',
+            defaultLanguage: siteData.default_language?.value || 'zh-CN',
+            enableAuth: (siteData.enable_auth?.value || 'true') === 'true',
+          };
           
-          document.title = siteData.siteName?.value || siteData.site_name?.value || defaultSettings.siteName;
+          setSettings(newSettings);
+          document.title = newSettings.siteName;
         }
       } catch (err) {
         console.error('Failed to fetch site settings:', err);
@@ -48,9 +43,9 @@ export function useSiteSettings() {
 
   return {
     settings,
-    siteName: settings.siteName,
-    defaultLanguage: settings.defaultLanguage,
-    enableAuth: settings.enableAuth,
+    siteName: settings?.siteName || '在线客服系统',
+    defaultLanguage: settings?.defaultLanguage || 'zh-CN',
+    enableAuth: settings?.enableAuth ?? true,
     loading,
     error,
   };
