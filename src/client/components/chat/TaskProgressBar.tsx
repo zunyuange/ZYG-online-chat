@@ -46,11 +46,13 @@ export function TaskProgressBar({ currentStatus, onChange, editable = false, t =
   });
 
   const labelStyle = (isActive: boolean): React.CSSProperties => ({
-    fontSize: '11px',
+    fontSize: '10px',
     color: isActive ? '#1890ff' : '#999',
     marginTop: '4px',
     textAlign: 'center',
-    whiteSpace: 'nowrap',
+    wordBreak: 'break-all',
+    lineHeight: '1.3',
+    maxWidth: '60px',
   });
 
   const lineStyle = (isPast: boolean): React.CSSProperties => ({
