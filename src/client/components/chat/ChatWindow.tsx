@@ -169,19 +169,14 @@ export function ChatWindow({
           {setLocale && supportedLocales.length > 0 && (
             <button
               onClick={() => setShowLangModal(true)}
-              style={langButtonStyle}
+              style={{ ...langButtonStyle, padding: '2px' }}
               title={t('select_language')}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <circle cx="12" cy="12" r="4"/>
-                <line x1="21.17" y1="8" x2="12" y2="8"/>
-                <line x1="3.95" y1="6.06" x2="8.54" y2="11.54"/>
-                <line x1="20.05" y1="17.94" x2="15.46" y2="12.46"/>
-                <line x1="21.17" y1="16" x2="12" y2="16"/>
-                <line x1="3.95" y1="17.94" x2="8.54" y2="12.46"/>
-                <line x1="20.05" y1="6.06" x2="15.46" y2="11.54"/>
-              </svg>
+              <img 
+                src="/icons/lang.png" 
+                alt="Language" 
+                style={{ width: '20px', height: '20px' }}
+              />
             </button>
           )}
         </div>

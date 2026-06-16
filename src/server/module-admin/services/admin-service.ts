@@ -144,7 +144,11 @@ export async function deleteUser(id: number): Promise<{ success: boolean; error?
 
 export async function verifyPassword(username: string, password: string): Promise<StaffUser | null> {
   const db = getDb();
-  const user = await db.get<StaffUser>('SELECT * FROM staff_users WHERE username = ? AND status = ?', [username, 'active']);
+  // Allow login for users with status 'active' or empty status (backward compatibility)
+  const user = await db.get<StaffUser>(
+    'SELECT * FROM staff_users WHERE username = ? AND (status = ? OR status IS NULL OR status = "")', 
+    [username, 'active']
+  );
   
   if (!user) {
     return null;
