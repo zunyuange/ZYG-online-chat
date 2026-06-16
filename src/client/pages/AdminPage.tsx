@@ -118,7 +118,7 @@ export function AdminPage() {
 
   useEffect(() => {
     checkAuth();
-  }, [activeTab]);
+  }, []);
 
   const checkAuth = async () => {
     const token = localStorage.getItem('admin_token');

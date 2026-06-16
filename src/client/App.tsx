@@ -47,7 +47,12 @@ function App() {
   // Update URL when page changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const path = currentPage === 'todo' ? '/todo' : currentPage === 'staff' ? '/staff' : '/chat';
+      let path = '/chat';
+      if (currentPage === 'todo') path = '/todo';
+      else if (currentPage === 'staff') path = '/staff';
+      else if (currentPage === 'stafflogin') path = '/stafflogin';
+      else if (currentPage === 'admin') path = '/admin';
+      else if (currentPage === 'adminlogin') path = '/adminlogin';
       window.history.pushState({}, '', path);
     }
   }, [currentPage]);
