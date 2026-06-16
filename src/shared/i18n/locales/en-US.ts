@@ -165,4 +165,53 @@ export const enUS = {
   operation_failed: 'Operation failed',
   load_failed: 'Load failed',
   delete_failed: 'Delete failed',
+  
+  // Dashboard
+  dashboard: 'Dashboard',
+  admin_count: 'Admin Count',
+  staff_count: 'Staff Count',
+  role_count: 'Role Count',
+  online_staff: 'Online Staff',
+  quick_actions: 'Quick Actions',
+  recent_staff: 'Recent Staff',
+  manage_staff: 'Manage Staff',
+  view_edit_staff: 'View and edit staff',
+  manage_admins: 'Manage Admins',
+  view_edit_admins: 'View and edit admins',
+  manage_roles: 'Manage Roles',
+  view_edit_roles: 'View and edit roles',
+  system_settings: 'System Settings',
+  configure_system: 'Configure system settings',
+  
+  // Staff Management
+  staff_management: 'Staff Management',
+  add_staff: 'Add Staff',
+  edit_staff: 'Edit Staff',
+  delete_staff: 'Delete Staff',
+  
+  // Admin Management
+  admin_management: 'Admin Management',
+  add_admin: 'Add Admin',
+  edit_admin: 'Edit Admin',
+  delete_admin: 'Delete Admin',
+  
+  // Role Management
+  role_management: 'Role Management',
+  add_role: 'Add Role',
+  edit_role: 'Edit Role',
+  delete_role: 'Delete Role',
+  enter_role_name: 'Enter role name',
+  enter_role_description: 'Enter role description',
+  
+  // Settings
+  site_name: 'Site Name',
+  enter_site_name: 'Enter site name',
+  default_language: 'Default Language',
+  enable_auth: 'Enable Authentication',
+  save_settings: 'Save Settings',
+  
+  // Form
+  leave_empty_to_keep: 'Leave empty to keep current',
+  saving: 'Saving...',
+  save: 'Save',
 };

@@ -165,4 +165,53 @@ export const zhCN = {
   operation_failed: '操作失败',
   load_failed: '加载失败',
   delete_failed: '删除失败',
+  
+  // Dashboard
+  dashboard: '首页',
+  admin_count: '管理员数量',
+  staff_count: '商家数量',
+  role_count: '角色数量',
+  online_staff: '在线商家',
+  quick_actions: '快捷操作',
+  recent_staff: '最近商家',
+  manage_staff: '管理商家',
+  view_edit_staff: '查看和编辑商家',
+  manage_admins: '管理管理员',
+  view_edit_admins: '查看和编辑管理员',
+  manage_roles: '管理角色',
+  view_edit_roles: '查看和编辑角色',
+  system_settings: '系统设置',
+  configure_system: '配置系统设置',
+  
+  // Staff Management
+  staff_management: '商家管理',
+  add_staff: '添加商家',
+  edit_staff: '编辑商家',
+  delete_staff: '删除商家',
+  
+  // Admin Management
+  admin_management: '管理员管理',
+  add_admin: '添加管理员',
+  edit_admin: '编辑管理员',
+  delete_admin: '删除管理员',
+  
+  // Role Management
+  role_management: '角色管理',
+  add_role: '添加角色',
+  edit_role: '编辑角色',
+  delete_role: '删除角色',
+  enter_role_name: '请输入角色名称',
+  enter_role_description: '请输入角色描述',
+  
+  // Settings
+  site_name: '站点名称',
+  enter_site_name: '请输入站点名称',
+  default_language: '默认语言',
+  enable_auth: '启用认证',
+  save_settings: '保存设置',
+  
+  // Form
+  leave_empty_to_keep: '留空保持不变',
+  saving: '保存中...',
+  save: '保存',
 };
