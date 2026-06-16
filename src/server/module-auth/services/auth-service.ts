@@ -290,8 +290,12 @@ export interface VerifyResult {
  * Supports both legacy single-password mode and multi-user database mode
  */
 export async function login(username: string, password: string, clientIp: string): Promise<LoginResult> {
+  console.log('[AuthService] login called with username:', username, 'password length:', password.length);
+  
   // Check if auth is required
   const authRequired = await checkAuthRequired();
+  console.log('[AuthService] authRequired:', authRequired);
+  
   if (!authRequired) {
     // No auth required, generate token anyway for push notifications
     const token = await generateToken();
@@ -312,6 +316,7 @@ export async function login(username: string, password: string, clientIp: string
   }
 
   try {
+    console.log('[AuthService] Trying database authentication');
     const { verifyPassword } = await import('@server/module-admin/services/admin-service');
     
     const user = await verifyPassword(username, password);
@@ -326,9 +331,11 @@ export async function login(username: string, password: string, clientIp: string
         userId: user.id,
         username: user.username,
       };
+    } else {
+      console.log('[AuthService] Database authentication failed - user not found or password mismatch');
     }
   } catch (error) {
-    console.log('[AuthService] Database auth not available, falling back to legacy mode');
+    console.log('[AuthService] Database auth not available, falling back to legacy mode:', error);
   }
 
   // Legacy single-password mode fallback
