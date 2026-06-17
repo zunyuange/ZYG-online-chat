@@ -84,7 +84,7 @@ export function StaffSettings() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
           },
-          body: JSON.stringify(businessInfo),
+          body: JSON.stringify({ business_name: businessInfo.business_name }),
         }),
       ]);
 
@@ -199,7 +199,7 @@ export function StaffSettings() {
             />
           </div>
 
-          {/* Business Slug */}
+          {/* Business Slug - Read Only */}
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
               商家标识
@@ -207,7 +207,7 @@ export function StaffSettings() {
             <input
               type="text"
               value={businessInfo.business_slug}
-              onChange={(e) => setBusinessInfo({ ...businessInfo, business_slug: e.target.value })}
+              readOnly
               style={{
                 width: '100%',
                 padding: '10px 12px',
@@ -216,11 +216,13 @@ export function StaffSettings() {
                 fontSize: '14px',
                 boxSizing: 'border-box',
                 backgroundColor: '#f5f5f5',
+                color: '#666',
+                cursor: 'not-allowed',
               }}
-              placeholder="请输入商家标识（英文/数字）"
+              placeholder="商家标识"
             />
             <p style={{ fontSize: '12px', color: '#999', marginTop: '6px' }}>
-              商家标识用于URL访问，如 https://xxx.workers.dev/chat?business=your-slug
+              商家标识用于URL访问，如 https://xxx.workers.dev/chat?business={businessInfo.business_slug}
             </p>
           </div>
         </div>

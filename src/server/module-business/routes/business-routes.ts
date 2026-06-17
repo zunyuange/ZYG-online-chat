@@ -147,6 +147,33 @@ businessRoutes.get('/settings', async (c) => {
   }
 });
 
+businessRoutes.post('/info', requireAuth, async (c) => {
+  try {
+    const body = await c.req.json();
+    const { business_name } = body;
+
+    const db = getDb();
+    const businessId = c.get('businessId');
+    
+    let query = 'UPDATE staff_users SET business_name = ?, updated_at = ? WHERE ';
+    let params: unknown[] = [business_name, Date.now()];
+    
+    if (businessId) {
+      query += 'id = ?';
+      params.push(businessId);
+    } else {
+      query += 'business_slug = "default"';
+    }
+
+    await db.run(query, params);
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Update business info error:', error);
+    return c.json({ success: false, error: 'Failed to update business info' }, 500);
+  }
+});
+
 businessRoutes.post('/settings', async (c) => {
   try {
     const body = await c.req.json();
