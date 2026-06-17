@@ -9,6 +9,8 @@ import { hashPassword } from '@server/shared/crypto';
 export interface StaffUser {
   id: number;
   business_id: number;
+  business_slug: string | null;
+  business_name: string | null;
   username: string;
   password_hash: string;
   email: string | null;
@@ -25,6 +27,7 @@ export interface CreateUserInput {
   email?: string;
   name?: string;
   role?: string;
+  business_id?: number;
 }
 
 export interface UpdateUserInput {
@@ -45,9 +48,40 @@ export async function createUser(input: CreateUserInput): Promise<{ success: boo
     }
 
     const passwordHash = await hashPassword(input.password);
+    
+    // Generate business_slug for new business users
+    let businessSlug: string | null = null;
+    let businessName: string | null = null;
+    let finalBusinessId = input.business_id || 0;
+    
+    // For new business owner accounts (no business_id specified or business_id = 0)
+    if (!input.business_id || input.business_id === 0) {
+      finalBusinessId = 0;
+      // Generate a unique business_slug
+      const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+      let attempts = 0;
+      const maxAttempts = 10;
+      while (attempts < maxAttempts) {
+        let slug = '';
+        for (let i = 0; i < 8; i++) {
+          slug += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        const existingSlug = await db.get('SELECT id FROM staff_users WHERE business_slug = ?', [slug]);
+        if (!existingSlug) {
+          businessSlug = slug;
+          break;
+        }
+        attempts++;
+      }
+      if (!businessSlug) {
+        return { success: false, error: '无法生成唯一的商家标识' };
+      }
+      businessName = input.name || input.username;
+    }
+    
     const result = await db.run(
-      'INSERT INTO staff_users (username, password_hash, email, name, role) VALUES (?, ?, ?, ?, ?)',
-      [input.username, passwordHash, input.email || null, input.name || null, input.role || 'staff']
+      'INSERT INTO staff_users (username, password_hash, email, name, role, business_id, business_slug, business_name, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [input.username, passwordHash, input.email || null, input.name || null, input.role || 'staff', finalBusinessId, businessSlug, businessName, 'active', Date.now(), Date.now()]
     );
 
     return { success: true, userId: result.lastInsertRowid };

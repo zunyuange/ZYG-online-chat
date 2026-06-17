@@ -33,6 +33,7 @@ interface StaffData {
   role: string;
   status: string;
   created_at: number;
+  business_id: number;
 }
 
 interface RoleData {
@@ -56,6 +57,13 @@ interface UserFormData {
   email: string;
   name: string;
   role: string;
+  business_id: number;
+}
+
+interface BusinessData {
+  id: number;
+  name: string;
+  slug: string;
 }
 
 interface RoleFormData {
@@ -72,6 +80,7 @@ export function AdminPage() {
   const [adminUsers, setAdminUsers] = useState<UserData[]>([]);
   const [staffUsers, setStaffUsers] = useState<StaffData[]>([]);
   const [roles, setRoles] = useState<RoleData[]>([]);
+  const [businesses, setBusinesses] = useState<BusinessData[]>([]);
   const [statistics, setStatistics] = useState<{
     adminCount: number;
     staffCount: number;
@@ -93,6 +102,7 @@ export function AdminPage() {
     email: '',
     name: '',
     role: 'staff',
+    business_id: 1,
   });
   const [roleFormData, setRoleFormData] = useState<RoleFormData>({
     name: '',
@@ -146,23 +156,26 @@ export function AdminPage() {
     try {
       const token = localStorage.getItem('admin_token');
       
-      const [adminRes, staffRes, roleRes, settingsRes] = await Promise.all([
+      const [adminRes, staffRes, roleRes, settingsRes, businessRes] = await Promise.all([
         fetch('/api/admin-auth/users', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/admin/staff-users', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/admin/roles', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/admin/settings', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/business/list', { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
-      const [adminData, staffData, roleData, settingsData] = await Promise.all([
+      const [adminData, staffData, roleData, settingsData, businessData] = await Promise.all([
         adminRes.json(),
         staffRes.json(),
         roleRes.json(),
         settingsRes.json(),
+        businessRes.json(),
       ]);
 
       if (adminData.success) setAdminUsers(adminData.data);
       if (staffData.success) setStaffUsers(staffData.data);
       if (roleData.success) setRoles(roleData.data);
+      if (businessData.success) setBusinesses(businessData.data);
       
       if (settingsData.success) {
         const data = settingsData.data;
@@ -332,7 +345,7 @@ export function AdminPage() {
   // Staff User Management
   const handleCreateStaff = () => {
     setEditingUser(null);
-    setFormData({ username: '', password: '', email: '', name: '', role: 'staff' });
+    setFormData({ username: '', password: '', email: '', name: '', role: 'admin' });
     setFormError(null);
     setShowUserModal(true);
   };
@@ -345,6 +358,7 @@ export function AdminPage() {
       email: user.email || '',
       name: user.name || '',
       role: user.role,
+      business_id: user.business_id || 1,
     });
     setFormError(null);
     setShowUserModal(true);
@@ -404,6 +418,11 @@ export function AdminPage() {
         role: formData.role,
         status: 'active',
       };
+
+      // Only include business_id when creating a new staff user, not when editing
+      if (activeTab === 'staff' && !editingUser) {
+        body.business_id = formData.business_id;
+      }
 
       if (editingUser && formData.password) {
         body.password = formData.password;
@@ -897,6 +916,7 @@ export function AdminPage() {
               <th style={thStyle}>{t('username')}</th>
               <th style={thStyle}>{t('name')}</th>
               <th style={thStyle}>Email</th>
+              <th style={thStyle}>商家</th>
               <th style={thStyle}>{t('role')}</th>
               <th style={thStyle}>{t('status')}</th>
               <th style={thStyle}>{t('created_at')}</th>
@@ -906,17 +926,27 @@ export function AdminPage() {
           <tbody>
             {staffUsers.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ ...tdStyle, textAlign: 'center', color: '#999' }}>
+                <td colSpan={9} style={{ ...tdStyle, textAlign: 'center', color: '#999' }}>
                   {t('no_data')}
                 </td>
               </tr>
             ) : (
-              staffUsers.map((user) => (
+              staffUsers.map((user) => {
+                const businessId = (user as any)?.business_id;
+                let businessName = '-';
+                if (businessId === 0) {
+                  businessName = (user as any)?.business_name || '商家主账号';
+                } else if (businessId > 0) {
+                  const business = businesses.find(b => Number(b.id) === businessId);
+                  businessName = business ? business.name : '未分配';
+                }
+                return (
                 <tr key={user.id}>
                   <td style={tdStyle}>{user.id}</td>
                   <td style={tdStyle}>{user.username}</td>
                   <td style={tdStyle}>{user.name || '-'}</td>
                   <td style={tdStyle}>{user.email || '-'}</td>
+                  <td style={tdStyle}>{businessName}</td>
                   <td style={tdStyle}><span style={roleBadgeStyle}>{user.role}</span></td>
                   <td style={tdStyle}><span style={badgeStyle(user.status)}>{user.status === 'active' ? t('active') : t('inactive')}</span></td>
                   <td style={tdStyle}>{new Date(user.created_at).toLocaleDateString()}</td>
@@ -956,7 +986,8 @@ export function AdminPage() {
                     </div>
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>
@@ -1358,7 +1389,7 @@ export function AdminPage() {
                 placeholder="enter email"
               />
 
-              {!editingUser || editingUser.role !== 'admin' && (
+              {activeTab === 'staff' ? (
                 <>
                   <label style={labelStyle}>{t('role')}</label>
                   <select
@@ -1366,10 +1397,24 @@ export function AdminPage() {
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                     style={inputStyle}
                   >
-                    <option value="staff">{t('staff')}</option>
                     <option value="admin">{t('admin')}</option>
+                    <option value="staff">{t('staff')}</option>
                   </select>
                 </>
+              ) : (
+                !editingUser || editingUser.role !== 'admin' && (
+                  <>
+                    <label style={labelStyle}>{t('role')}</label>
+                    <select
+                      value={formData.role}
+                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                      style={inputStyle}
+                    >
+                      <option value="staff">{t('staff')}</option>
+                      <option value="admin">{t('admin')}</option>
+                    </select>
+                  </>
+                )
               )}
 
               <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>

@@ -9,8 +9,34 @@ import * as uploadService from '../services/upload-service';
 import * as sseService from '../services/sse-service';
 import * as queueService from '../services/queue-service';
 import * as barkService from '@server/services/bark-service';
+import { verifyToken } from '@server/module-auth/services/auth-service';
+import { getDb } from '@server/shared/db';
 
 export const chatRoutes = new Hono();
+
+async function requireAuth(c: any, next: any) {
+  const authHeader = c.req.header('Authorization');
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return c.json({ success: false, error: '未提供认证令牌' }, 401);
+  }
+
+  const token = authHeader.substring(7);
+  const result = await verifyToken(token);
+
+  if (!result.valid) {
+    return c.json({ success: false, error: result.error || 'Token 无效' }, 401);
+  }
+
+  if (result.businessId) {
+    c.set('businessId', result.businessId);
+  }
+  if (result.businessSlug) {
+    c.set('businessSlug', result.businessSlug);
+  }
+
+  await next();
+}
 
 // ==========================================
 // Session Routes
@@ -245,5 +271,261 @@ chatRoutes.get('/queue/:sessionId', async (c) => {
   } catch (error) {
     console.error('Get queue info error:', error);
     return c.json({ success: false, error: 'Failed to get queue info' }, 500);
+  }
+});
+
+// ==========================================
+// Transfer Session Route
+// ==========================================
+
+chatRoutes.post('/sessions/:id/transfer', requireAuth, async (c) => {
+  try {
+    const sessionId = c.req.param('id');
+    const body = await c.req.json();
+    const { targetStaffId, reason } = body;
+    const businessId = c.get('businessId');
+
+    const db = getDb();
+
+    const session = await db.get('SELECT * FROM sessions WHERE id = ? AND business_id = ?', [sessionId, businessId]);
+    if (!session) {
+      return c.json({ success: false, error: '会话不存在' }, 404);
+    }
+
+    const targetStaff = await db.get(
+      'SELECT id, username, name FROM staff_users WHERE id = ? AND status = "active"',
+      [targetStaffId]
+    );
+    if (!targetStaff) {
+      return c.json({ success: false, error: '目标客服不存在或未激活' }, 400);
+    }
+
+    await db.run(
+      'UPDATE sessions SET assigned_staff_id = ?, updated_at = ? WHERE id = ?',
+      [targetStaffId, Date.now(), sessionId]
+    );
+
+    const transferRecord = {
+      timestamp: Date.now(),
+      fromStaffId: session.assigned_staff_id,
+      toStaffId: targetStaffId,
+      reason: reason || '主动转接'
+    };
+
+    await db.run(
+      'UPDATE sessions SET transfer_history = ? WHERE id = ?',
+      [JSON.stringify(transferRecord), sessionId]
+    );
+
+    return c.json({ 
+      success: true, 
+      data: { 
+        staff: { id: targetStaff.id, username: targetStaff.username, name: targetStaff.name } 
+      } 
+    });
+  } catch (error) {
+    console.error('Transfer session error:', error);
+    return c.json({ success: false, error: '转接失败' }, 500);
+  }
+});
+
+// ==========================================
+// Delete Message Route
+// ==========================================
+
+chatRoutes.post('/messages/:id/delete', requireAuth, async (c) => {
+  try {
+    const messageId = parseInt(c.req.param('id'), 10);
+    const body = await c.req.json();
+    const { sessionId } = body;
+    const businessId = c.get('businessId');
+
+    const db = getDb();
+
+    const message = await db.get('SELECT * FROM messages WHERE id = ?', [messageId]);
+    if (!message) {
+      return c.json({ success: false, error: '消息不存在' }, 404);
+    }
+
+    const session = await db.get('SELECT business_id FROM sessions WHERE id = ?', [sessionId]);
+    if (!session || session.business_id !== businessId) {
+      return c.json({ success: false, error: '无权操作此消息' }, 403);
+    }
+
+    const now = Date.now();
+    const timeLimit = 5 * 60 * 1000;
+    if (now - message.created_at > timeLimit) {
+      return c.json({ success: false, error: '超过撤回时间限制（5分钟）' }, 400);
+    }
+
+    await db.run(
+      'UPDATE messages SET is_deleted = 1, deleted_at = ? WHERE id = ?',
+      [now, messageId]
+    );
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Delete message error:', error);
+    return c.json({ success: false, error: '撤回失败' }, 500);
+  }
+});
+
+// ==========================================
+// Statistics Route
+// ==========================================
+
+chatRoutes.get('/stats', requireAuth, async (c) => {
+  try {
+    const businessId = c.get('businessId');
+    const db = getDb();
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayTimestamp = todayStart.getTime();
+
+    const todaySessions = await db.get(
+      'SELECT COUNT(*) as count FROM sessions WHERE business_id = ? AND created_at >= ?',
+      [businessId, todayTimestamp]
+    );
+
+    const activeSessions = await db.get(
+      'SELECT COUNT(*) as count FROM sessions WHERE business_id = ? AND status = "active"',
+      [businessId]
+    );
+
+    const queueCount = await db.get(
+      'SELECT COUNT(*) as count FROM queue WHERE business_id = ?',
+      [businessId]
+    );
+
+    const avgResponse = await db.get(
+      'SELECT AVG(response_time) as avg FROM sessions WHERE business_id = ? AND response_time IS NOT NULL',
+      [businessId]
+    );
+
+    const satisfaction = await db.get(
+      'SELECT AVG(score) as avg, COUNT(*) as total FROM evaluations WHERE session_id IN (SELECT id FROM sessions WHERE business_id = ?)',
+      [businessId]
+    );
+
+    const todayMessages = await db.get(
+      'SELECT COUNT(*) as count FROM messages WHERE created_at >= ?',
+      [todayTimestamp]
+    );
+
+    return c.json({
+      success: true,
+      data: {
+        todaySessions: Number(todaySessions.count) || 0,
+        activeSessions: Number(activeSessions.count) || 0,
+        queueCount: Number(queueCount.count) || 0,
+        avgResponseTime: avgResponse.avg ? Math.round(Number(avgResponse.avg)) : 0,
+        satisfactionRate: satisfaction.avg ? Math.round(Number(satisfaction.avg) * 20) : 0,
+        evaluationCount: Number(satisfaction.total) || 0,
+        todayMessages: Number(todayMessages.count) || 0
+      }
+    });
+  } catch (error) {
+    console.error('Get stats error:', error);
+    return c.json({ success: false, error: '获取统计数据失败' }, 500);
+  }
+});
+
+// ==========================================
+// Blacklist Routes
+// ==========================================
+
+chatRoutes.post('/blacklist/add', requireAuth, async (c) => {
+  try {
+    const body = await c.req.json();
+    const { visitorId, ip, reason, days } = body;
+    const businessId = c.get('businessId');
+
+    const db = getDb();
+
+    const existing = await db.get(
+      'SELECT id FROM visitor_blacklist WHERE business_id = ? AND visitor_id = ?',
+      [businessId, visitorId]
+    );
+
+    if (existing) {
+      return c.json({ success: false, error: '该访客已在黑名单中' }, 400);
+    }
+
+    const expiresAt = days ? Date.now() + days * 24 * 60 * 60 * 1000 : null;
+
+    await db.run(
+      'INSERT INTO visitor_blacklist (business_id, visitor_id, ip, reason, expires_at) VALUES (?, ?, ?, ?, ?)',
+      [businessId, visitorId, ip, reason, expiresAt]
+    );
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Add blacklist error:', error);
+    return c.json({ success: false, error: '添加黑名单失败' }, 500);
+  }
+});
+
+chatRoutes.post('/blacklist/remove', requireAuth, async (c) => {
+  try {
+    const body = await c.req.json();
+    const { visitorId } = body;
+    const businessId = c.get('businessId');
+
+    const db = getDb();
+
+    await db.run(
+      'DELETE FROM visitor_blacklist WHERE business_id = ? AND visitor_id = ?',
+      [businessId, visitorId]
+    );
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Remove blacklist error:', error);
+    return c.json({ success: false, error: '移除黑名单失败' }, 500);
+  }
+});
+
+chatRoutes.get('/blacklist', requireAuth, async (c) => {
+  try {
+    const businessId = c.get('businessId');
+    const db = getDb();
+
+    const blacklist = await db.all(
+      'SELECT * FROM visitor_blacklist WHERE business_id = ? ORDER BY created_at DESC',
+      [businessId]
+    );
+
+    return c.json({ success: true, data: blacklist });
+  } catch (error) {
+    console.error('Get blacklist error:', error);
+    return c.json({ success: false, error: '获取黑名单失败' }, 500);
+  }
+});
+
+// ==========================================
+// Banword Check Route
+// ==========================================
+
+chatRoutes.post('/banword/check', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { content } = body;
+
+    const db = getDb();
+    const banwords = await db.all('SELECT keyword, level FROM banwords WHERE status = 1');
+
+    for (const banword of banwords) {
+      if (content.includes(banword.keyword)) {
+        if (banword.level >= 2) {
+          return c.json({ blocked: true, message: '内容包含违禁词' });
+        }
+      }
+    }
+
+    return c.json({ blocked: false });
+  } catch (error) {
+    console.error('Check banword error:', error);
+    return c.json({ blocked: false });
   }
 });

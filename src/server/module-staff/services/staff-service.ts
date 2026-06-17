@@ -604,6 +604,8 @@ export interface CreateStaffUserParams {
 export interface StaffUser {
   id: number;
   business_id: number;
+  business_slug: string | null;
+  business_name: string | null;
   username: string;
   email: string | null;
   name: string | null;
@@ -639,7 +641,7 @@ export async function createStaffUser(params: CreateStaffUserParams): Promise<{ 
     // Fetch the created user
     const user = await db.get<StaffUser>(
       'SELECT id, business_id, username, email, name, role, status, created_at, updated_at FROM staff_users WHERE id = ?',
-      [result.meta.last_row_id]
+      [result.lastInsertRowid]
     );
 
     return { success: true, data: user! };
@@ -663,9 +665,16 @@ export async function listStaffUsers(businessId: number = 1): Promise<StaffUser[
 /**
  * Delete a staff user
  */
-export async function deleteStaffUser(id: number): Promise<{ success: boolean; error?: string }> {
+export async function deleteStaffUser(id: number, businessId: number): Promise<{ success: boolean; error?: string }> {
   const db = getDb();
   try {
+    const user = await db.get<{ business_id: number }>('SELECT business_id FROM staff_users WHERE id = ?', [id]);
+    if (!user) {
+      return { success: false, error: '用户不存在' };
+    }
+    if (user.business_id !== businessId) {
+      return { success: false, error: '无权删除其他商家的用户' };
+    }
     await db.run('DELETE FROM staff_users WHERE id = ?', [id]);
     return { success: true };
   } catch (error) {

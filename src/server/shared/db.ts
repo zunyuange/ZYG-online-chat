@@ -168,6 +168,7 @@ export async function initializeSchema(): Promise<void> {
     "visitor_name TEXT NOT NULL, " +
     "business_id INTEGER NOT NULL DEFAULT 1, " +
     "service_id INTEGER DEFAULT 0, " +
+    "assigned_staff_id INTEGER, " +
     "groupid INTEGER DEFAULT 0, " +
     "status TEXT NOT NULL DEFAULT 'active', " +
     "state TEXT NOT NULL DEFAULT 'normal', " +
@@ -184,9 +185,10 @@ export async function initializeSchema(): Promise<void> {
     "avatar TEXT, " +
     "device TEXT, " +
     "lang TEXT DEFAULT 'cn', " +
+    "transfer_history TEXT, " +
+    "response_time INTEGER, " +
     "created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), " +
-    "updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), " +
-    "FOREIGN KEY (business_id) REFERENCES businesses(id))"
+    "updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))"
   );
 
   // Create messages table
@@ -201,25 +203,36 @@ export async function initializeSchema(): Promise<void> {
     "file_name TEXT, " +
     "file_size INTEGER, " +
     "is_read INTEGER DEFAULT 0, " +
+    "is_deleted INTEGER DEFAULT 0, " +
+    "deleted_by TEXT, " +
+    "deleted_at INTEGER, " +
+    "product_id INTEGER, " +
+    "product_name TEXT, " +
+    "product_price TEXT, " +
+    "product_image TEXT, " +
+    "product_url TEXT, " +
     "created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), " +
     "FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE)"
   );
 
-  // Create businesses table for multi-tenant support (商家表)
+  // Create staff_users table for multi-user authentication (商家/客服表)
+  // business_id = 0 表示商家主账号，business_id > 0 表示归属到该商家的客服
   await database.exec(
-    "CREATE TABLE IF NOT EXISTS businesses (" +
+    "CREATE TABLE IF NOT EXISTS staff_users (" +
     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-    "name TEXT NOT NULL, " +
-    "slug TEXT NOT NULL UNIQUE, " +
-    "logo TEXT, " +
-    "description TEXT, " +
-    "theme TEXT NOT NULL DEFAULT 'default', " +
-    "state TEXT NOT NULL DEFAULT 'open', " +
-    "max_staff_count INTEGER NOT NULL DEFAULT 10, " +
-    "lang TEXT NOT NULL DEFAULT 'zh-CN', " +
+    "business_id INTEGER NOT NULL DEFAULT 0, " +
+    "business_slug TEXT UNIQUE, " +
+    "business_name TEXT, " +
     "enable_auto_trans INTEGER NOT NULL DEFAULT 0, " +
     "bd_trans_appid TEXT, " +
     "bd_trans_secret TEXT, " +
+    "default_lang TEXT NOT NULL DEFAULT 'zh-CN', " +
+    "username TEXT NOT NULL UNIQUE, " +
+    "password_hash TEXT NOT NULL, " +
+    "email TEXT, " +
+    "name TEXT, " +
+    "role TEXT NOT NULL DEFAULT 'staff', " +
+    "status TEXT NOT NULL DEFAULT 'active', " +
     "created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), " +
     "updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))"
   );
@@ -238,24 +251,7 @@ export async function initializeSchema(): Promise<void> {
     "lang TEXT NOT NULL DEFAULT 'cn', " +
     "status TEXT NOT NULL DEFAULT 'offline', " +
     "last_visit_at INTEGER, " +
-    "created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), " +
-    "FOREIGN KEY (business_id) REFERENCES businesses(id))"
-  );
-
-  // Create staff_users table for multi-user authentication
-  await database.exec(
-    "CREATE TABLE IF NOT EXISTS staff_users (" +
-    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-    "business_id INTEGER NOT NULL DEFAULT 1, " +
-    "username TEXT NOT NULL UNIQUE, " +
-    "password_hash TEXT NOT NULL, " +
-    "email TEXT, " +
-    "name TEXT, " +
-    "role TEXT NOT NULL DEFAULT 'staff', " +
-    "status TEXT NOT NULL DEFAULT 'active', " +
-    "created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), " +
-    "updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), " +
-    "FOREIGN KEY (business_id) REFERENCES businesses(id))"
+    "created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))"
   );
 
   // Create robot_knowledge table for AI auto-reply
@@ -299,7 +295,35 @@ export async function initializeSchema(): Promise<void> {
     "CREATE TABLE IF NOT EXISTS banwords (" +
     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
     "keyword TEXT NOT NULL UNIQUE, " +
+    "level INTEGER NOT NULL DEFAULT 1, " +
+    "replace_with TEXT, " +
     "status INTEGER NOT NULL DEFAULT 1, " +
+    "created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))"
+  );
+
+  // Create visitor_blacklist table for blocked visitors
+  await database.exec(
+    "CREATE TABLE IF NOT EXISTS visitor_blacklist (" +
+    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+    "business_id INTEGER NOT NULL, " +
+    "visitor_id TEXT NOT NULL, " +
+    "ip TEXT, " +
+    "reason TEXT, " +
+    "expires_at INTEGER, " +
+    "created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))"
+  );
+
+  // Create chat_stats table for statistics
+  await database.exec(
+    "CREATE TABLE IF NOT EXISTS chat_stats (" +
+    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+    "business_id INTEGER NOT NULL, " +
+    "date TEXT NOT NULL, " +
+    "total_sessions INTEGER DEFAULT 0, " +
+    "active_sessions INTEGER DEFAULT 0, " +
+    "total_messages INTEGER DEFAULT 0, " +
+    "avg_response_time INTEGER DEFAULT 0, " +
+    "satisfaction_rate REAL DEFAULT 0, " +
     "created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))"
   );
 
@@ -402,7 +426,8 @@ export async function initializeSchema(): Promise<void> {
   await database.exec("CREATE INDEX IF NOT EXISTS offline_messages_created_at_idx ON offline_messages(created_at)");
   await database.exec("CREATE INDEX IF NOT EXISTS queue_visiter_id_idx ON queue(visiter_id)");
   await database.exec("CREATE INDEX IF NOT EXISTS queue_business_id_idx ON queue(business_id)");
-  await database.exec("CREATE INDEX IF NOT EXISTS businesses_slug_idx ON businesses(slug)");
+  await database.exec("CREATE INDEX IF NOT EXISTS staff_users_business_slug_idx ON staff_users(business_slug)");
+  await database.exec("CREATE INDEX IF NOT EXISTS staff_users_business_id_idx ON staff_users(business_id)");
   await database.exec("CREATE INDEX IF NOT EXISTS visitors_business_id_idx ON visitors(business_id)");
   await database.exec("CREATE INDEX IF NOT EXISTS visitors_visitor_id_idx ON visitors(visitor_id)");
 
@@ -455,40 +480,17 @@ export async function initializeSchema(): Promise<void> {
 }
 
 async function initializeDefaultAdmin(database: Database): Promise<void> {
-  // Create or update default admin user with password 123456
   const passwordHash = await hashPassword('123456');
 
-  // Initialize default business first
-  const existingBusiness = await database.get<{ id: number }>('SELECT id FROM businesses WHERE slug = ?', ['default']);
-
-  let businessId = 1;
-  if (existingBusiness) {
-    console.log('[Database] Default business already exists (id: 1)');
-    businessId = existingBusiness.id;
-  } else {
-    await database.run(
-      'INSERT INTO businesses (name, slug, logo, description, theme, state, max_staff_count, lang) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      ['默认商家', 'default', '', '系统默认商家', 'default', 'open', 10, 'zh-CN']
-    );
-    console.log('[Database] Default business created: 默认商家');
-    const newBusiness = await database.get<{ id: number }>('SELECT id FROM businesses WHERE slug = ?', ['default']);
-    if (newBusiness) {
-      businessId = newBusiness.id;
-    }
-  }
-
-  // Initialize admin_users table with default admin user
   const existingAdmin = await database.get<{ id: number }>('SELECT id FROM admin_users WHERE username = ?', ['admin']);
   
   if (existingAdmin) {
-    // Update existing admin user with correct password
     await database.run(
       'UPDATE admin_users SET password_hash = ?, email = ?, name = ?, status = ?, updated_at = ? WHERE username = ?',
       [passwordHash, 'admin@example.com', '系统管理员', 'active', Date.now(), 'admin']
     );
     console.log('[Database] Default admin user updated: admin/123456 (admin_users)');
   } else {
-    // Create new admin user
     await database.run(
       'INSERT INTO admin_users (username, password_hash, email, name, status) VALUES (?, ?, ?, ?, ?)',
       ['admin', passwordHash, 'admin@example.com', '系统管理员', 'active']
@@ -496,24 +498,22 @@ async function initializeDefaultAdmin(database: Database): Promise<void> {
     console.log('[Database] Default admin user created: admin/123456 (admin_users)');
   }
   
-  // Also initialize staff_users table with default admin user (for staff login)
-  // Link to default business
+  // Initialize staff_users table with default business admin user
+  // business_id = 0 表示商家主账号，business_slug 是商家标识
   const existingStaff = await database.get<{ id: number }>('SELECT id FROM staff_users WHERE username = ?', ['admin']);
   
   if (existingStaff) {
-    // Update existing staff user with correct password and business_id
     await database.run(
-      'UPDATE staff_users SET password_hash = ?, email = ?, name = ?, role = ?, status = ?, business_id = ?, updated_at = ? WHERE username = ?',
-      [passwordHash, 'admin@example.com', '系统管理员', 'staff', 'active', businessId, Date.now(), 'admin']
+      'UPDATE staff_users SET password_hash = ?, email = ?, name = ?, role = ?, status = ?, business_id = ?, business_slug = ?, business_name = ?, updated_at = ? WHERE username = ?',
+      [passwordHash, 'admin@example.com', '系统管理员', 'admin', 'active', 0, 'default', '默认商家', Date.now(), 'admin']
     );
-    console.log('[Database] Default admin user updated: admin/123456 (staff_users)');
+    console.log('[Database] Default staff user updated: admin/123456 (staff_users as business admin)');
   } else {
-    // Create new staff user with business_id
     await database.run(
-      'INSERT INTO staff_users (username, password_hash, email, name, role, status, business_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      ['admin', passwordHash, 'admin@example.com', '系统管理员', 'staff', 'active', businessId]
+      'INSERT INTO staff_users (username, password_hash, email, name, role, status, business_id, business_slug, business_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      ['admin', passwordHash, 'admin@example.com', '系统管理员', 'admin', 'active', 0, 'default', '默认商家']
     );
-    console.log('[Database] Default admin user created: admin/123456 (staff_users)');
+    console.log('[Database] Default staff user created: admin/123456 (staff_users as business admin)');
   }
 }
 

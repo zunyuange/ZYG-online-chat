@@ -20,6 +20,10 @@ import { useI18n } from '@client/context/I18nContext';
 interface UserInfo {
   userId?: number;
   username?: string;
+  businessId?: number;
+  businessSlug?: string;
+  businessName?: string;
+  role?: string;
 }
 
 // Check if device is mobile
@@ -89,6 +93,18 @@ export function StaffPage() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [currentPage, setCurrentPage] = useState<'home' | 'staff' | 'code' | 'settings'>('home');
+  
+  // Statistics data
+  const [stats, setStats] = useState<{
+    todaySessions: number;
+    activeSessions: number;
+    queueCount: number;
+    avgResponseTime: number;
+    satisfactionRate: number;
+    evaluationCount: number;
+    todayMessages: number;
+  } | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   // Ref to prevent multiple initializations
   const dataLoadedRef = useRef(false);
@@ -143,6 +159,10 @@ export function StaffPage() {
           setUserInfo({
             userId: result.userId,
             username: result.username || '管理员',
+            businessId: result.businessId,
+            businessSlug: result.businessSlug,
+            businessName: result.businessName,
+            role: result.role,
           });
         }
       } catch (error) {
@@ -151,7 +171,27 @@ export function StaffPage() {
     };
 
     fetchUserInfo();
+    fetchStats();
   }, [isAuthenticated]);
+
+  const fetchStats = async () => {
+    setStatsLoading(true);
+    try {
+      const response = await fetch('/api/chat/stats', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+        },
+      });
+      const result = await response.json();
+      if (result.success) {
+        setStats(result.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('staff_token');
@@ -520,13 +560,15 @@ export function StaffPage() {
           <MessageCircle size={16} />
           <span>首页</span>
         </div>
-        <div
-          onClick={() => setCurrentPage('staff')}
-          style={navTabItemStyle(currentPage === 'staff')}
-        >
-          <Users size={16} />
-          <span>客服管理</span>
-        </div>
+        {userInfo?.role === 'admin' && (
+          <div
+            onClick={() => setCurrentPage('staff')}
+            style={navTabItemStyle(currentPage === 'staff')}
+          >
+            <Users size={16} />
+            <span>客服管理</span>
+          </div>
+        )}
         <div
           onClick={() => setCurrentPage('code')}
           style={navTabItemStyle(currentPage === 'code')}
@@ -534,13 +576,15 @@ export function StaffPage() {
           <Code2 size={16} />
           <span>代码</span>
         </div>
-        <div
-          onClick={() => setCurrentPage('settings')}
-          style={navTabItemStyle(currentPage === 'settings')}
-        >
-          <Settings size={16} />
-          <span>设置</span>
-        </div>
+        {userInfo?.role === 'admin' && (
+          <div
+            onClick={() => setCurrentPage('settings')}
+            style={navTabItemStyle(currentPage === 'settings')}
+          >
+            <Settings size={16} />
+            <span>设置</span>
+          </div>
+        )}
       </div>
 
       {/* Clear messages confirmation modal */}
@@ -636,8 +680,42 @@ export function StaffPage() {
               <div style={overlayStyle} onClick={() => setShowSessionList(false)} />
             )}
 
-            {/* Sidebar - Session List */}
+            {/* Sidebar - Statistics and Session List */}
             <div style={sidebarStyle}>
+              {/* Statistics Cards */}
+              {currentPage === 'home' && (
+                <div style={{ padding: '12px', borderBottom: '1px solid #e8e8e8', backgroundColor: '#fff' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 500, color: '#666', marginBottom: '12px', paddingLeft: '4px' }}>
+                    统计概览
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div style={{ backgroundColor: '#f6ffed', padding: '8px', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '18px', fontWeight: 600, color: '#52c41a' }}>
+                        {statsLoading ? '...' : stats?.todaySessions || 0}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#8c8c8c' }}>今日会话</div>
+                    </div>
+                    <div style={{ backgroundColor: '#fff7e6', padding: '8px', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '18px', fontWeight: 600, color: '#fa8c16' }}>
+                        {statsLoading ? '...' : stats?.activeSessions || 0}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#8c8c8c' }}>活跃会话</div>
+                    </div>
+                    <div style={{ backgroundColor: '#fff1f0', padding: '8px', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '18px', fontWeight: 600, color: '#ff4d4f' }}>
+                        {statsLoading ? '...' : stats?.queueCount || 0}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#8c8c8c' }}>排队人数</div>
+                    </div>
+                    <div style={{ backgroundColor: '#e6f7ff', padding: '8px', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '18px', fontWeight: 600, color: '#1890ff' }}>
+                        {statsLoading ? '...' : stats?.todayMessages || 0}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#8c8c8c' }}>今日消息</div>
+                    </div>
+                  </div>
+                </div>
+              )}
               <SessionList
                 sessions={sessions}
                 currentSessionId={currentSessionId}

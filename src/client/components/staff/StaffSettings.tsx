@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Globe, Save, Check, Eye, EyeOff } from 'lucide-react';
+import { Globe, Save, Check, Eye, EyeOff, Building } from 'lucide-react';
 
 interface TranslationSettings {
   enable_auto_trans: boolean;
@@ -8,12 +8,21 @@ interface TranslationSettings {
   default_lang: string;
 }
 
+interface BusinessInfo {
+  business_name: string;
+  business_slug: string;
+}
+
 export function StaffSettings() {
   const [settings, setSettings] = useState<TranslationSettings>({
     enable_auto_trans: false,
     bd_trans_appid: '',
     bd_trans_secret: '',
     default_lang: 'zh-CN',
+  });
+  const [businessInfo, setBusinessInfo] = useState<BusinessInfo>({
+    business_name: '',
+    business_slug: '',
   });
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
@@ -26,16 +35,30 @@ export function StaffSettings() {
   const fetchSettings = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/business/settings', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
-        },
-      });
-      const result = await response.json();
-      if (result.success) {
-        setSettings(result.data);
-      } else {
-        console.error('Failed to fetch settings:', result.error);
+      const [settingsRes, infoRes] = await Promise.all([
+        fetch('/api/business/settings', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+          },
+        }),
+        fetch('/api/business/info', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+          },
+        }),
+      ]);
+
+      const settingsResult = await settingsRes.json();
+      if (settingsResult.success) {
+        setSettings(settingsResult.data);
+      }
+
+      const infoResult = await infoRes.json();
+      if (infoResult.success) {
+        setBusinessInfo({
+          business_name: infoResult.data.business_name || '',
+          business_slug: infoResult.data.business_slug || '',
+        });
       }
     } catch (error) {
       console.error('Failed to fetch settings:', error);
@@ -44,7 +67,7 @@ export function StaffSettings() {
     }
   };
 
-  const handleSave = async () => {
+  const handleSaveSettings = async () => {
     try {
       const response = await fetch('/api/business/settings', {
         method: 'POST',
@@ -56,7 +79,7 @@ export function StaffSettings() {
       });
       const result = await response.json();
       if (result.success) {
-        setMessage('保存成功');
+        setMessage('翻译设置保存成功');
         setTimeout(() => setMessage(''), 2000);
       } else {
         setMessage(result.error || '保存失败');
@@ -64,6 +87,29 @@ export function StaffSettings() {
     } catch (error) {
       setMessage('保存失败');
       console.error('Failed to save settings:', error);
+    }
+  };
+
+  const handleSaveBusinessInfo = async () => {
+    try {
+      const response = await fetch('/api/business/info', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+        },
+        body: JSON.stringify(businessInfo),
+      });
+      const result = await response.json();
+      if (result.success) {
+        setMessage('商家信息保存成功');
+        setTimeout(() => setMessage(''), 2000);
+      } else {
+        setMessage(result.error || '保存失败');
+      }
+    } catch (error) {
+      setMessage('保存失败');
+      console.error('Failed to save business info:', error);
     }
   };
 
@@ -261,7 +307,7 @@ export function StaffSettings() {
 
           {/* Save Button */}
           <button
-            onClick={handleSave}
+            onClick={handleSaveSettings}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -277,6 +323,82 @@ export function StaffSettings() {
           >
             <Save size={18} />
             保存设置
+          </button>
+        </div>
+      </div>
+
+      {/* Business Info Card */}
+      <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginTop: '24px' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Building size={18} style={{ color: '#52c41a' }} />
+          <h3 style={{ fontSize: '16px', fontWeight: 500, margin: 0 }}>商家信息</h3>
+        </div>
+
+        <div style={{ padding: '24px' }}>
+          {/* Business Name */}
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+              商家名称
+            </label>
+            <input
+              type="text"
+              value={businessInfo.business_name}
+              onChange={(e) => setBusinessInfo({ ...businessInfo, business_name: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: '1px solid #d9d9d9',
+                borderRadius: '4px',
+                fontSize: '14px',
+                boxSizing: 'border-box',
+              }}
+              placeholder="请输入商家名称"
+            />
+          </div>
+
+          {/* Business Slug */}
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+              商家标识
+            </label>
+            <input
+              type="text"
+              value={businessInfo.business_slug}
+              onChange={(e) => setBusinessInfo({ ...businessInfo, business_slug: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: '1px solid #d9d9d9',
+                borderRadius: '4px',
+                fontSize: '14px',
+                boxSizing: 'border-box',
+                backgroundColor: '#f5f5f5',
+              }}
+              placeholder="请输入商家标识（英文/数字）"
+            />
+            <p style={{ fontSize: '12px', color: '#999', marginTop: '6px' }}>
+              商家标识用于URL访问，如 https://xxx.workers.dev/chat?business=your-slug
+            </p>
+          </div>
+
+          {/* Save Button */}
+          <button
+            onClick={handleSaveBusinessInfo}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 24px',
+              border: 'none',
+              borderRadius: '4px',
+              backgroundColor: '#52c41a',
+              color: '#fff',
+              cursor: 'pointer',
+              fontSize: '14px',
+            }}
+          >
+            <Save size={18} />
+            保存商家信息
           </button>
         </div>
       </div>

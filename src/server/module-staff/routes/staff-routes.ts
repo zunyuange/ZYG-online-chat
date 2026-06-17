@@ -28,9 +28,12 @@ async function requireAuth(c: any, next: any) {
     return c.json({ success: false, error: result.error || 'Token 无效' }, 401);
   }
 
-  // Attach businessId to context for downstream use
+  // Attach businessId and businessSlug to context for downstream use
   if (result.businessId) {
     c.set('businessId', result.businessId);
+  }
+  if (result.businessSlug) {
+    c.set('businessSlug', result.businessSlug);
   }
 
   await next();
@@ -611,13 +614,15 @@ staffRoutes.post('/users', async (c) => {
       return c.json({ success: false, error: '用户名和密码不能为空' }, 400);
     }
 
+    const businessId = c.get('businessId');
+    
     const result = await createStaffUser({
       username,
       password,
       name,
       email,
       role,
-      businessId: 1, // Default to business 1 for now
+      businessId,
     });
 
     if (!result.success) {
@@ -631,10 +636,10 @@ staffRoutes.post('/users', async (c) => {
   }
 });
 
-// List all staff users
+// List all staff users for current business
 staffRoutes.get('/users', async (c) => {
   try {
-    const businessId = parseInt(c.req.query('businessId') || '1', 10);
+    const businessId = c.get('businessId');
     const users = await listStaffUsers(businessId);
     return c.json({ success: true, data: users });
   } catch (error) {
@@ -647,11 +652,13 @@ staffRoutes.get('/users', async (c) => {
 staffRoutes.delete('/users/:id', async (c) => {
   try {
     const id = parseInt(c.req.param('id'), 10);
+    const businessId = c.get('businessId');
+    
     if (!id) {
       return c.json({ success: false, error: 'Invalid user ID' }, 400);
     }
 
-    const result = await deleteStaffUser(id);
+    const result = await deleteStaffUser(id, businessId);
     if (!result.success) {
       return c.json({ success: false, error: result.error }, 400);
     }

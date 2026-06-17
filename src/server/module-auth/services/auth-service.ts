@@ -4,6 +4,8 @@
  * Supports both legacy single-password auth and multi-user database auth
  */
 
+import { verifyPassword, listUsers } from '@server/module-admin/services/admin-service';
+
 // Configuration
 let _staffPassword: string | null = null;
 let _requireAuth: boolean = true;
@@ -25,10 +27,12 @@ interface RateLimitEntry {
 const ipRateLimit = new Map<string, RateLimitEntry>();
 
 interface TokenPayload {
-  role: 'staff';
+  role: 'staff' | 'admin';
   userId?: number;
   username?: string;
   businessId?: number;
+  businessSlug?: string;
+  businessName?: string;
   iat: number;
   exp: number;
 }
@@ -69,7 +73,6 @@ export async function checkAuthRequired(): Promise<boolean> {
   
   // Default behavior: check if there are staff users in database
   try {
-    const { listUsers } = await import('@server/module-admin/services/admin-service');
     const users = await listUsers();
     if (users.length > 0) {
       return true;
@@ -157,9 +160,40 @@ function getRemainingAttempts(ip: string): number {
 
 /**
  * Simple base64url encode
+ * Supports both UTF-8 strings and binary data
  */
-function base64urlEncode(str: string): string {
-  return btoa(str)
+function base64urlEncode(input: string | Uint8Array): string {
+  let data: Uint8Array;
+  if (typeof input === 'string') {
+    const encoder = new TextEncoder();
+    data = encoder.encode(input);
+  } else {
+    data = input;
+  }
+  
+  let result = '';
+  const table = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  
+  for (let i = 0; i < data.length; i += 3) {
+    const byte1 = data[i];
+    const byte2 = data[i + 1] || 0;
+    const byte3 = data[i + 2] || 0;
+    
+    const chunk = (byte1 << 16) | (byte2 << 8) | byte3;
+    
+    result += table[(chunk >> 18) & 0x3F];
+    result += table[(chunk >> 12) & 0x3F];
+    
+    if (i + 1 < data.length) {
+      result += table[(chunk >> 6) & 0x3F];
+    }
+    
+    if (i + 2 < data.length) {
+      result += table[chunk & 0x3F];
+    }
+  }
+  
+  return result
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=/g, '');
@@ -167,11 +201,19 @@ function base64urlEncode(str: string): string {
 
 /**
  * Simple base64url decode
+ * Supports UTF-8 characters (including Chinese)
  */
 function base64urlDecode(str: string): string {
   str = str.replace(/-/g, '+').replace(/_/g, '/');
   while (str.length % 4) str += '=';
-  return atob(str);
+  
+  const binary = atob(str);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  const decoder = new TextDecoder('utf-8');
+  return decoder.decode(bytes);
 }
 
 /**
@@ -193,24 +235,21 @@ async function simpleHash(message: string, secret: string): Promise<string> {
   );
 
   const signature = await crypto.subtle.sign('HMAC', key, msgData);
-  const signatureArray = new Uint8Array(signature);
-  let binary = '';
-  for (let i = 0; i < signatureArray.length; i++) {
-    binary += String.fromCharCode(signatureArray[i]);
-  }
-  return base64urlEncode(binary);
+  return base64urlEncode(new Uint8Array(signature));
 }
 
 /**
  * Generate JWT token
  */
-async function generateToken(userId?: number, username?: string, businessId?: number): Promise<string> {
+async function generateToken(userId?: number, username?: string, businessId?: number, businessSlug?: string, businessName?: string, role?: string): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const payload: TokenPayload = {
-    role: 'staff',
+    role: role || 'staff',
     userId,
     username,
     businessId,
+    businessSlug,
+    businessName,
     iat: now,
     exp: now + TOKEN_EXPIRATION_SECONDS,
   };
@@ -286,6 +325,8 @@ export interface VerifyResult {
   userId?: number;
   username?: string;
   businessId?: number;
+  businessSlug?: string;
+  businessName?: string;
 }
 
 /**
@@ -319,26 +360,38 @@ export async function login(username: string, password: string, clientIp: string
   }
 
   try {
-    console.log('[AuthService] Trying database authentication');
-    const { verifyPassword } = await import('@server/module-admin/services/admin-service');
+    console.log('[AuthService] Trying database authentication, username:', username);
     
     const user = await verifyPassword(username, password);
+    console.log('[AuthService] verifyPassword result:', user ? 'found user' : 'null');
     
     if (user) {
       // Database user authentication successful
-      const token = await generateToken(user.id, user.username, (user as any).business_id);
+      const u = user as any;
+      const businessId = Number(u.business_id);
+      const userId = Number(user.id);
+      // 商家主账号：business_id = 0，使用自己的business_slug
+      // 客服账号：business_id > 0，需要查找商家信息
+      const token = await generateToken(
+        userId, 
+        user.username, 
+        businessId === 0 ? userId : businessId,
+        u.business_slug || '',
+        u.business_name || '',
+        user.role
+      );
       return {
         success: true,
         token,
         expiresAt: Math.floor(Date.now() / 1000) + TOKEN_EXPIRATION_SECONDS,
-        userId: user.id,
+        userId: userId,
         username: user.username,
       };
     } else {
       console.log('[AuthService] Database authentication failed - user not found or password mismatch');
     }
   } catch (error) {
-    console.log('[AuthService] Database auth not available, falling back to legacy mode:', error);
+    console.log('[AuthService] Database auth error:', error instanceof Error ? error.message : String(error));
   }
 
   // Legacy single-password mode fallback
@@ -374,7 +427,15 @@ export async function verifyToken(token: string): Promise<VerifyResult> {
     return { valid: false, error: 'Token 无效或已过期' };
   }
 
-  return { valid: true, userId: payload.userId, username: payload.username, businessId: payload.businessId };
+  return { 
+    valid: true, 
+    userId: payload.userId, 
+    username: payload.username, 
+    businessId: payload.businessId,
+    businessSlug: payload.businessSlug,
+    businessName: payload.businessName,
+    role: payload.role
+  };
 }
 
 /**

@@ -31,13 +31,13 @@ adminRoutes.use('*', requireAuth);
 adminRoutes.post('/users', async (c) => {
   try {
     const body = await c.req.json();
-    const { username, password, email, name, role } = body;
+    const { username, password, email, name, role, business_id } = body;
 
     if (!username || !password) {
       return c.json({ success: false, error: '用户名和密码是必填项' }, 400);
     }
 
-    const result = await adminService.createUser({ username, password, email, name, role });
+    const result = await adminService.createUser({ username, password, email, name, role, business_id });
     
     if (result.success) {
       return c.json({ success: true, message: '用户创建成功', userId: result.userId }, 201);
@@ -147,7 +147,7 @@ adminRoutes.delete('/users/:id', async (c) => {
 adminRoutes.post('/staff-users', async (c) => {
   try {
     const body = await c.req.json();
-    const { username, password, email, name, role, status } = body;
+    const { username, password, email, name, role, status, business_id } = body;
 
     if (!username || !password) {
       return c.json({ success: false, error: '用户名和密码是必填项' }, 400);
@@ -159,7 +159,7 @@ adminRoutes.post('/staff-users', async (c) => {
       email, 
       name, 
       role: role || 'staff',
-      status: status || 'active'
+      business_id
     });
     
     if (result.success) {
@@ -183,6 +183,7 @@ adminRoutes.get('/staff-users', async (c) => {
       name: user.name,
       role: user.role,
       status: user.status,
+      business_id: user.business_id || 0,
       created_at: user.created_at,
     }));
     return c.json({ success: true, data: sanitizedUsers });

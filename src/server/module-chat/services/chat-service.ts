@@ -110,31 +110,37 @@ function mapRowToMessage(row: MessageRow): Message {
 
 /**
  * Get business by slug or id
+ * Now using staff_users table where business_id = 0 indicates a business owner account
  */
 async function getBusinessBySlug(slug?: string): Promise<BusinessRow | null> {
   const db = getDb();
   
   if (!slug) {
-    // Return default business
-    return db.get<BusinessRow>('SELECT * FROM businesses WHERE slug = ?', ['default']);
+    // Return default business - find by business_slug = 'default' or business_id = 0
+    const business = await db.get<BusinessRow>(
+      'SELECT id, business_slug as slug, business_name as name FROM staff_users WHERE business_slug = ? OR (business_id = 0 AND role = ?)',
+      ['default', 'admin']
+    );
+    return business || null;
   }
   
-  // Try to find by slug first
+  // Try to find by business_slug first (商家使用 business_slug 标识)
   const business = await db.get<BusinessRow>(
-    'SELECT * FROM businesses WHERE slug = ? AND state = ?',
-    [slug, 'open']
+    'SELECT id, business_slug as slug, business_name as name FROM staff_users WHERE business_slug = ? AND role = ?',
+    [slug, 'admin']
   );
   
   if (business) {
     return business;
   }
   
-  // Try by id
+  // Try by id (numeric slug)
   const id = parseInt(slug, 10);
   if (!isNaN(id)) {
+    // Find business by id where business_id = 0 (商家主账号)
     return db.get<BusinessRow>(
-      'SELECT * FROM businesses WHERE id = ? AND state = ?',
-      [id, 'open']
+      'SELECT id, business_slug as slug, business_name as name FROM staff_users WHERE id = ? AND business_id = 0',
+      [id]
     );
   }
   
@@ -202,7 +208,7 @@ export async function getSession(sessionId: string): Promise<Session | null> {
   if (!row) return null;
   
   // Get business info
-  const business = await db.get<BusinessRow>('SELECT * FROM businesses WHERE id = ?', [row.business_id]);
+  const business = await db.get<BusinessRow>('SELECT id, business_slug as slug, business_name as name FROM staff_users WHERE id = ?', [row.business_id]);
   return mapRowToSession(row, business || undefined);
 }
 
@@ -237,7 +243,7 @@ export async function listSessions(status?: 'active' | 'closed', businessId?: nu
   const businessMap = new Map<number, BusinessRow>();
   const businessIds = [...new Set(rows.map(r => r.business_id))];
   for (const bid of businessIds) {
-    const business = await db.get<BusinessRow>('SELECT * FROM businesses WHERE id = ?', [bid]);
+    const business = await db.get<BusinessRow>('SELECT id, business_slug as slug, business_name as name FROM staff_users WHERE id = ?', [bid]);
     if (business) {
       businessMap.set(bid, business);
     }

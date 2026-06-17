@@ -2,10 +2,10 @@ import { Hono } from 'hono';
 import { getDb } from '@server/shared/db';
 import { verifyToken } from '@server/module-auth/services/auth-service';
 import { verifyAdminToken } from '@server/module-admin/routes/admin-auth-routes';
+import { hashPassword } from '@server/shared/crypto';
 
 const businessRoutes = new Hono();
 
-// Authentication middleware for protected routes
 async function requireAuth(c: any, next: any) {
   const authHeader = c.req.header('Authorization');
   
@@ -15,14 +15,11 @@ async function requireAuth(c: any, next: any) {
 
   const token = authHeader.substring(7);
   
-  // Try staff token first
   let result = await verifyToken(token);
   
-  // If staff token fails, try admin token
   if (!result.valid) {
     const adminResult = await verifyAdminToken(token);
     if (adminResult.valid) {
-      // Admin token is valid, set businessId from admin's business (default to 1)
       c.set('businessId', 1);
       await next();
       return;
@@ -30,7 +27,6 @@ async function requireAuth(c: any, next: any) {
     return c.json({ success: false, error: 'Token 无效' }, 401);
   }
 
-  // Attach businessId to context for downstream use
   if (result.businessId) {
     c.set('businessId', result.businessId);
   }
@@ -38,7 +34,6 @@ async function requireAuth(c: any, next: any) {
   await next();
 }
 
-// Apply auth middleware to POST /settings
 businessRoutes.use('/settings', (c, next) => {
   if (c.req.method === 'POST') {
     return requireAuth(c, next);
@@ -46,41 +41,20 @@ businessRoutes.use('/settings', (c, next) => {
   return next();
 });
 
-// Get business by slug or id (public endpoint for chat page)
-businessRoutes.get('/:slug', async (c) => {
+// 具体路由放在前面
+businessRoutes.get('/list', async (c) => {
   try {
     const db = getDb();
-    const slug = c.req.param('slug');
-    
-    // Try to find by slug first
-    let business = await db.get(
-      'SELECT id, name, slug, logo, description, theme, state, max_staff_count, lang FROM businesses WHERE slug = ?',
-      [slug]
+    const businesses = await db.all(
+      'SELECT id, business_name as name, business_slug as slug, description, created_at FROM staff_users WHERE business_id = 0 ORDER BY created_at DESC'
     );
-    
-    // If not found, try by id
-    if (!business) {
-      const id = parseInt(slug, 10);
-      if (!isNaN(id)) {
-        business = await db.get(
-          'SELECT id, name, slug, logo, description, theme, state, max_staff_count, lang FROM businesses WHERE id = ?',
-          [id]
-        );
-      }
-    }
-
-    if (!business) {
-      return c.json({ success: false, error: 'Business not found' }, 404);
-    }
-
-    return c.json({ success: true, data: business });
+    return c.json({ success: true, data: businesses });
   } catch (error) {
-    console.error('Get business error:', error);
-    return c.json({ success: false, error: 'Failed to get business' }, 500);
+    console.error('Get business list error:', error);
+    return c.json({ success: false, error: 'Failed to get business list' }, 500);
   }
 });
 
-// Get business info (default)
 businessRoutes.get('/info', async (c) => {
   try {
     const db = getDb();
@@ -88,16 +62,45 @@ businessRoutes.get('/info', async (c) => {
     
     let business;
     if (slug) {
-      // Get by slug
       business = await db.get(
-        'SELECT id, name, slug, logo, description, theme, state, max_staff_count, lang FROM businesses WHERE slug = ?',
+        'SELECT id, business_name as name, business_slug as slug FROM staff_users WHERE business_slug = ?',
         [slug]
       );
     } else {
-      // Get default business
-      business = await db.get(
-        'SELECT id, name, slug, logo, description, theme, state, max_staff_count, lang FROM businesses WHERE id = 1'
-      );
+      // Get business from authenticated user
+      const authHeader = c.req.header('Authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        const result = await verifyToken(token);
+        
+        if (result.valid && result.userId) {
+          // For business owners (business_id = 0), use their own id
+          // For staff (business_id > 0), use business_id to find the business
+          const userId = Number(result.userId);
+          const businessId = Number(result.businessId);
+          
+          if (businessId && businessId > 0) {
+            // This is a staff user, get business info from business_id
+            business = await db.get(
+              'SELECT id, business_name as name, business_slug as slug FROM staff_users WHERE id = ?',
+              [businessId]
+            );
+          } else {
+            // This is a business owner (business_id = 0), get their own info
+            business = await db.get(
+              'SELECT id, business_name as name, business_slug as slug FROM staff_users WHERE id = ?',
+              [userId]
+            );
+          }
+        }
+      }
+      
+      // Fallback to default if no auth or not found
+      if (!business) {
+        business = await db.get(
+          'SELECT id, business_name as name, business_slug as slug FROM staff_users WHERE business_slug = "default"'
+        );
+      }
     }
 
     if (!business) {
@@ -119,12 +122,12 @@ businessRoutes.get('/settings', async (c) => {
     let settings;
     if (slug) {
       settings = await db.get(
-        'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang FROM businesses WHERE slug = ?',
+        'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang FROM staff_users WHERE business_slug = ?',
         [slug]
       );
     } else {
       settings = await db.get(
-        'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang FROM businesses WHERE id = 1'
+        'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang FROM staff_users WHERE business_slug = "default"'
       );
     }
 
@@ -151,24 +154,22 @@ businessRoutes.post('/settings', async (c) => {
 
     const db = getDb();
     
-    // Determine which business to update
-    let query = 'UPDATE businesses SET enable_auto_trans = ?, bd_trans_appid = ?, bd_trans_secret = ?, default_lang = ?, updated_at = ? WHERE ';
+    let query = 'UPDATE staff_users SET enable_auto_trans = ?, bd_trans_appid = ?, bd_trans_secret = ?, default_lang = ?, updated_at = ? WHERE ';
     let params: unknown[] = [enable_auto_trans ? 1 : 0, bd_trans_appid, bd_trans_secret, default_lang, Date.now()];
     
     if (business_id) {
       query += 'id = ?';
       params.push(business_id);
     } else if (business_slug) {
-      query += 'slug = ?';
+      query += 'business_slug = ?';
       params.push(business_slug);
     } else {
-      // Fallback to business from authenticated user or default
       const businessId = c.get('businessId');
       if (businessId) {
         query += 'id = ?';
         params.push(businessId);
       } else {
-        query += 'id = 1';
+        query += 'business_slug = "default"';
       }
     }
 
@@ -184,10 +185,16 @@ businessRoutes.post('/settings', async (c) => {
 businessRoutes.post('/create', async (c) => {
   try {
     const body = await c.req.json();
-    const { name, description, max_staff_count = 10 } = body;
+    const { name, description, username, password } = body;
 
     if (!name) {
       return c.json({ success: false, error: '商家名称是必填项' }, 400);
+    }
+    if (!username) {
+      return c.json({ success: false, error: '用户名是必填项' }, 400);
+    }
+    if (!password) {
+      return c.json({ success: false, error: '密码是必填项' }, 400);
     }
 
     const db = getDb();
@@ -206,7 +213,7 @@ businessRoutes.post('/create', async (c) => {
     const maxAttempts = 10;
     
     while (attempts < maxAttempts) {
-      const existing = await db.get('SELECT id FROM businesses WHERE slug = ?', [slug]);
+      const existing = await db.get('SELECT id FROM staff_users WHERE business_slug = ?', [slug]);
       if (!existing) break;
       slug = generateSlug();
       attempts++;
@@ -216,17 +223,56 @@ businessRoutes.post('/create', async (c) => {
       return c.json({ success: false, error: '无法生成唯一的商家标识' }, 500);
     }
 
+    const existingUser = await db.get('SELECT id FROM staff_users WHERE username = ?', [username]);
+    if (existingUser) {
+      return c.json({ success: false, error: '用户名已存在' }, 400);
+    }
+
+    const passwordHash = await hashPassword(password);
+
     const result = await db.run(
-      'INSERT INTO businesses (name, slug, description, max_staff_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
-      [name, slug, description || '', max_staff_count, Date.now(), Date.now()]
+      'INSERT INTO staff_users (username, password_hash, business_name, business_slug, description, business_id, role, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [username, passwordHash, name, slug, description || '', 0, 'admin', 'active', Date.now(), Date.now()]
     );
 
-    const newBusiness = await db.get('SELECT * FROM businesses WHERE id = ?', [result.lastInsertRowid]);
+    const newBusiness = await db.get('SELECT id, business_name as name, business_slug as slug, description, created_at FROM staff_users WHERE id = ?', [result.lastInsertRowid]);
 
     return c.json({ success: true, message: '商家创建成功', data: newBusiness }, 201);
   } catch (error) {
     console.error('Create business error:', error);
     return c.json({ success: false, error: '创建商家失败' }, 500);
+  }
+});
+
+// 动态路由放在最后
+businessRoutes.get('/:slug', async (c) => {
+  try {
+    const db = getDb();
+    const slug = c.req.param('slug');
+    
+    let business = await db.get(
+      'SELECT id, business_name as name, business_slug as slug FROM staff_users WHERE business_slug = ?',
+      [slug]
+    );
+    
+    if (!business) {
+      const id = parseInt(slug, 10);
+      if (!isNaN(id)) {
+        business = await db.get(
+          'SELECT id, business_name as name, business_slug as slug FROM staff_users WHERE id = ?',
+          [id]
+        );
+      }
+    }
+
+    if (!business) {
+      return c.json({ success: false, error: 'Business not found' }, 404);
+    }
+
+    return c.json({ success: true, data: business });
+  } catch (error) {
+    console.error('Get business error:', error);
+    return c.json({ success: false, error: 'Failed to get business' }, 500);
   }
 });
 

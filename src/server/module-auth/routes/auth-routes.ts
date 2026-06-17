@@ -147,6 +147,10 @@ authRoutes.get('/verify', async (c) => {
       valid: true,
       userId: result.userId,
       username: result.username,
+      businessId: result.businessId,
+      businessSlug: result.businessSlug,
+      businessName: result.businessName,
+      role: result.role,
     });
   } else {
     return c.json({
