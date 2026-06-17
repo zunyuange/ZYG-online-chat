@@ -67,49 +67,43 @@ export function StaffSettings() {
     }
   };
 
-  const handleSaveSettings = async () => {
+  const handleSaveAll = async () => {
     try {
-      const response = await fetch('/api/business/settings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
-        },
-        body: JSON.stringify(settings),
-      });
-      const result = await response.json();
-      if (result.success) {
-        setMessage('翻译设置保存成功');
-        setTimeout(() => setMessage(''), 2000);
-      } else {
-        setMessage(result.error || '保存失败');
-      }
-    } catch (error) {
-      setMessage('保存失败');
-      console.error('Failed to save settings:', error);
-    }
-  };
+      const [settingsRes, infoRes] = await Promise.all([
+        fetch('/api/business/settings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+          },
+          body: JSON.stringify(settings),
+        }),
+        fetch('/api/business/info', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+          },
+          body: JSON.stringify(businessInfo),
+        }),
+      ]);
 
-  const handleSaveBusinessInfo = async () => {
-    try {
-      const response = await fetch('/api/business/info', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
-        },
-        body: JSON.stringify(businessInfo),
-      });
-      const result = await response.json();
-      if (result.success) {
-        setMessage('商家信息保存成功');
-        setTimeout(() => setMessage(''), 2000);
+      const settingsResult = await settingsRes.json();
+      const infoResult = await infoRes.json();
+
+      if (settingsResult.success && infoResult.success) {
+        setMessage('保存成功');
+      } else if (settingsResult.success) {
+        setMessage('翻译设置保存成功，商家信息保存失败');
+      } else if (infoResult.success) {
+        setMessage('商家信息保存成功，翻译设置保存失败');
       } else {
-        setMessage(result.error || '保存失败');
+        setMessage('保存失败');
       }
+      setTimeout(() => setMessage(''), 2000);
     } catch (error) {
       setMessage('保存失败');
-      console.error('Failed to save business info:', error);
+      console.error('Failed to save:', error);
     }
   };
 
@@ -158,7 +152,7 @@ export function StaffSettings() {
       <div style={{ marginBottom: '24px' }}>
         <h2 style={{ fontSize: '20px', fontWeight: 500, margin: 0 }}>系统设置</h2>
         <p style={{ color: '#999', fontSize: '14px', marginTop: '8px' }}>
-          配置翻译API密钥和其他系统参数
+          配置商家信息和翻译API密钥
         </p>
       </div>
 
@@ -176,8 +170,64 @@ export function StaffSettings() {
         </div>
       )}
 
-      {/* Translation Settings Card */}
+      {/* Business Info Card */}
       <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Building size={18} style={{ color: '#52c41a' }} />
+          <h3 style={{ fontSize: '16px', fontWeight: 500, margin: 0 }}>商家信息</h3>
+        </div>
+
+        <div style={{ padding: '24px' }}>
+          {/* Business Name */}
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+              商家名称
+            </label>
+            <input
+              type="text"
+              value={businessInfo.business_name}
+              onChange={(e) => setBusinessInfo({ ...businessInfo, business_name: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: '1px solid #d9d9d9',
+                borderRadius: '4px',
+                fontSize: '14px',
+                boxSizing: 'border-box',
+              }}
+              placeholder="请输入商家名称"
+            />
+          </div>
+
+          {/* Business Slug */}
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+              商家标识
+            </label>
+            <input
+              type="text"
+              value={businessInfo.business_slug}
+              onChange={(e) => setBusinessInfo({ ...businessInfo, business_slug: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: '1px solid #d9d9d9',
+                borderRadius: '4px',
+                fontSize: '14px',
+                boxSizing: 'border-box',
+                backgroundColor: '#f5f5f5',
+              }}
+              placeholder="请输入商家标识（英文/数字）"
+            />
+            <p style={{ fontSize: '12px', color: '#999', marginTop: '6px' }}>
+              商家标识用于URL访问，如 https://xxx.workers.dev/chat?business=your-slug
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Translation Settings Card */}
+      <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginTop: '24px' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Globe size={18} style={{ color: '#1890ff' }} />
           <h3 style={{ fontSize: '16px', fontWeight: 500, margin: 0 }}>翻译设置</h3>
@@ -307,7 +357,7 @@ export function StaffSettings() {
 
           {/* Save Button */}
           <button
-            onClick={handleSaveSettings}
+            onClick={handleSaveAll}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -323,82 +373,6 @@ export function StaffSettings() {
           >
             <Save size={18} />
             保存设置
-          </button>
-        </div>
-      </div>
-
-      {/* Business Info Card */}
-      <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginTop: '24px' }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Building size={18} style={{ color: '#52c41a' }} />
-          <h3 style={{ fontSize: '16px', fontWeight: 500, margin: 0 }}>商家信息</h3>
-        </div>
-
-        <div style={{ padding: '24px' }}>
-          {/* Business Name */}
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
-              商家名称
-            </label>
-            <input
-              type="text"
-              value={businessInfo.business_name}
-              onChange={(e) => setBusinessInfo({ ...businessInfo, business_name: e.target.value })}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #d9d9d9',
-                borderRadius: '4px',
-                fontSize: '14px',
-                boxSizing: 'border-box',
-              }}
-              placeholder="请输入商家名称"
-            />
-          </div>
-
-          {/* Business Slug */}
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
-              商家标识
-            </label>
-            <input
-              type="text"
-              value={businessInfo.business_slug}
-              onChange={(e) => setBusinessInfo({ ...businessInfo, business_slug: e.target.value })}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #d9d9d9',
-                borderRadius: '4px',
-                fontSize: '14px',
-                boxSizing: 'border-box',
-                backgroundColor: '#f5f5f5',
-              }}
-              placeholder="请输入商家标识（英文/数字）"
-            />
-            <p style={{ fontSize: '12px', color: '#999', marginTop: '6px' }}>
-              商家标识用于URL访问，如 https://xxx.workers.dev/chat?business=your-slug
-            </p>
-          </div>
-
-          {/* Save Button */}
-          <button
-            onClick={handleSaveBusinessInfo}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '10px 24px',
-              border: 'none',
-              borderRadius: '4px',
-              backgroundColor: '#52c41a',
-              color: '#fff',
-              cursor: 'pointer',
-              fontSize: '14px',
-            }}
-          >
-            <Save size={18} />
-            保存商家信息
           </button>
         </div>
       </div>
