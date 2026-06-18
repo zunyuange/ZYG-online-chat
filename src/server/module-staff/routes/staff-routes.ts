@@ -336,6 +336,25 @@ staffRoutes.delete('/messages/:sessionId', async (c) => {
   }
 });
 
+// End a session
+staffRoutes.post('/sessions/:sessionId/end', async (c) => {
+  try {
+    const sessionId = c.req.param('sessionId');
+    
+    const session = await staffService.endSession(sessionId);
+    if (!session) {
+      return c.json({ success: false, error: 'Session not found' }, 404);
+    }
+
+    await sseService.broadcastSessionUpdate(session);
+
+    return c.json({ success: true, data: session });
+  } catch (error) {
+    console.error('End session error:', error);
+    return c.json({ success: false, error: 'Failed to end session' }, 500);
+  }
+});
+
 // ==========================================
 // Queue Routes (Staff view)
 // ==========================================

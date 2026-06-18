@@ -98,6 +98,12 @@ export const enUS = {
   admin: 'Admin',
   clear_messages: 'Clear chat history',
   confirm_clear: 'Are you sure you want to clear all chat history? This action cannot be undone.',
+  end_session: 'End Session',
+  confirm_end_session: 'Are you sure you want to end this session? Visitors will not be able to send messages after ending.',
+  session_ended: 'Session has ended',
+  session_ended_tip: 'To continue, please refresh the page to reconnect',
+  restart_conversation: 'Restart Conversation',
+  confirm: 'Confirm',
   
   online: 'Online',
   offline: 'Offline',

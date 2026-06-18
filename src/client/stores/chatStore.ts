@@ -422,4 +422,36 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   // Clear error
   clearError: () => set({ error: null }),
+
+  // Reset session - create new session when current one is closed
+  resetSession: async () => {
+    // Stop polling and disconnect SSE
+    get().stopPolling();
+    get().disconnectSSE();
+
+    // Clear localStorage
+    localStorage.removeItem(SESSION_ID_KEY);
+    
+    // Clear URL session param
+    const url = new URL(window.location.href);
+    url.searchParams.delete('s');
+    window.history.replaceState({}, '', url.toString());
+
+    // Reset state
+    set({
+      session: null,
+      messages: [],
+      hasMore: false,
+      loading: true,
+      error: null,
+      sseConnected: false,
+      usePolling: false,
+    });
+
+    // Reset last message time
+    lastMessageTime = 0;
+
+    // Initialize new session
+    await get().initSession();
+  },
 }));

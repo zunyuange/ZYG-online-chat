@@ -91,6 +91,7 @@ export function StaffPage() {
   const [showQueueList, setShowQueueList] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showEndSessionConfirm, setShowEndSessionConfirm] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [currentPage, setCurrentPage] = useState<'home' | 'staff' | 'code' | 'settings'>('home');
   
@@ -203,6 +204,25 @@ export function StaffPage() {
     if (currentSessionId) {
       clearMessages(currentSessionId);
       setShowClearConfirm(false);
+    }
+  };
+
+  const handleEndSession = async () => {
+    if (currentSessionId) {
+      try {
+        await fetch(`/api/staff/sessions/${currentSessionId}/end`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+          },
+        });
+        setSelectedSessionId(null);
+        setCurrentSessionId(null);
+      } catch (error) {
+        console.error('Failed to end session:', error);
+      }
+      setShowEndSessionConfirm(false);
     }
   };
 
@@ -651,6 +671,70 @@ export function StaffPage() {
         </div>
       )}
 
+      {/* End session confirmation modal */}
+      {showEndSessionConfirm && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setShowEndSessionConfirm(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '12px',
+              padding: '24px',
+              minWidth: '320px',
+              maxWidth: '400px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 500 }}>
+              {t('end_session')}
+            </h3>
+            <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#666' }}>
+              {t('confirm_end_session')}
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowEndSessionConfirm(false)}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #d9d9d9',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  backgroundColor: '#fff',
+                  color: '#666',
+                  fontSize: '14px',
+                }}
+              >
+                {t('cancel')}
+              </button>
+              <button
+                onClick={handleEndSession}
+                style={{
+                  padding: '8px 16px',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  backgroundColor: '#ff4d4f',
+                  color: '#fff',
+                  fontSize: '14px',
+                }}
+              >
+                {t('confirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Error toast */}
       {error && (
         <div style={errorStyle}>
@@ -741,6 +825,7 @@ export function StaffPage() {
                 onTopicChange={handleTopicChange}
                 onStatusChange={handleStatusChange}
                 onClearMessages={() => setShowClearConfirm(true)}
+                onEndSession={() => setShowEndSessionConfirm(true)}
               />
             </div>
           </>

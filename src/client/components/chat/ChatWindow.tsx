@@ -31,6 +31,7 @@ interface ChatWindowProps {
   locale?: string;
   setLocale?: (locale: string) => void;
   supportedLocales?: LocaleOption[];
+  onRestart?: () => void;
 }
 
 export function ChatWindow({
@@ -51,6 +52,7 @@ export function ChatWindow({
   locale,
   setLocale,
   supportedLocales = [],
+  onRestart,
 }: ChatWindowProps) {
   const [showLangModal, setShowLangModal] = useState(false);
 
@@ -113,9 +115,11 @@ export function ChatWindow({
   const langModalStyle: React.CSSProperties = {
     backgroundColor: '#fff',
     borderRadius: '12px',
-    padding: '24px',
     width: '90%',
     maxWidth: '320px',
+    maxHeight: '70vh',
+    display: 'flex',
+    flexDirection: 'column',
     boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
   };
 
@@ -123,21 +127,33 @@ export function ChatWindow({
     fontSize: '18px',
     fontWeight: 600,
     color: '#1a1a2e',
-    marginBottom: '20px',
+    padding: '20px 24px',
     textAlign: 'center',
+    borderBottom: '1px solid #eee',
+    flexShrink: 0,
+  };
+
+  const langOptionsContainerStyle: React.CSSProperties = {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '8px',
+    padding: '16px 24px 24px',
+    overflowY: 'auto',
+    flexGrow: 1,
   };
 
   const langOptionStyle: React.CSSProperties = {
-    width: '100%',
+    width: 'calc(50% - 4px)',
     padding: '12px 16px',
     border: 'none',
     borderRadius: '8px',
     backgroundColor: '#f5f5f5',
-    cursor: 'pointer',
-    fontSize: '16px',
+    color: '#333',
+    fontSize: '14px',
     textAlign: 'left',
-    marginBottom: '8px',
+    cursor: 'pointer',
     transition: 'background-color 0.2s',
+    boxSizing: 'border-box',
   };
 
   const getStatusText = () => {
@@ -187,22 +203,24 @@ export function ChatWindow({
         <div style={langModalOverlayStyle} onClick={() => setShowLangModal(false)}>
           <div style={langModalStyle} onClick={(e) => e.stopPropagation()}>
             <div style={langModalTitleStyle}>{t('select_language')}</div>
-            {supportedLocales.map((l) => (
-              <button
-                key={l.code}
-                onClick={() => handleLangSelect(l.code)}
-                style={{
-                  ...langOptionStyle,
-                  backgroundColor: locale === l.code ? '#1890ff' : '#f5f5f5',
-                  color: locale === l.code ? '#fff' : '#333',
-                }}
-              >
-                {l.nativeName}
-                {locale === l.code && (
-                  <span style={{ float: 'right' }}>✓</span>
-                )}
-              </button>
-            ))}
+            <div style={langOptionsContainerStyle}>
+              {supportedLocales.map((l) => (
+                <button
+                  key={l.code}
+                  onClick={() => handleLangSelect(l.code)}
+                  style={{
+                    ...langOptionStyle,
+                    backgroundColor: locale === l.code ? '#1890ff' : '#f5f5f5',
+                    color: locale === l.code ? '#fff' : '#333',
+                  }}
+                >
+                  {l.nativeName}
+                  {locale === l.code && (
+                    <span style={{ float: 'right' }}>✓</span>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -229,13 +247,54 @@ export function ChatWindow({
         t={t}
       />
 
+      {/* Session ended notice */}
+      {session?.status === 'closed' && (
+        <div style={{
+          padding: '16px',
+          backgroundColor: '#fff2f0',
+          borderTop: '1px solid #ffccc7',
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: '14px', color: '#d93026', fontWeight: 500 }}>
+            {t('session_ended')}
+          </div>
+          <div style={{ fontSize: '12px', color: '#d93026', marginTop: '4px' }}>
+            {t('session_ended_tip')}
+          </div>
+          <button
+            onClick={onRestart}
+            style={{
+              marginTop: '12px',
+              padding: '8px 24px',
+              backgroundColor: '#1890ff',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '4px',
+              fontSize: '14px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#40a9ff';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#1890ff';
+            }}
+          >
+            {t('restart_conversation')}
+          </button>
+        </div>
+      )}
+
       {/* Input - fixed at bottom */}
-      <MessageInput
-        onSend={onSend}
-        onUpload={onUpload}
-        sending={sending}
-        t={t}
-      />
+      {session?.status !== 'closed' && (
+        <MessageInput
+          onSend={onSend}
+          onUpload={onUpload}
+          sending={sending}
+          t={t}
+        />
+      )}
     </div>
   );
 }

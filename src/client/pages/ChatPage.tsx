@@ -29,6 +29,7 @@ export function ChatPage() {
     uploadFile,
     markAsRead,
     clearError,
+    resetSession,
   } = useChatStore();
 
   // Initialize session on mount
@@ -60,6 +61,10 @@ export function ChatPage() {
     if (messages.length > 0) {
       loadMessages(messages[0].id);
     }
+  };
+
+  const handleRestart = () => {
+    resetSession();
   };
 
   // Full page container - no scroll, fixed height
@@ -148,6 +153,7 @@ export function ChatPage() {
         locale={locale}
         setLocale={setLocale}
         supportedLocales={supportedLocales}
+        onRestart={handleRestart}
       />
 
       {/* PWA Install Prompt */}

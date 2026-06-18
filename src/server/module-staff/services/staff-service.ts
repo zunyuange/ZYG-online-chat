@@ -58,6 +58,21 @@ export async function updateTaskStatus(sessionId: string, taskStatus: TaskStatus
 }
 
 /**
+ * End a session (close it)
+ */
+export async function endSession(sessionId: string): Promise<Session | null> {
+  const db = getDb();
+  const now = Date.now();
+
+  await db.run(
+    'UPDATE sessions SET status = ?, updated_at = ? WHERE id = ?',
+    ['closed', now, sessionId]
+  );
+
+  return getSessionBase(sessionId);
+}
+
+/**
  * Get session with message preview
  */
 export async function getSessionWithPreview(sessionId: string): Promise<{

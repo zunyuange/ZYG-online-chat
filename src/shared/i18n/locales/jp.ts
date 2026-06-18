@@ -1,6 +1,7 @@
 // 日语
 export default {
   hello: 'こんにちは！',
+  select_language: '言語を選択',
   service_offline: 'サポートはオフラインです',
   service_online: 'サポートがオンラインになりました',
   say_is_off: 'このセッションは終了しました',
@@ -68,4 +69,157 @@ export default {
   choose_lang: '言語を選択',
   service_title: 'オンラインサポート',
   banword_tip: '送信に失敗しました。禁止用語が含まれています',
+
+  // Task status
+  status_requirement_discussion: '要件討論',
+  status_requirement_confirmed: '要件確認',
+  status_in_progress: '進行中',
+  status_delivered: '配信',
+  status_reviewed: 'レビュー',
+  complete: '完了',
+  start_conversation: '会話を開始しましょう！',
+
+  // Auth
+  login: 'ログイン',
+  logout: 'ログアウト',
+  username: 'ユーザー名',
+  password: 'パスワード',
+  please_enter_username: 'ユーザー名を入力してください',
+  please_enter_password: 'パスワードを入力してください',
+  login_success: 'ログイン成功',
+  login_failed: 'ログイン失敗',
+  login_desc: 'ユーザー名とパスワードを入力してログインしてください',
+  logging_in: 'ログイン中...',
+  remaining_attempts: '残り試行回数',
+  too_many_attempts: '試行回数が多すぎます。10分後に再試行してください',
+  wrong_username_or_password: 'ユーザー名またはパスワードが間違っています',
+
+  // Navigation
+  chat: 'チャット',
+  sessions: 'セッションリスト',
+  queue: '待ち行列',
+  admin: '管理',
+  clear_messages: 'チャット履歴をクリア',
+  confirm_clear: '現在のセッションのすべてのチャット履歴をクリアしてもよろしいですか？この操作は元に戻せません。',
+
+  // Status
+  online: 'オンライン',
+  all: 'すべて',
+  active: '進行中',
+  completed: '完了',
+
+  // Types
+  staff: 'スタッフ',
+  visitor: '訪問者',
+  message: 'メッセージ',
+  files: 'ファイル',
+  image: '画像',
+
+  // Actions
+  search: '検索',
+  settings: '設定',
+  profile: 'プロフィール',
+  create: '作成',
+  edit: '編集',
+  delete: '削除',
+  view: '表示',
+  status: 'ステータス',
+  action: '操作',
+
+  // Messages
+  success: '成功',
+  failed: '失敗',
+  error: 'エラー',
+  warning: '警告',
+  info: '情報',
+  welcome: 'オンラインサポートシステムへようこそ',
+  new_message: '新しいメッセージ',
+  unread: '未読',
+  read: '既読',
+
+  // Organization
+  group: 'グループ',
+  department: '部門',
+  role: 'ロール',
+  permissions: '権限',
+
+  // Features
+  robot: 'ロボット',
+  faq: 'よくある質問',
+  knowledge_base: '知識ベース',
+  auto_reply: '自動返信',
+
+  // Analytics
+  statistics: '統計',
+  reports: 'レポート',
+  analytics: '分析',
+
+  // Admin
+  admin_login_title: '管理バックエンドログイン',
+  service_login_title: 'サポートワークステーションログイン',
+  admin_panel: '管理バックエンド',
+  user_management: 'ユーザー管理',
+  go_to_staff: 'サポートワークステーションに移動',
+  go_to_admin: '管理バックエンドに移動',
+  add_user: 'ユーザー追加',
+  edit_user: 'ユーザー編集',
+  delete_user: 'ユーザー削除',
+  created_at: '作成日時',
+  optional: '任意',
+  enter_new_password: '新しいパスワードを入力',
+  please_enter_email: 'メールアドレスを入力してください',
+  inactive: '無効',
+  operation_failed: '操作に失敗しました',
+  load_failed: '読み込みに失敗しました',
+  delete_failed: '削除に失敗しました',
+
+  // Dashboard
+  dashboard: 'ダッシュボード',
+  admin_count: '管理者数',
+  staff_count: 'スタッフ数',
+  role_count: 'ロール数',
+  online_staff: 'オンラインスタッフ',
+  quick_actions: 'クイックアクション',
+  recent_staff: '最近のスタッフ',
+  manage_staff: 'スタッフ管理',
+  view_edit_staff: 'スタッフの表示と編集',
+  manage_admins: '管理者管理',
+  view_edit_admins: '管理者の表示と編集',
+  manage_roles: 'ロール管理',
+  view_edit_roles: 'ロールの表示と編集',
+  system_settings: 'システム設定',
+  configure_system: 'システム設定を構成',
+
+  // Staff Management
+  staff_management: 'スタッフ管理',
+  add_staff: 'スタッフ追加',
+  edit_staff: 'スタッフ編集',
+  delete_staff: 'スタッフ削除',
+
+  // Admin Management
+  admin_management: '管理者管理',
+  add_admin: '管理者追加',
+  edit_admin: '管理者編集',
+  delete_admin: '管理者削除',
+
+  // Role Management
+  role_management: 'ロール管理',
+  add_role: 'ロール追加',
+  edit_role: 'ロール編集',
+  delete_role: 'ロール削除',
+  enter_role_name: 'ロール名を入力してください',
+  enter_role_description: 'ロールの説明を入力してください',
+  system_role: 'システムロール',
+
+  // Settings
+  site_name: 'サイト名',
+  enter_site_name: 'サイト名を入力してください',
+  default_language: 'デフォルト言語',
+  enable_auth: '認証を有効にする',
+  save_settings: '設定を保存',
+
+  // Form
+  leave_empty_to_keep: '変更しない場合は空のままにしてください',
+  saving: '保存中...',
+  save: '保存',
 };

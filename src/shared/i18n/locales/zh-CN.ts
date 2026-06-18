@@ -2,50 +2,48 @@ export const zhCN = {
   hello: '您好！',
   select_language: '选择语言',
   service_offline: '客服已经下线',
-  // Task status
   status_requirement_discussion: '需求讨论',
   status_requirement_confirmed: '需求确认',
-  status_in_progress: '执行中',
+  status_in_progress: '进行中',
   status_delivered: '交付',
-  status_reviewed: '评价',
-  // Other
+  status_reviewed: '评审',
   complete: '完成',
   start_conversation: '开始对话吧!',
   service_online: '客服上线',
   say_is_off: '该会话已经关闭',
   data_error: '数据不完整',
-  service_ban: '该商户客服已经禁止访问',
-  service_leave: '该客服都暂时离开,请留言！也可以转接其他客服',
+  service_ban: '该商家客服已经被禁止',
+  service_leave: '该客服暂时离开,请留言,也可以转接其他客服',
   service_empty: '不存在该专属客服',
   group_service_offline: '该分类客服都不在线',
   session_close: '该会话已经关闭',
-  save_file_error: '请检查存储介质配置信息',
+  save_file_error: '请检查存储配置信息',
   other_offline: '对方不在线',
   question_delete: '该问题已经被删除',
   ext_error: '不支持该文件格式',
   illegal_img_error: '非法图片文件',
-  evaluate_error: '评价失败，请重试',
+  evaluate_error: '评价失败,请重试',
   evaluate_thk: '感谢您的评价',
-  evaluate_score: '请评分',
+  evaluate_score: '请评价',
   mobile_error: '手机格式不正确',
-  name_error: '请填写姓名',
+  name_error: '请输入您的姓名',
   save_ok: '保存成功',
   save_error: '提交失败',
   robot_error: [
     '我不太明白您的意思,您可以换一个问题试试',
-    '不太明白您的问题，不过我正在努力的学习中',
+    '不太明白您的问题,不过我正在努力的学习中',
     '这个问题很有趣',
-    '您的问题我已经拿着小本本记下了',
-    '我不理解您的意思，请您在描述一下',
-    '您问的太快了，访问歇一会再问吧',
+    '您的问题我已经拿小本本记下来了',
+    '我不理解您的意思,请您再描述一下',
+    '您问的太快了,请稍等一会再问吧',
   ],
   send: '发送',
   please_enter: '请输入内容',
   ai_service: 'AI智能客服',
   cancel: '取消',
   submit: '提交',
-  evaluate_service: '评价客服',
-  transfer_service: '已经将您转接到其他客服',
+  evaluate_service: '评价服务',
+  transfer_service: '已经将您转接给其他客服',
   off_line: '[离线]',
   name: '姓名',
   please_enter_name: '请输入您的姓名',
@@ -54,10 +52,10 @@ export const zhCN = {
   close_wav: '关闭提示音',
   open_wav: '开启提示音',
   paste_images_tip: '将您剪切好的图片粘贴到输入框即可',
-  message_tip: '你有一条消息',
-  how_to_send_screenshot: '怎样发截图？',
-  ctrl_enter: '按Enter键发送消息，Ctrl+Enter换行',
-  enter_ctrl: '按Ctrl+Enter键发送消息，Enter换行',
+  message_tip: '您有一条消息',
+  how_to_send_screenshot: '怎么发送图片?',
+  ctrl_enter: '按Enter发送消息,Ctrl+Enter换行',
+  enter_ctrl: '按Ctrl+Enter发送消息,Enter换行',
   disappointment: '失望',
   dissatisfaction: '不满',
   commonly: '一般',
@@ -65,19 +63,19 @@ export const zhCN = {
   surprised: '惊喜',
   please_select_images: '请选择图片',
   not_supported: '不支持该格式的文件',
-  no_data: '已没有数据',
-  tip_waiting: '通知 ： 排队等待中....',
+  no_data: '已经没有数据',
+  tip_waiting: '通知（排队等待中...）',
   tip: '提示框',
   is_transfer_service: '该客服离线中，是否转接其他客服？',
   yes: '是',
   no: '否',
-  transferring: '转接中....',
+  transferring: '转接中...',
   guess_ask: '我猜你想问的:',
-  please_enter_message: '请输入信息',
+  please_enter_message: '请输入消息',
   choose_lang: '选择语言',
   service_title: '在线客服',
   banword_tip: '发送失败，内容包含违禁词',
-  
+
   login: '登录',
   logout: '退出登录',
   username: '用户名',
@@ -86,68 +84,73 @@ export const zhCN = {
   please_enter_password: '请输入密码',
   login_success: '登录成功',
   login_failed: '登录失败',
-  login_desc: '请输入账号密码登录客服工作台',
+  login_desc: '请输入用户名密码登录客服工作台',
   logging_in: '登录中...',
   remaining_attempts: '剩余尝试次数',
-  too_many_attempts: '尝试次数过多，请 10 分钟后重试',
+  too_many_attempts: '尝试次数过多，请10分钟后重试',
   wrong_username_or_password: '用户名或密码错误',
-  
+
   chat: '聊天',
   sessions: '会话列表',
   queue: '排队',
   admin: '管理',
   clear_messages: '清空聊天记录',
-  confirm_clear: '确定要清空当前会话的所有聊天记录吗？此操作不可恢复。',
-  
+  confirm_clear: '确定要清空当前会话的所有聊天记录吗，此操作不可恢复。',
+  end_session: '结束对话',
+  confirm_end_session: '确定要结束当前会话吗，结束后访客将无法继续发送消息。',
+  session_ended: '当前对话已结束',
+  session_ended_tip: '如需继续，请重新刷新页面连接对话',
+  restart_conversation: '重新开始对话',
+  confirm: '确认',
+
   online: '在线',
   offline: '离线',
   all: '全部',
   active: '进行中',
   completed: '已完成',
-  
+
   staff: '客服',
   visitor: '访客',
   message: '消息',
   files: '文件',
   image: '图片',
-  
+
   search: '搜索',
   settings: '设置',
   profile: '个人资料',
-  
+
   create: '创建',
   edit: '编辑',
   delete: '删除',
   view: '查看',
   status: '状态',
   action: '操作',
-  
+
   success: '成功',
   failed: '失败',
   error: '错误',
   warning: '警告',
   info: '提示',
-  
+
   welcome: '欢迎使用在线客服系统',
   new_message: '新消息',
   unread: '未读',
   read: '已读',
-  
+
   group: '分组',
   department: '部门',
   role: '角色',
   permissions: '权限',
-  
+
   robot: '机器人',
   faq: '常见问题',
   knowledge_base: '知识库',
   auto_reply: '自动回复',
-  
+
   statistics: '统计',
   reports: '报表',
   analytics: '分析',
-  
-  // Admin
+
   admin_login_title: '管理后台登录',
   service_login_title: '客服工作台登录',
   admin_panel: '管理后台',
@@ -165,8 +168,7 @@ export const zhCN = {
   operation_failed: '操作失败',
   load_failed: '加载失败',
   delete_failed: '删除失败',
-  
-  // Dashboard
+
   dashboard: '首页',
   admin_count: '管理员数量',
   staff_count: '商家数量',
@@ -182,20 +184,17 @@ export const zhCN = {
   view_edit_roles: '查看和编辑角色',
   system_settings: '系统设置',
   configure_system: '配置系统设置',
-  
-  // Staff Management
+
   staff_management: '商家管理',
   add_staff: '添加商家',
   edit_staff: '编辑商家',
   delete_staff: '删除商家',
-  
-  // Admin Management
+
   admin_management: '管理员管理',
   add_admin: '添加管理员',
   edit_admin: '编辑管理员',
   delete_admin: '删除管理员',
-  
-  // Role Management
+
   role_management: '角色管理',
   add_role: '添加角色',
   edit_role: '编辑角色',
@@ -203,15 +202,13 @@ export const zhCN = {
   enter_role_name: '请输入角色名称',
   enter_role_description: '请输入角色描述',
   system_role: '系统角色',
-  
-  // Settings
+
   site_name: '站点名称',
   enter_site_name: '请输入站点名称',
   default_language: '默认语言',
   enable_auth: '启用认证',
   save_settings: '保存设置',
-  
-  // Form
+
   leave_empty_to_keep: '留空保持不变',
   saving: '保存中...',
   save: '保存',

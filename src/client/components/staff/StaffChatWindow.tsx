@@ -6,7 +6,7 @@ import type { Message, Session, InputMode, TaskStatus, ContentType } from '@shar
 import { MessageList } from '@client/components/chat/MessageList';
 import { MessageInput } from '@client/components/chat/MessageInput';
 import { TopicHeader } from '@client/components/chat/TopicHeader';
-import { Trash2 } from 'lucide-react';
+import { Trash2, LogOut } from 'lucide-react';
 
 interface StaffChatWindowProps {
   session: Session | null;
@@ -23,6 +23,7 @@ interface StaffChatWindowProps {
   onTopicChange?: (topic: string) => void;
   onStatusChange?: (status: TaskStatus) => void;
   onClearMessages?: () => void;
+  onEndSession?: () => void;
 }
 
 export function StaffChatWindow({
@@ -40,6 +41,7 @@ export function StaffChatWindow({
   onTopicChange,
   onStatusChange,
   onClearMessages,
+  onEndSession,
 }: StaffChatWindowProps) {
   const containerStyle: React.CSSProperties = {
     display: 'flex',
@@ -138,6 +140,27 @@ export function StaffChatWindow({
             >
               <Trash2 size={12} />
               清空
+            </button>
+          )}
+          {onEndSession && session?.status === 'active' && (
+            <button
+              onClick={onEndSession}
+              style={{
+                padding: '4px 8px',
+                backgroundColor: '#ff4d4f',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                color: '#fff',
+                fontSize: '12px',
+              }}
+              title="结束对话"
+            >
+              <LogOut size={12} />
+              结束
             </button>
           )}
         </div>
