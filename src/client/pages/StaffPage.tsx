@@ -210,15 +210,24 @@ export function StaffPage() {
   const handleEndSession = async () => {
     if (currentSessionId) {
       try {
-        await fetch(`/api/staff/sessions/${currentSessionId}/end`, {
+        const response = await fetch(`/api/staff/sessions/${currentSessionId}/end`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
           },
         });
-        setSelectedSessionId(null);
-        setCurrentSessionId(null);
+        const result = await response.json();
+        if (result.success) {
+          // Refresh sessions list to remove the closed session
+          await loadSessions();
+          // Clear current session selection
+          setSelectedSessionId(null);
+          setCurrentSessionId(null);
+          console.log('Session ended successfully');
+        } else {
+          console.error('Failed to end session:', result.error);
+        }
       } catch (error) {
         console.error('Failed to end session:', error);
       }

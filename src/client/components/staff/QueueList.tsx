@@ -22,7 +22,12 @@ export function QueueList({ isOpen, onClose, onSelectSession }: QueueListProps) 
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/staff/queue');
+      const token = localStorage.getItem('staff_token');
+      const response = await fetch('/api/staff/queue', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       const result = await response.json();
       if (result.success) {
         setQueueItems(result.data);

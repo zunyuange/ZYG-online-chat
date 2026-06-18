@@ -346,6 +346,9 @@ staffRoutes.post('/sessions/:sessionId/end', async (c) => {
       return c.json({ success: false, error: 'Session not found' }, 404);
     }
 
+    console.log(`[StaffRoutes] Broadcasting session end for ${sessionId}`);
+    
+    // Broadcast session update to both staff and visitor clients
     await sseService.broadcastSessionUpdate(session);
 
     return c.json({ success: true, data: session });

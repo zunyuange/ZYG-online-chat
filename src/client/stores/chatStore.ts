@@ -176,22 +176,55 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (!session) return;
 
     try {
-      const params = new URLSearchParams({ sessionId: session.id, limit: '20' });
-      const response = await fetch(`/api/chat/messages?${params}`);
-      const result = await response.json();
+      // First check session status
+      const sessionResponse = await fetch('/api/chat/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id }),
+      });
+      const sessionResult = await sessionResponse.json();
 
-      if (result.success && result.data) {
-        const newMessages = result.data as Message[];
-        // Find messages newer than our last known message
-        const latestTime = messages.length > 0 ? messages[messages.length - 1].createdAt : 0;
-        const freshMessages = newMessages.filter((m) => m.createdAt > latestTime);
+      if (sessionResult.success && sessionResult.data) {
+        const updatedSession = sessionResult.data;
+        
+        // If session is now closed and was not closed before, update state immediately
+        if (updatedSession.status === 'closed' && session.status !== 'closed') {
+          console.log('[ChatStore] Session closed detected, clearing messages and stopping polling');
+          // Clear messages when session is closed
+          set({ session: updatedSession, messages: [] });
+          // Stop polling since session is closed
+          get().stopPolling();
+          // Disconnect SSE
+          get().disconnectSSE();
+          return;
+        }
 
-        if (freshMessages.length > 0) {
-          // Add only new messages (avoid duplicates)
-          const existingIds = new Set(messages.map((m) => m.id));
-          const toAdd = freshMessages.filter((m) => !existingIds.has(m.id));
-          if (toAdd.length > 0) {
-            set({ messages: [...messages, ...toAdd] });
+        // Update session if there are any changes
+        if (updatedSession.status !== session.status || 
+            updatedSession.unreadByVisitor !== session.unreadByVisitor) {
+          set({ session: updatedSession });
+        }
+      }
+
+      // Only check messages if session is still active
+      if (session.status !== 'closed') {
+        const params = new URLSearchParams({ sessionId: session.id, limit: '20' });
+        const response = await fetch(`/api/chat/messages?${params}`);
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          const newMessages = result.data as Message[];
+          // Find messages newer than our last known message
+          const latestTime = messages.length > 0 ? messages[messages.length - 1].createdAt : 0;
+          const freshMessages = newMessages.filter((m) => m.createdAt > latestTime);
+
+          if (freshMessages.length > 0) {
+            // Add only new messages (avoid duplicates)
+            const existingIds = new Set(messages.map((m) => m.id));
+            const toAdd = freshMessages.filter((m) => !existingIds.has(m.id));
+            if (toAdd.length > 0) {
+              set({ messages: [...messages, ...toAdd] });
+            }
           }
         }
       }
@@ -204,6 +237,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
   sendMessage: async (content: string, type: ContentType) => {
     const { session } = get();
     if (!session || !content.trim()) return;
+    
+    // Prevent sending messages if session is closed
+    if (session.status === 'closed') {
+      set({ error: 'Session has ended. Please restart the conversation.' });
+      return;
+    }
 
     set({ sending: true, error: null });
 
@@ -310,7 +349,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
   updateSession: (sessionUpdate: Partial<Session>) => {
     const { session } = get();
     if (session && sessionUpdate) {
-      set({ session: { ...session, ...sessionUpdate } as Session });
+      const updatedSession = { ...session, ...sessionUpdate } as Session;
+      // If session is closed, clear messages immediately
+      if (updatedSession.status === 'closed' && session.status !== 'closed') {
+        set({ session: updatedSession, messages: [] });
+      } else {
+        set({ session: updatedSession });
+      }
     }
   },
 
@@ -429,15 +474,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
     get().stopPolling();
     get().disconnectSSE();
 
-    // Clear localStorage
+    // Clear localStorage - remove both session ID and visitor name
     localStorage.removeItem(SESSION_ID_KEY);
+    localStorage.removeItem(VISITOR_NAME_KEY);
     
     // Clear URL session param
     const url = new URL(window.location.href);
     url.searchParams.delete('s');
     window.history.replaceState({}, '', url.toString());
 
-    // Reset state
+    // Reset state - clear all messages and session info
     set({
       session: null,
       messages: [],

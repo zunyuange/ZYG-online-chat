@@ -189,6 +189,21 @@ export const useStaffStore = create<StaffState>((set, get) => ({
       if (result.success) {
         const newSessions = result.data as SessionWithPreview[];
         const totalUnread = newSessions.reduce((sum, s) => sum + s.unreadByStaff, 0);
+        
+        // Check if current session is still active
+        const isCurrentSessionActive = newSessions.some((s) => s.id === currentSessionId);
+        
+        // If current session is no longer in the active list (it was closed), clear it
+        if (currentSessionId && !isCurrentSessionActive) {
+          console.log(`[StaffStore] Current session ${currentSessionId} is no longer active, clearing selection`);
+          set({ 
+            sessions: newSessions, 
+            totalUnread,
+            currentSessionId: null 
+          });
+          return;
+        }
+        
         set({ sessions: newSessions, totalUnread });
       }
 

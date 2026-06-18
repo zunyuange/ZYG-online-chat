@@ -58,18 +58,43 @@ export async function updateTaskStatus(sessionId: string, taskStatus: TaskStatus
 }
 
 /**
- * End a session (close it)
+ * End a session (close it) and delete related messages
  */
 export async function endSession(sessionId: string): Promise<Session | null> {
   const db = getDb();
   const now = Date.now();
 
-  await db.run(
-    'UPDATE sessions SET status = ?, updated_at = ? WHERE id = ?',
-    ['closed', now, sessionId]
-  );
+  // Use transaction to ensure both operations succeed or fail together
+  try {
+    // Begin transaction
+    await db.exec('BEGIN');
 
-  return getSessionBase(sessionId);
+    // Delete all messages for this session
+    const deleteResult = await db.run('DELETE FROM messages WHERE session_id = ?', [sessionId]);
+    console.log(`[StaffService] Deleted ${deleteResult.changes} messages for session ${sessionId}`);
+
+    // Update session status to closed
+    await db.run(
+      'UPDATE sessions SET status = ?, updated_at = ? WHERE id = ?',
+      ['closed', now, sessionId]
+    );
+
+    // Commit transaction
+    await db.exec('COMMIT');
+
+    const updatedSession = await getSessionBase(sessionId);
+    console.log(`[StaffService] Session ${sessionId} ended successfully`);
+    return updatedSession;
+  } catch (error) {
+    // Rollback on error
+    try {
+      await db.exec('ROLLBACK');
+    } catch (rollbackError) {
+      console.error('[StaffService] Rollback failed:', rollbackError);
+    }
+    console.error('[StaffService] End session error:', error);
+    throw error;
+  }
 }
 
 /**
