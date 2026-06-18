@@ -5,7 +5,7 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import * as staffService from '../services/staff-service';
-import { createStaffUser, listStaffUsers, deleteStaffUser } from '../services/staff-service';
+import { createStaffUser, listStaffUsers, deleteStaffUser, updateStaffUser, updateOwnProfile } from '../services/staff-service';
 import * as chatService from '@server/module-chat/services/chat-service';
 import * as uploadService from '@server/module-chat/services/upload-service';
 import * as sseService from '@server/module-chat/services/sse-service';
@@ -28,12 +28,15 @@ async function requireAuth(c: any, next: any) {
     return c.json({ success: false, error: result.error || 'Token 无效' }, 401);
   }
 
-  // Attach businessId and businessSlug to context for downstream use
+  // Attach businessId, businessSlug and userId to context for downstream use
   if (result.businessId) {
     c.set('businessId', result.businessId);
   }
   if (result.businessSlug) {
     c.set('businessSlug', result.businessSlug);
+  }
+  if (result.userId) {
+    c.set('userId', result.userId);
   }
 
   await next();
@@ -675,6 +678,37 @@ staffRoutes.get('/users', async (c) => {
   }
 });
 
+// Update a staff user
+staffRoutes.put('/users', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { id, username, password, name, email, role } = body;
+
+    if (!id) {
+      return c.json({ success: false, error: '用户ID不能为空' }, 400);
+    }
+
+    const businessId = c.get('businessId');
+    
+    const result = await updateStaffUser(parseInt(id, 10), businessId, {
+      username,
+      password,
+      name,
+      email,
+      role,
+    });
+
+    if (!result.success) {
+      return c.json({ success: false, error: result.error }, 400);
+    }
+
+    return c.json({ success: true, data: result.data });
+  } catch (error) {
+    console.error('Update staff user error:', error);
+    return c.json({ success: false, error: 'Failed to update staff user' }, 500);
+  }
+});
+
 // Delete a staff user
 staffRoutes.delete('/users/:id', async (c) => {
   try {
@@ -694,5 +728,25 @@ staffRoutes.delete('/users/:id', async (c) => {
   } catch (error) {
     console.error('Delete staff user error:', error);
     return c.json({ success: false, error: 'Failed to delete staff user' }, 500);
+  }
+});
+
+// Update own profile
+staffRoutes.put('/profile', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { name, password } = body;
+    const userId = c.get('userId');
+    
+    const result = await updateOwnProfile(parseInt(userId, 10), { name, password });
+    
+    if (!result.success) {
+      return c.json({ success: false, error: result.error }, 400);
+    }
+
+    return c.json({ success: true, data: result.data });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    return c.json({ success: false, error: 'Failed to update profile' }, 500);
   }
 });

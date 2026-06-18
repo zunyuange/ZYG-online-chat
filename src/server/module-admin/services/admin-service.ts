@@ -213,8 +213,8 @@ export async function getOnlineStaffCount(): Promise<number> {
   
   const result = await db.get<{ count: number }>(
     `SELECT COUNT(*) as count FROM staff_users 
-     WHERE role = 'staff' AND status = 'active' 
-     AND (last_active IS NULL OR last_active > ?)`,
+     WHERE (role = 'staff' OR role = 'admin') AND status = 'active' 
+     AND last_active IS NOT NULL AND last_active > ?`,
     [now - onlineThreshold]
   );
   
@@ -235,12 +235,12 @@ export async function getStaffWithOnlineStatus(): Promise<(StaffUser & { isOnlin
   const onlineThreshold = 5 * 60 * 1000;
   
   const users = await db.all<StaffUser & { last_active: number | null }>(
-    'SELECT *, last_active FROM staff_users WHERE role = ? ORDER BY created_at DESC',
-    ['staff']
+    'SELECT *, last_active FROM staff_users WHERE role IN (?, ?) ORDER BY created_at DESC',
+    ['staff', 'admin']
   );
   
   return users.map(user => ({
     ...user,
-    isOnline: user.last_active === null || user.last_active > now - onlineThreshold,
+    isOnline: user.last_active !== null && user.last_active > now - onlineThreshold,
   }));
 }

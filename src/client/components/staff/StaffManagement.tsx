@@ -60,6 +60,7 @@ export function StaffManagement() {
   const handleOpenModal = (user?: StaffUser) => {
     if (user) {
       setFormData({
+        id: user.id,
         username: user.username,
         password: '',
         name: user.name || '',
@@ -85,8 +86,12 @@ export function StaffManagement() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.username || !formData.password) {
-      setMessage('用户名和密码不能为空');
+    if (!formData.username) {
+      setMessage('用户名不能为空');
+      return;
+    }
+    if (!modal.editing && !formData.password) {
+      setMessage('密码不能为空');
       return;
     }
 

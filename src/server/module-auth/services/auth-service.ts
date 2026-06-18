@@ -4,7 +4,7 @@
  * Supports both legacy single-password auth and multi-user database auth
  */
 
-import { verifyPassword, listUsers } from '@server/module-admin/services/admin-service';
+import { verifyPassword, listUsers, updateStaffLastActive } from '@server/module-admin/services/admin-service';
 
 // Configuration
 let _staffPassword: string | null = null;
@@ -370,6 +370,10 @@ export async function login(username: string, password: string, clientIp: string
       const u = user as any;
       const businessId = Number(u.business_id);
       const userId = Number(user.id);
+      
+      // Update last_active timestamp for online status tracking
+      await updateStaffLastActive(userId);
+      
       // 商家主账号：business_id = 0，使用自己的business_slug
       // 客服账号：business_id > 0，需要查找商家信息
       const token = await generateToken(

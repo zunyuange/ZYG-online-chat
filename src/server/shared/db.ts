@@ -149,6 +149,19 @@ export function getDb(): Database {
 export async function initializeSchema(): Promise<void> {
   const database = getDb();
 
+  // Check if schema is already initialized by checking for admin_users table
+  try {
+    const result = await database.get<{ name: string }>(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='admin_users'"
+    );
+    if (result) {
+      console.log('[Database] Schema already initialized, skipping...');
+      return;
+    }
+  } catch (error) {
+    console.error('[Database] Error checking schema:', error);
+  }
+
   // Create todos table
   await database.exec(
     "CREATE TABLE IF NOT EXISTS todos (" +

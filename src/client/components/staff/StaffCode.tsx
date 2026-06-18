@@ -3,13 +3,8 @@ import { Copy, Check, Link, Code2 } from 'lucide-react';
 
 interface BusinessInfo {
   id: number;
-  name: string;
-  slug: string;
-  logo: string;
-  description: string;
-  theme: string;
-  state: string;
-  max_staff_count: number;
+  business_name: string;
+  business_slug: string;
   lang: string;
   created_at: number;
   updated_at: number;
@@ -118,12 +113,12 @@ export function StaffCode() {
             fontSize: '24px',
             fontWeight: 500,
           }}>
-            {business?.name?.charAt(0) || '商'}
+            {business?.business_name?.charAt(0) || '商'}
           </div>
           <div>
-            <h3 style={{ fontSize: '18px', fontWeight: 500, margin: 0 }}>{business?.name || '默认商家'}</h3>
+            <h3 style={{ fontSize: '18px', fontWeight: 500, margin: 0 }}>{business?.business_name || '默认商家'}</h3>
             <p style={{ color: '#999', fontSize: '14px', margin: '4px 0 0' }}>
-              商家标识: {business?.slug || 'default'}
+              商家标识: {business?.business_slug || 'default'}
             </p>
           </div>
         </div>

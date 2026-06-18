@@ -92,8 +92,15 @@ export function StaffPage() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showEndSessionConfirm, setShowEndSessionConfirm] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [currentPage, setCurrentPage] = useState<'home' | 'staff' | 'code' | 'settings'>('home');
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    password: '',
+    confirmPassword: '',
+  });
+  const [profileMessage, setProfileMessage] = useState('');
   
   // Statistics data
   const [stats, setStats] = useState<{
@@ -198,6 +205,60 @@ export function StaffPage() {
     localStorage.removeItem('staff_token');
     localStorage.removeItem('staff_token_expires');
     window.location.reload();
+  };
+
+  const handleOpenProfile = () => {
+    setShowProfileModal(true);
+    setShowUserMenu(false);
+    setProfileForm({ name: '', password: '', confirmPassword: '' });
+    setProfileMessage('');
+  };
+
+  const handleCloseProfile = () => {
+    setShowProfileModal(false);
+    setProfileForm({ name: '', password: '', confirmPassword: '' });
+    setProfileMessage('');
+  };
+
+  const handleUpdateProfile = async () => {
+    setProfileMessage('');
+    
+    if (profileForm.password !== profileForm.confirmPassword) {
+      setProfileMessage('两次输入的密码不一致');
+      return;
+    }
+
+    if (!profileForm.name && !profileForm.password) {
+      setProfileMessage('请至少修改一项内容');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('staff_token');
+      const response = await fetch('/api/staff/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: profileForm.name || undefined,
+          password: profileForm.password || undefined,
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setProfileMessage('修改成功');
+        setTimeout(() => {
+          handleCloseProfile();
+        }, 1500);
+      } else {
+        setProfileMessage(result.error || '修改失败');
+      }
+    } catch (error) {
+      setProfileMessage('修改失败');
+    }
   };
 
   const handleClearMessages = () => {
@@ -555,6 +616,26 @@ export function StaffPage() {
                   </select>
                 </div>
                 <button
+                  onClick={handleOpenProfile}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    color: '#666',
+                    fontSize: '13px',
+                    textAlign: 'left',
+                  }}
+                >
+                  <User size={14} />
+                  修改个人资料
+                </button>
+                <button
                   onClick={handleLogout}
                   style={{
                     width: '100%',
@@ -893,6 +974,141 @@ export function StaffPage() {
             </span>
           )}
         </button>
+      )}
+
+      {/* 修改个人资料模态框 */}
+      {showProfileModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => handleCloseProfile()}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '8px',
+              padding: '24px',
+              width: '90%',
+              maxWidth: '400px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: 'bold' }}>
+              修改个人资料
+            </h3>
+            {profileMessage && (
+              <div
+                style={{
+                  padding: '8px 12px',
+                  marginBottom: '16px',
+                  borderRadius: '4px',
+                  backgroundColor: profileMessage.includes('成功') ? '#f6ffed' : '#fff2f0',
+                  color: profileMessage.includes('成功') ? '#52c41a' : '#ff4d4f',
+                  fontSize: '13px',
+                }}
+              >
+                {profileMessage}
+              </div>
+            )}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: '#666' }}>
+                姓名
+              </label>
+              <input
+                type="text"
+                value={profileForm.name}
+                onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                placeholder="输入新姓名（留空则不修改）"
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #d9d9d9',
+                  borderRadius: '4px',
+                  fontSize: '13px',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: '#666' }}>
+                新密码
+              </label>
+              <input
+                type="password"
+                value={profileForm.password}
+                onChange={(e) => setProfileForm({ ...profileForm, password: e.target.value })}
+                placeholder="输入新密码（留空则不修改）"
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #d9d9d9',
+                  borderRadius: '4px',
+                  fontSize: '13px',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: '#666' }}>
+                确认密码
+              </label>
+              <input
+                type="password"
+                value={profileForm.confirmPassword}
+                onChange={(e) => setProfileForm({ ...profileForm, confirmPassword: e.target.value })}
+                placeholder="再次输入新密码"
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #d9d9d9',
+                  borderRadius: '4px',
+                  fontSize: '13px',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={handleCloseProfile}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #d9d9d9',
+                  borderRadius: '4px',
+                  backgroundColor: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  color: '#666',
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleUpdateProfile}
+                style={{
+                  padding: '8px 16px',
+                  border: 'none',
+                  borderRadius: '4px',
+                  backgroundColor: '#1890ff',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  color: '#fff',
+                }}
+              >
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Queue List Modal */}

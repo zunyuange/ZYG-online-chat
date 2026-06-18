@@ -690,6 +690,65 @@ export async function listStaffUsers(businessId: number = 1): Promise<StaffUser[
 /**
  * Delete a staff user
  */
+export async function updateStaffUser(id: number, businessId: number, params: Partial<CreateStaffUserParams>): Promise<{ success: boolean; data?: StaffUser; error?: string }> {
+  const db = getDb();
+  const { username, password, name, email, role } = params;
+
+  try {
+    const user = await db.get<{ business_id: number }>('SELECT business_id FROM staff_users WHERE id = ?', [id]);
+    if (!user) {
+      return { success: false, error: '用户不存在' };
+    }
+    if (user.business_id !== businessId && user.business_id !== 0) {
+      return { success: false, error: '无权编辑其他商家的用户' };
+    }
+
+    const updates: string[] = [];
+    const updateParams: unknown[] = [];
+
+    if (username !== undefined) {
+      updates.push('username = ?');
+      updateParams.push(username);
+    }
+    if (password !== undefined && password !== '') {
+      const passwordHash = await hashPassword(password);
+      updates.push('password_hash = ?');
+      updateParams.push(passwordHash);
+    }
+    if (name !== undefined) {
+      updates.push('name = ?');
+      updateParams.push(name || '');
+    }
+    if (email !== undefined) {
+      updates.push('email = ?');
+      updateParams.push(email || null);
+    }
+    if (role !== undefined) {
+      updates.push('role = ?');
+      updateParams.push(role);
+    }
+
+    if (updates.length === 0) {
+      return { success: false, error: '没有需要更新的字段' };
+    }
+
+    await db.run(
+      `UPDATE staff_users SET ${updates.join(', ')}, updated_at = ? WHERE id = ?`,
+      [...updateParams, Date.now(), id]
+    );
+
+    const updatedUser = await db.get<StaffUser>(
+      'SELECT id, business_id, username, email, name, role, status, created_at, updated_at FROM staff_users WHERE id = ?',
+      [id]
+    );
+
+    return { success: true, data: updatedUser! };
+  } catch (error) {
+    console.error('[StaffService] Update staff user error:', error);
+    return { success: false, error: error instanceof Error ? error.message : '更新失败' };
+  }
+}
+
 export async function deleteStaffUser(id: number, businessId: number): Promise<{ success: boolean; error?: string }> {
   const db = getDb();
   try {
@@ -705,5 +764,49 @@ export async function deleteStaffUser(id: number, businessId: number): Promise<{
   } catch (error) {
     console.error('[StaffService] Delete staff user error:', error);
     return { success: false, error: error instanceof Error ? error.message : '删除失败' };
+  }
+}
+
+export async function updateOwnProfile(id: number, params: { name?: string; password?: string }): Promise<{ success: boolean; data?: StaffUser; error?: string }> {
+  const db = getDb();
+  const { name, password } = params;
+
+  try {
+    const user = await db.get<StaffUser>('SELECT * FROM staff_users WHERE id = ?', [id]);
+    if (!user) {
+      return { success: false, error: '用户不存在' };
+    }
+
+    const updates: string[] = [];
+    const updateParams: unknown[] = [];
+
+    if (name !== undefined && name !== '') {
+      updates.push('name = ?');
+      updateParams.push(name);
+    }
+    if (password !== undefined && password !== '') {
+      const passwordHash = await hashPassword(password);
+      updates.push('password_hash = ?');
+      updateParams.push(passwordHash);
+    }
+
+    if (updates.length === 0) {
+      return { success: false, error: '没有需要更新的字段' };
+    }
+
+    await db.run(
+      `UPDATE staff_users SET ${updates.join(', ')}, updated_at = ? WHERE id = ?`,
+      [...updateParams, Date.now(), id]
+    );
+
+    const updatedUser = await db.get<StaffUser>(
+      'SELECT id, business_id, username, email, name, role, status, created_at, updated_at FROM staff_users WHERE id = ?',
+      [id]
+    );
+
+    return { success: true, data: updatedUser! };
+  } catch (error) {
+    console.error('[StaffService] Update own profile error:', error);
+    return { success: false, error: error instanceof Error ? error.message : '更新失败' };
   }
 }

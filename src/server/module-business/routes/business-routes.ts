@@ -63,7 +63,7 @@ businessRoutes.get('/info', async (c) => {
     let business;
     if (slug) {
       business = await db.get(
-        'SELECT id, business_name, business_slug FROM staff_users WHERE business_slug = ?',
+        'SELECT id, business_name, business_slug, default_lang as lang, created_at, updated_at FROM staff_users WHERE business_slug = ?',
         [slug]
       );
     } else {
@@ -82,13 +82,13 @@ businessRoutes.get('/info', async (c) => {
           if (businessId && businessId > 0) {
             // This is a staff user, get business info from business_id
             business = await db.get(
-              'SELECT id, business_name, business_slug FROM staff_users WHERE id = ?',
+              'SELECT id, business_name, business_slug, default_lang as lang, created_at, updated_at FROM staff_users WHERE id = ?',
               [businessId]
             );
           } else {
             // This is a business owner (business_id = 0), get their own info
             business = await db.get(
-              'SELECT id, business_name, business_slug FROM staff_users WHERE id = ?',
+              'SELECT id, business_name, business_slug, default_lang as lang, created_at, updated_at FROM staff_users WHERE id = ?',
               [userId]
             );
           }
@@ -98,7 +98,7 @@ businessRoutes.get('/info', async (c) => {
       // Fallback to default if no auth or not found
       if (!business) {
         business = await db.get(
-          'SELECT id, business_name, business_slug FROM staff_users WHERE business_slug = "default"'
+          'SELECT id, business_name, business_slug, default_lang as lang, created_at, updated_at FROM staff_users WHERE business_slug = "default"'
         );
       }
     }

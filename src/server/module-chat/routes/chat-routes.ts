@@ -544,8 +544,8 @@ chatRoutes.get('/staff/online', async (c) => {
     let query = `
       SELECT COUNT(*) as count 
       FROM staff_users 
-      WHERE role = 'staff' AND status = 'active' 
-      AND (last_active IS NULL OR last_active > ?)
+      WHERE (role = 'staff' OR role = 'admin') AND status = 'active' 
+      AND last_active IS NOT NULL AND last_active > ?
     `;
     
     const params: unknown[] = [now - onlineThreshold];
