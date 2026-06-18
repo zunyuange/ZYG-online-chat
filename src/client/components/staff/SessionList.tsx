@@ -18,6 +18,7 @@ interface SessionListProps {
   currentSessionId: string | null;
   onSelect: (sessionId: string) => void;
   loading?: boolean;
+  staffList?: { id: number; name: string; username: string }[];
 }
 
 export function SessionList({
@@ -25,6 +26,7 @@ export function SessionList({
   currentSessionId,
   onSelect,
   loading,
+  staffList = [],
 }: SessionListProps) {
   const formatTime = (date: Date) => {
     const now = new Date();
@@ -52,6 +54,12 @@ export function SessionList({
       default:
         return content.length > 30 ? `${content.slice(0, 30)}...` : content;
     }
+  };
+
+  const getAssignedStaffName = (assignedStaffId: number | null) => {
+    if (!assignedStaffId || staffList.length === 0) return null;
+    const staff = staffList.find((s) => s.id === assignedStaffId);
+    return staff ? staff.name || staff.username : null;
   };
 
   const containerStyle: React.CSSProperties = {
@@ -141,28 +149,36 @@ export function SessionList({
         {sessions.length === 0 ? (
           <div style={emptyStyle}>暂无会话</div>
         ) : (
-          sessions.map((session) => (
-            <div
-              key={session.id}
-              style={itemStyle(session.id === currentSessionId)}
-              onClick={() => onSelect(session.id)}
-            >
-              <div style={nameStyle}>
-                <span>{session.visitorName}</span>
-                <span style={timeStyle}>
-                  {session.lastMessageAt
-                    ? formatTime(session.lastMessageAt)
-                    : formatTime(session.createdAt)}
-                </span>
+          sessions.map((session) => {
+            const assignedStaffName = getAssignedStaffName(session.assignedStaffId || null);
+            return (
+              <div
+                key={session.id}
+                style={itemStyle(session.id === currentSessionId)}
+                onClick={() => onSelect(session.id)}
+              >
+                <div style={nameStyle}>
+                  <span>{session.visitorName}</span>
+                  <span style={timeStyle}>
+                    {session.lastMessageAt
+                      ? formatTime(session.lastMessageAt)
+                      : formatTime(session.createdAt)}
+                  </span>
+                </div>
+                <div style={previewStyle}>
+                  {getLastMessagePreview(session)}
+                </div>
+                {assignedStaffName && (
+                  <div style={{ fontSize: '11px', color: '#1890ff', marginTop: '4px' }}>
+                    客服: {assignedStaffName}
+                  </div>
+                )}
+                {session.unreadByStaff > 0 && (
+                  <UnreadBadge count={session.unreadByStaff} />
+                )}
               </div>
-              <div style={previewStyle}>
-                {getLastMessagePreview(session)}
-              </div>
-              {session.unreadByStaff > 0 && (
-                <UnreadBadge count={session.unreadByStaff} />
-              )}
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

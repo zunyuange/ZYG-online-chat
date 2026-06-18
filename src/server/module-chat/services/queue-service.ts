@@ -91,6 +91,7 @@ export async function getQueueInfo(sessionId: string): Promise<QueueInfo> {
 export async function getQueueList(): Promise<QueueItem[]> {
   const db = getDb();
 
+  // 只查询等待中的会话，不包括进行中的会话
   const rows = await db.all<QueueListRow>(
     `SELECT
       id as sessionId,
@@ -100,30 +101,31 @@ export async function getQueueList(): Promise<QueueItem[]> {
       created_at as createdAt
     FROM sessions
     WHERE status = 'active'
-    AND task_status IN ('requirement_discussion', 'requirement_confirmed', 'in_progress')
+    AND task_status IN ('requirement_discussion', 'requirement_confirmed')
     ORDER BY
       CASE task_status
-        WHEN 'in_progress' THEN 1
-        WHEN 'requirement_confirmed' THEN 2
-        WHEN 'requirement_discussion' THEN 3
+        WHEN 'requirement_confirmed' THEN 1
+        WHEN 'requirement_discussion' THEN 2
       END,
       created_at ASC`
   );
 
   // Calculate position and wait time for each
+  let confirmedPosition = 0;
   let discussionPosition = 0;
 
   return rows.map((row) => {
     let position = 1;
     let waitMinutes = 0;
 
-    if (row.taskStatus === 'requirement_discussion' || row.taskStatus === 'requirement_confirmed') {
-      discussionPosition++;
-      position = discussionPosition;
+    if (row.taskStatus === 'requirement_confirmed') {
+      confirmedPosition++;
+      position = confirmedPosition;
       waitMinutes = (position - 1) * AVG_HANDLE_TIME_MINUTES;
-    } else if (row.taskStatus === 'in_progress') {
-      position = 0; // Currently being handled
-      waitMinutes = 0;
+    } else if (row.taskStatus === 'requirement_discussion') {
+      discussionPosition++;
+      position = confirmedPosition + discussionPosition;
+      waitMinutes = (position - 1) * AVG_HANDLE_TIME_MINUTES;
     }
 
     return {

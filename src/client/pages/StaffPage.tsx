@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { MessageCircle, Users, User, LogOut, Trash2, Globe, Code2, Settings } from 'lucide-react';
+import { MessageCircle, Users, User, LogOut, Code2, Settings, ArrowRightLeft } from 'lucide-react';
 import { useStaffStore } from '@client/stores/staffStore';
 import { SessionList } from '@client/components/staff/SessionList';
 import { StaffChatWindow } from '@client/components/staff/StaffChatWindow';
@@ -119,6 +119,11 @@ export function StaffPage() {
   // Ref to prevent multiple initializations
   const dataLoadedRef = useRef(false);
 
+  // Transfer request state
+  const [pendingTransfers, setPendingTransfers] = useState<any[]>([]);
+  const [showTransferNotification, setShowTransferNotification] = useState(false);
+  const transferPollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   // ============ ALL HOOKS MUST BE BEFORE CONDITIONAL RETURNS ============
 
   // Detect mobile on mount and resize
@@ -151,6 +156,16 @@ export function StaffPage() {
     loadSessions();
     connectSSE();
     initFromUrl();
+    
+    // Start polling for pending transfer requests
+    fetchPendingTransfers();
+    transferPollingIntervalRef.current = setInterval(fetchPendingTransfers, 10000);
+    
+    return () => {
+      if (transferPollingIntervalRef.current) {
+        clearInterval(transferPollingIntervalRef.current);
+      }
+    };
   }, [isAuthenticated, loadSessions, connectSSE, initFromUrl]);
 
   // Get user info after authentication
@@ -232,10 +247,87 @@ export function StaffPage() {
     }
   };
 
+  const fetchPendingTransfers = async () => {
+    try {
+      const response = await fetch('/api/chat/transfer/pending', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+        },
+      });
+      const result = await response.json();
+      if (result.success && result.data) {
+        const newCount = result.data.length;
+        const oldCount = pendingTransfers.length;
+        
+        setPendingTransfers(result.data);
+        
+        // Show notification if there are new transfer requests
+        if (newCount > oldCount && newCount > 0) {
+          setShowTransferNotification(true);
+          // Auto hide after 5 seconds
+          setTimeout(() => {
+            setShowTransferNotification(false);
+          }, 5000);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch pending transfers:', error);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('staff_token');
     localStorage.removeItem('staff_token_expires');
     window.location.reload();
+  };
+
+  const handleAcceptTransfer = async (requestId: number) => {
+    try {
+      const response = await fetch(`/api/chat/transfer/${requestId}/respond`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+        },
+        body: JSON.stringify({ action: 'accept' }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        // Refresh pending transfers list
+        await fetchPendingTransfers();
+        // Reload sessions to show the new session
+        await loadSessions();
+        alert('已接受转接请求');
+      } else {
+        alert(result.error || '接受失败');
+      }
+    } catch (error) {
+      console.error('Failed to accept transfer:', error);
+      alert('接受失败');
+    }
+  };
+
+  const handleRejectTransfer = async (requestId: number) => {
+    try {
+      const response = await fetch(`/api/chat/transfer/${requestId}/respond`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+        },
+        body: JSON.stringify({ action: 'reject' }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        // Refresh pending transfers list
+        await fetchPendingTransfers();
+      } else {
+        alert(result.error || '拒绝失败');
+      }
+    } catch (error) {
+      console.error('Failed to reject transfer:', error);
+      alert('拒绝失败');
+    }
   };
 
   const handleOpenProfile = () => {
@@ -588,6 +680,29 @@ export function StaffPage() {
               </span>
             </div>
           )}
+          {/* Transfer request notification badge */}
+          {pendingTransfers.length > 0 && (
+            <button
+              onClick={() => setShowTransferNotification(!showTransferNotification)}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: '#faad14',
+                border: 'none',
+                borderRadius: '16px',
+                color: '#fff',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '13px',
+                fontWeight: 500,
+              }}
+              title="有待处理的转接请求"
+            >
+              <ArrowRightLeft size={14} />
+              <span>{pendingTransfers.length}</span>
+            </button>
+          )}
           {/* User menu */}
           <div style={{ position: 'relative' }}>
             <button
@@ -926,6 +1041,7 @@ export function StaffPage() {
                 currentSessionId={currentSessionId}
                 onSelect={handleSelectSession}
                 loading={loading}
+                staffList={staffList}
               />
             </div>
 
@@ -1151,6 +1267,115 @@ export function StaffPage() {
         onClose={() => setShowQueueList(false)}
         onSelectSession={handleSelectSession}
       />
+
+      {/* Transfer Request Notification Panel */}
+      {showTransferNotification && pendingTransfers.length > 0 && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '70px',
+            right: '20px',
+            width: '350px',
+            backgroundColor: '#fff',
+            borderRadius: '8px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+            zIndex: 1000,
+            maxHeight: '400px',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              padding: '12px 16px',
+              borderBottom: '1px solid #f0f0f0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: '#faad14',
+              color: '#fff',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ArrowRightLeft size={16} />
+              <span style={{ fontWeight: 500 }}>待处理转接请求 ({pendingTransfers.length})</span>
+            </div>
+            <button
+              onClick={() => setShowTransferNotification(false)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#fff',
+                cursor: 'pointer',
+                fontSize: '18px',
+                padding: '0',
+                lineHeight: 1,
+              }}
+            >
+              ×
+            </button>
+          </div>
+          <div style={{ overflowY: 'auto', maxHeight: '340px' }}>
+            {pendingTransfers.map((request) => (
+              <div
+                key={request.id}
+                style={{
+                  padding: '12px 16px',
+                  borderBottom: '1px solid #f0f0f0',
+                }}
+              >
+                <div style={{ marginBottom: '8px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 500, color: '#333' }}>
+                    来自: {request.from_staff_name || request.from_staff_id}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+                    会话: {request.session_visitor_name || request.session_id}
+                  </div>
+                  {request.reason && (
+                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                      原因: {request.reason}
+                    </div>
+                  )}
+                  <div style={{ fontSize: '11px', color: '#bbb', marginTop: '4px' }}>
+                    {new Date(request.created_at).toLocaleString('zh-CN')}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => handleAcceptTransfer(request.id)}
+                    style={{
+                      flex: 1,
+                      padding: '6px 12px',
+                      backgroundColor: '#52c41a',
+                      border: 'none',
+                      borderRadius: '4px',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                    }}
+                  >
+                    接受
+                  </button>
+                  <button
+                    onClick={() => handleRejectTransfer(request.id)}
+                    style={{
+                      flex: 1,
+                      padding: '6px 12px',
+                      backgroundColor: '#ff4d4f',
+                      border: 'none',
+                      borderRadius: '4px',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                    }}
+                  >
+                    拒绝
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

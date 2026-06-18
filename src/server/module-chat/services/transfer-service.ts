@@ -28,11 +28,11 @@ export async function createTransferRequest(params: CreateTransferRequestParams)
     );
     
     if (!session) {
-      return { success: false, error: '�Ự������' };
+      return { success: false, error: '会话不存在' };
     }
     
     if (session.assigned_staff_id !== params.fromStaffId) {
-      return { success: false, error: '�����ǸûỰ�ĵ�ǰ�ͷ�' };
+      return { success: false, error: '您不是该会话的当前客服' };
     }
     
     const existingRequest = await db.get<TransferRequest>(
@@ -41,7 +41,7 @@ export async function createTransferRequest(params: CreateTransferRequestParams)
     );
     
     if (existingRequest) {
-      return { success: false, error: '���д�������ת������' };
+      return { success: false, error: '已存在待处理的转接请求' };
     }
     
     const result = await db.run(
@@ -57,7 +57,7 @@ export async function createTransferRequest(params: CreateTransferRequestParams)
     return { success: true, data: request! };
   } catch (error) {
     console.error('[TransferService] Create transfer request error:', error);
-    return { success: false, error: error instanceof Error ? error.message : '����ת������ʧ��' };
+    return { success: false, error: error instanceof Error ? error.message : '创建转接请求失败' };
   }
 }
 
@@ -71,15 +71,15 @@ export async function respondToTransferRequest(requestId: number, staffId: numbe
     );
     
     if (!request) {
-      return { success: false, error: 'ת�����󲻴���' };
+      return { success: false, error: '转接请求不存在' };
     }
     
     if (request.to_staff_id !== staffId) {
-      return { success: false, error: '����Ȩ������ת������' };
+      return { success: false, error: '无权限处理该转接请求' };
     }
     
     if (request.status !== 'pending') {
-      return { success: false, error: 'ת�������Ѵ���' };
+      return { success: false, error: '转接请求已处理' };
     }
     
     const status = action === 'accept' ? 'accepted' : 'rejected';
@@ -99,7 +99,7 @@ export async function respondToTransferRequest(requestId: number, staffId: numbe
     return { success: true };
   } catch (error) {
     console.error('[TransferService] Respond to transfer request error:', error);
-    return { success: false, error: error instanceof Error ? error.message : '����ת������ʧ��' };
+    return { success: false, error: error instanceof Error ? error.message : '创建转接请求失败' };
   }
 }
 
@@ -129,11 +129,11 @@ export async function deleteTransferRequest(requestId: number, staffId: number):
     );
     
     if (!request) {
-      return { success: false, error: 'ת�����󲻴���' };
+      return { success: false, error: '转接请求不存在' };
     }
     
     if (request.from_staff_id !== staffId && request.to_staff_id !== staffId) {
-      return { success: false, error: '����Ȩɾ����ת������' };
+      return { success: false, error: '无权限删除该转接请求' };
     }
     
     await db.run('DELETE FROM transfer_requests WHERE id = ?', [requestId]);
@@ -141,7 +141,7 @@ export async function deleteTransferRequest(requestId: number, staffId: number):
     return { success: true };
   } catch (error) {
     console.error('[TransferService] Delete transfer request error:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'ɾ��ת������ʧ��' };
+    return { success: false, error: error instanceof Error ? error.message : '删除转接请求失败' };
   }
 }
 

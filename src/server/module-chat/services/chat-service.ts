@@ -229,7 +229,8 @@ export async function listSessions(status?: 'active' | 'closed', businessId?: nu
     params.push(status);
   }
 
-  if (businessId) {
+  // 管理员 (business_id = 0) 可以看到所有会话，普通商家只能看到自己的会话
+  if (businessId && businessId !== 0) {
     conditions.push('business_id = ?');
     params.push(businessId);
   }

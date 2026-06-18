@@ -610,7 +610,7 @@ chatRoutes.get('/staff/online', async (c) => {
   }
 });
 
-chatRoutes.post('/transfer/request', async (c) => {
+chatRoutes.post('/transfer/request', requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const { sessionId, toStaffId, reason } = body;
@@ -619,7 +619,7 @@ chatRoutes.post('/transfer/request', async (c) => {
       return c.json({ success: false, error: '会话ID和目标客服ID不能为空' }, 400);
     }
     
-    const staffId = c.get('userId');
+    const staffId = parseInt(c.get('userId'), 10);
     
     const result = await transferService.createTransferRequest({
       sessionId,
@@ -631,6 +631,9 @@ chatRoutes.post('/transfer/request', async (c) => {
     if (!result.success) {
       return c.json({ success: false, error: result.error }, 400);
     }
+    
+    // Broadcast the transfer request via SSE to notify target staff
+    await sseService.broadcastTransferRequest(result.data);
     
     return c.json({ success: true, data: result.data });
   } catch (error) {

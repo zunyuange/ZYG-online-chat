@@ -135,7 +135,8 @@ export async function listSessionsWithPreview(status?: SessionStatus, businessId
     };
   })[]
 > {
-  let sessions = await listSessionsBase(status, businessId);
+  // 管理员可以看到所有会话，不需要按 businessId 过滤
+  let sessions = await listSessionsBase(status, role === 'admin' ? undefined : businessId);
 
   if (sessions.length === 0) {
     return [];

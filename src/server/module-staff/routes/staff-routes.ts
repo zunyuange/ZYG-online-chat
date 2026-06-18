@@ -28,7 +28,7 @@ async function requireAuth(c: any, next: any) {
     return c.json({ success: false, error: result.error || 'Token 无效' }, 401);
   }
 
-  // Attach businessId, businessSlug and userId to context for downstream use
+  // Attach businessId, businessSlug, userId and role to context for downstream use
   if (result.businessId) {
     c.set('businessId', result.businessId);
   }
@@ -37,6 +37,9 @@ async function requireAuth(c: any, next: any) {
   }
   if (result.userId) {
     c.set('userId', result.userId);
+  }
+  if (result.role) {
+    c.set('role', result.role);
   }
 
   await next();

@@ -376,10 +376,11 @@ export async function login(username: string, password: string, clientIp: string
       
       // 商家主账号：business_id = 0，使用自己的business_slug
       // 客服账号：business_id > 0，需要查找商家信息
+      // 管理员(business_id = 0)保持business_id = 0，这样才能看到所有会话
       const token = await generateToken(
         userId, 
         user.username, 
-        businessId === 0 ? userId : businessId,
+        businessId,
         u.business_slug || '',
         u.business_name || '',
         user.role

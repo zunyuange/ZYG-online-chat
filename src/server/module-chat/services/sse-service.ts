@@ -210,6 +210,26 @@ export async function broadcastMessageRead(sessionId: string, messageIds: number
 }
 
 /**
+ * Broadcast transfer request to staff clients
+ */
+export async function broadcastTransferRequest(transferRequest: any): Promise<void> {
+  const eventData = {
+    type: 'transfer_request',
+    transferRequest,
+  };
+
+  const sendPromises: Promise<boolean>[] = [];
+
+  // Send to all staff clients (so they can see the incoming request)
+  for (const client of staffClients) {
+    sendPromises.push(sendToStream(client, 'transfer_request', eventData));
+  }
+
+  await Promise.allSettled(sendPromises);
+  cleanupDeadStreams();
+}
+
+/**
  * Send heartbeat to keep connections alive
  */
 export async function sendHeartbeat(): Promise<void> {
