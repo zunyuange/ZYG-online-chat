@@ -35,6 +35,12 @@ async function requireAuth(c: any, next: any) {
   if (result.businessSlug) {
     c.set('businessSlug', result.businessSlug);
   }
+  if (result.userId) {
+    c.set('userId', result.userId);
+  }
+  if (result.role) {
+    c.set('role', result.role);
+  }
 
   await next();
 }
