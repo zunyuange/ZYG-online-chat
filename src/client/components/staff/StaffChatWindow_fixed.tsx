@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Staff Chat Window Component - Chat window for staff with session info
  */
 
@@ -141,6 +141,7 @@ export function StaffChatWindow({
   return (
     <>
       <div style={containerStyle}>
+        {/* Header */}
         <div style={headerStyle}>
           <div style={infoStyle}>
             <span style={statusDotStyle(session.status)}></span>
@@ -234,6 +235,7 @@ export function StaffChatWindow({
           </div>
         </div>
 
+        {/* Topic Header */}
         {session && (
           <TopicHeader
             session={session}
@@ -247,6 +249,7 @@ export function StaffChatWindow({
           />
         )}
 
+        {/* Messages */}
         <MessageList
           messages={messages}
           hasMore={hasMore}
@@ -256,6 +259,7 @@ export function StaffChatWindow({
           t={t}
         />
 
+        {/* Input */}
         <MessageInput
           onSend={onSend}
           onUpload={onUpload}
@@ -268,6 +272,7 @@ export function StaffChatWindow({
         />
       </div>
 
+      {/* Transfer Modal */}
       {showTransferModal && (
         <div
           style={{

@@ -104,7 +104,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
 
   // Select a session and load messages
   selectSession: async (sessionId: string) => {
-    const { messages, sessions } = get();
+    const { messages, sessions, user } = get();
 
     set({ currentSessionId: sessionId, messagesLoading: true, error: null });
 
@@ -116,9 +116,9 @@ export const useStaffStore = create<StaffState>((set, get) => ({
           method: 'POST',
         });
         const result = await response.json();
-        if (result.success) {
+        if (result.success && user) {
           const newSessions = sessions.map(s => 
-            s.id === sessionId ? { ...s, assignedStaffId: get().user?.userId } : s
+            s.id === sessionId ? { ...s, assignedStaffId: user.userId } : s
           );
           set({ sessions: newSessions });
         }
