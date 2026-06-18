@@ -209,19 +209,34 @@ export const useStaffStore = create<StaffState>((set, get) => ({
 
       // If we have a selected session, check for new messages
       if (currentSessionId) {
-        const params = new URLSearchParams({ sessionId: currentSessionId, limit: '20' });
+        const params = new URLSearchParams({ sessionId: currentSessionId, limit: '50' });
         const msgResponse = await authFetch(`/api/staff/messages?${params}`);
         const msgResult = await msgResponse.json();
 
         if (msgResult.success && msgResult.data) {
-          const newMsgs = msgResult.data as Message[];
+          const serverMessages = msgResult.data as Message[];
           const currentMsgs = messages.get(currentSessionId) || [];
-          const existingIds = new Set(currentMsgs.map((m) => m.id));
-          const toAdd = newMsgs.filter((m) => !existingIds.has(m.id));
+          
+          // Check if any messages have updated isRead status
+          let hasReadStatusChanges = false;
+          const updatedMessages = currentMsgs.map((localMsg) => {
+            const serverMsg = serverMessages.find((m) => m.id === localMsg.id);
+            if (serverMsg && serverMsg.isRead !== localMsg.isRead) {
+              hasReadStatusChanges = true;
+              console.log(`[StaffStore] Message ${localMsg.id} read status changed from ${localMsg.isRead} to ${serverMsg.isRead}`);
+              return { ...localMsg, isRead: serverMsg.isRead };
+            }
+            return localMsg;
+          });
 
-          if (toAdd.length > 0) {
+          // Find new messages
+          const existingIds = new Set(currentMsgs.map((m) => m.id));
+          const toAdd = serverMessages.filter((m) => !existingIds.has(m.id));
+
+          // Update if there are new messages or read status changes
+          if (toAdd.length > 0 || hasReadStatusChanges) {
             const newMessages = new Map(messages);
-            newMessages.set(currentSessionId, [...currentMsgs, ...toAdd]);
+            newMessages.set(currentSessionId, [...updatedMessages, ...toAdd]);
             set({ messages: newMessages });
           }
         }

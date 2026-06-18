@@ -220,26 +220,41 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // Only check messages if session is still active
       if (session.status !== 'closed') {
         console.log('[ChatStore] Session is active, checking for new messages');
-        const params = new URLSearchParams({ sessionId: session.id, limit: '20' });
+        const params = new URLSearchParams({ sessionId: session.id, limit: '50' });
         const response = await fetch(`/api/chat/messages?${params}`);
         const result = await response.json();
 
         if (result.success && result.data) {
-          const newMessages = result.data as Message[];
-          console.log(`[ChatStore] Found ${newMessages.length} messages from server`);
+          const serverMessages = result.data as Message[];
+          console.log(`[ChatStore] Found ${serverMessages.length} messages from server`);
+          
+          // Check if any messages have updated isRead status
+          let hasReadStatusChanges = false;
+          const updatedMessages = messages.map((localMsg) => {
+            const serverMsg = serverMessages.find((m) => m.id === localMsg.id);
+            if (serverMsg && serverMsg.isRead !== localMsg.isRead) {
+              hasReadStatusChanges = true;
+              console.log(`[ChatStore] Message ${localMsg.id} read status changed from ${localMsg.isRead} to ${serverMsg.isRead}`);
+              return { ...localMsg, isRead: serverMsg.isRead };
+            }
+            return localMsg;
+          });
+
           // Find messages newer than our last known message
           const latestTime = messages.length > 0 ? messages[messages.length - 1].createdAt : 0;
-          const freshMessages = newMessages.filter((m) => m.createdAt > latestTime);
+          const freshMessages = serverMessages.filter((m) => m.createdAt > latestTime);
           console.log(`[ChatStore] Found ${freshMessages.length} fresh messages`);
 
-          if (freshMessages.length > 0) {
+          // Check if we need to update
+          if (freshMessages.length > 0 || hasReadStatusChanges) {
             // Add only new messages (avoid duplicates)
-            const existingIds = new Set(messages.map((m) => m.id));
+            const existingIds = new Set(updatedMessages.map((m) => m.id));
             const toAdd = freshMessages.filter((m) => !existingIds.has(m.id));
             console.log(`[ChatStore] Adding ${toAdd.length} new messages`);
-            if (toAdd.length > 0) {
-              set({ messages: [...messages, ...toAdd] });
-            }
+            
+            const finalMessages = [...updatedMessages, ...toAdd];
+            console.log(`[ChatStore] Updating messages, total: ${finalMessages.length}`);
+            set({ messages: finalMessages });
           }
         } else {
           console.log('[ChatStore] Failed to get messages:', result.error);
