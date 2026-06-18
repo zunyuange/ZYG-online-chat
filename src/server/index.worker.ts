@@ -166,6 +166,16 @@ app.use('*', async (c, next) => {
   await next();
 });
 
+// Set correct Content-Type with UTF-8 encoding for JSON responses
+app.use('*', async (c, next) => {
+  await next();
+  const res = c.res;
+  const contentType = res.headers.get('Content-Type');
+  if (contentType && contentType.includes('application/json')) {
+    res.headers.set('Content-Type', 'application/json; charset=utf-8');
+  }
+});
+
 // Public settings endpoint (no auth required) - MUST BE BEFORE /api routes
 app.get('/api/site-settings', async (c) => {
   try {

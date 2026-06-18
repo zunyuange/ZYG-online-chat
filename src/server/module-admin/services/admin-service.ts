@@ -194,13 +194,6 @@ export async function verifyPassword(username: string, password: string): Promis
 
   console.log('[AdminService] User found:', user.username);
   
-  // 临时修复：直接比较密码
-  if (password === 'password') {
-    console.log('[AdminService] Password match');
-    return user;
-  }
-  
-  // 原始哈希验证逻辑
   const passwordHash = await hashPassword(password);
   console.log('[AdminService] Input password hash:', passwordHash);
   console.log('[AdminService] Stored password hash:', user.password_hash);

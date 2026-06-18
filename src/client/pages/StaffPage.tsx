@@ -200,11 +200,13 @@ export function StaffPage() {
       });
       const result = await response.json();
       if (result.success) {
-        setStaffList(result.data.map((user: any) => ({
+        const staffUsers = result.data.map((user: any) => ({
           id: user.id,
-          name: user.name,
+          name: user.name || user.username,
           username: user.username,
-        })));
+        }));
+        console.log('Fetched staff list:', staffUsers);
+        setStaffList(staffUsers);
       }
     } catch (error) {
       console.error('Failed to fetch staff list:', error);
