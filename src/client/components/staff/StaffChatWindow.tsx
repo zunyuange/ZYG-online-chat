@@ -24,6 +24,7 @@ interface StaffChatWindowProps {
   onStatusChange?: (status: TaskStatus) => void;
   onClearMessages?: () => void;
   onEndSession?: () => void;
+  t?: (key: string) => string;
 }
 
 export function StaffChatWindow({
@@ -42,6 +43,7 @@ export function StaffChatWindow({
   onStatusChange,
   onClearMessages,
   onEndSession,
+  t = (key: string) => key,
 }: StaffChatWindowProps) {
   const containerStyle: React.CSSProperties = {
     display: 'flex',
@@ -85,7 +87,7 @@ export function StaffChatWindow({
     return (
       <div style={containerStyle}>
         <div style={placeholderStyle}>
-          选择一个会话开始聊天
+          {t('select_session')}
         </div>
       </div>
     );
@@ -118,7 +120,7 @@ export function StaffChatWindow({
                 fontSize: '12px',
               }}
             >
-              {session.unreadByStaff} 条未读
+              {session.unreadByStaff} {t('unread')}
             </span>
           )}
           {onClearMessages && messages.length > 0 && (
@@ -136,10 +138,10 @@ export function StaffChatWindow({
                 color: '#ff4d4f',
                 fontSize: '12px',
               }}
-              title="清空聊天记录"
+              title={t('clear_messages')}
             >
               <Trash2 size={12} />
-              清空
+              {t('clear')}
             </button>
           )}
           {onEndSession && session?.status === 'active' && (
@@ -157,10 +159,10 @@ export function StaffChatWindow({
                 color: '#fff',
                 fontSize: '12px',
               }}
-              title="结束对话"
+              title={t('end_session')}
             >
               <LogOut size={12} />
-              结束
+              {t('end')}
             </button>
           )}
         </div>
@@ -176,6 +178,7 @@ export function StaffChatWindow({
           onTopicChange={onTopicChange}
           onStatusChange={onStatusChange}
           compact={false}
+          t={t}
         />
       )}
 
@@ -186,12 +189,14 @@ export function StaffChatWindow({
         loading={loading}
         isOwn={(message) => message.senderType === 'staff'}
         onLoadMore={onLoadMore}
+        t={t}
       />
 
       {/* Input */}
       <MessageInput
         onSend={onSend}
         onUpload={onUpload}
+        t={t}
         sending={sending}
         inputMode={inputMode}
         onModeChange={onModeChange}

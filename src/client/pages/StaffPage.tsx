@@ -835,6 +835,7 @@ export function StaffPage() {
                 onStatusChange={handleStatusChange}
                 onClearMessages={() => setShowClearConfirm(true)}
                 onEndSession={() => setShowEndSessionConfirm(true)}
+                t={t}
               />
             </div>
           </>

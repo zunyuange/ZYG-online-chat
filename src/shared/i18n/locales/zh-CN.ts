@@ -102,6 +102,9 @@ export const zhCN = {
   session_ended_tip: '如需继续，请重新刷新页面连接对话',
   restart_conversation: '重新开始对话',
   confirm: '确认',
+  select_session: '选择一个会话开始聊天',
+  clear: '清空',
+  end: '结束',
 
   online: '在线',
   offline: '离线',
