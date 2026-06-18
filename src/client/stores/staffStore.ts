@@ -190,6 +190,13 @@ export const useStaffStore = create<StaffState>((set, get) => ({
         const newSessions = result.data as SessionWithPreview[];
         const totalUnread = newSessions.reduce((sum, s) => sum + s.unreadByStaff, 0);
         
+        // Debug: Log unread counts from server
+        console.log('[StaffStore] Sessions from server:');
+        newSessions.forEach(s => {
+          console.log(`  - ${s.visitorName}: unreadByStaff=${s.unreadByStaff}`);
+        });
+        console.log(`[StaffStore] Total unread: ${totalUnread}`);
+        
         // Check if current session is still active
         const isCurrentSessionActive = newSessions.some((s) => s.id === currentSessionId);
         
