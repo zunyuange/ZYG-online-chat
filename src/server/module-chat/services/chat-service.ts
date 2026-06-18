@@ -358,11 +358,13 @@ export async function markAsRead(sessionId: string, readerType: SenderType): Pro
 
   // Mark messages from the other party as read
   const senderType = readerType === 'visitor' ? 'staff' : 'visitor';
+  console.log(`[ChatService] Marking messages as read for session ${sessionId}, readerType: ${readerType}, senderType to mark: ${senderType}`);
 
-  await db.run(
+  const result = await db.run(
     'UPDATE messages SET is_read = 1 WHERE session_id = ? AND sender_type = ? AND is_read = 0',
     [sessionId, senderType]
   );
+  console.log(`[ChatService] Updated ${result.changes} messages as read`);
 
   // Reset unread counter
   const counterField = readerType === 'visitor' ? 'unread_by_visitor' : 'unread_by_staff';
@@ -370,4 +372,5 @@ export async function markAsRead(sessionId: string, readerType: SenderType): Pro
     `UPDATE sessions SET ${counterField} = 0, updated_at = ? WHERE id = ?`,
     [now, sessionId]
   );
+  console.log(`[ChatService] Reset ${counterField} counter for session ${sessionId}`);
 }
