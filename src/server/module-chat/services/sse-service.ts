@@ -185,6 +185,31 @@ export async function broadcastSessionUpdate(session: Session): Promise<void> {
 }
 
 /**
+ * Broadcast message read status update to session clients
+ */
+export async function broadcastMessageRead(sessionId: string, messageIds: number[]): Promise<void> {
+  const eventData = {
+    type: 'message_read',
+    sessionId,
+    messageIds,
+  };
+
+  const sendPromises: Promise<boolean>[] = [];
+
+  // Send to the session's clients (visitor side)
+  const sessionClientSet = sessionClients.get(sessionId);
+  if (sessionClientSet) {
+    for (const client of sessionClientSet) {
+      sendPromises.push(sendToStream(client, 'message_read', eventData));
+    }
+    console.log(`[SSE] Broadcast message_read to ${sessionClientSet.size} clients for session ${sessionId}`);
+  }
+
+  await Promise.allSettled(sendPromises);
+  cleanupDeadStreams();
+}
+
+/**
  * Send heartbeat to keep connections alive
  */
 export async function sendHeartbeat(): Promise<void> {

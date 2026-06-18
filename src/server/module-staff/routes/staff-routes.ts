@@ -242,7 +242,12 @@ staffRoutes.get('/sse', async (c) => {
 staffRoutes.put('/read/:sessionId', async (c) => {
   try {
     const sessionId = c.req.param('sessionId');
-    await staffService.markAsRead(sessionId, 'staff');
+    const messageIds = await staffService.markAsRead(sessionId, 'staff');
+
+    // Broadcast message read status to visitor
+    if (messageIds.length > 0) {
+      await sseService.broadcastMessageRead(sessionId, messageIds);
+    }
 
     // Broadcast session update
     const session = await chatService.getSession(sessionId);

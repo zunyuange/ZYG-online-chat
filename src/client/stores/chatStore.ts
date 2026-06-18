@@ -444,6 +444,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     });
 
+    eventSource.addEventListener('message_read', (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.sessionId && data.messageIds && Array.isArray(data.messageIds)) {
+          console.log(`[ChatStore] SSE message_read received for session ${data.sessionId}, messageIds: ${data.messageIds}`);
+          const messageIdsSet = new Set(data.messageIds);
+          set({
+            messages: get().messages.map((m) =>
+              messageIdsSet.has(m.id) ? { ...m, isRead: true } : m
+            ),
+          });
+        }
+      } catch (error) {
+        console.error('SSE message_read parse error:', error);
+      }
+    });
+
     eventSource.addEventListener('connected', (event) => {
       console.log('SSE connected:', event.data);
       set({ sseConnected: true });

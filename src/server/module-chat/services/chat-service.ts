@@ -352,7 +352,7 @@ export async function getMessages(
 /**
  * Mark messages as read
  */
-export async function markAsRead(sessionId: string, readerType: SenderType): Promise<void> {
+export async function markAsRead(sessionId: string, readerType: SenderType): Promise<number[]> {
   const db = getDb();
   const now = Date.now();
 
@@ -360,17 +360,30 @@ export async function markAsRead(sessionId: string, readerType: SenderType): Pro
   const senderType = readerType === 'visitor' ? 'staff' : 'visitor';
   console.log(`[ChatService] Marking messages as read for session ${sessionId}, readerType: ${readerType}, senderType to mark: ${senderType}`);
 
-  const result = await db.run(
-    'UPDATE messages SET is_read = 1 WHERE session_id = ? AND sender_type = ? AND is_read = 0',
+  // First get the IDs of messages that will be updated
+  const rows = await db.all<{ id: number }>(
+    'SELECT id FROM messages WHERE session_id = ? AND sender_type = ? AND is_read = 0',
     [sessionId, senderType]
   );
-  console.log(`[ChatService] Updated ${result.changes} messages as read`);
+  const messageIds = rows.map((row) => row.id);
+  console.log(`[ChatService] Found ${messageIds.length} messages to mark as read: ${messageIds}`);
 
-  // Reset unread counter
-  const counterField = readerType === 'visitor' ? 'unread_by_visitor' : 'unread_by_staff';
-  await db.run(
-    `UPDATE sessions SET ${counterField} = 0, updated_at = ? WHERE id = ?`,
-    [now, sessionId]
-  );
-  console.log(`[ChatService] Reset ${counterField} counter for session ${sessionId}`);
+  if (messageIds.length > 0) {
+    // Update messages
+    const result = await db.run(
+      'UPDATE messages SET is_read = 1 WHERE session_id = ? AND sender_type = ? AND is_read = 0',
+      [sessionId, senderType]
+    );
+    console.log(`[ChatService] Updated ${result.changes} messages as read`);
+
+    // Reset unread counter
+    const counterField = readerType === 'visitor' ? 'unread_by_visitor' : 'unread_by_staff';
+    await db.run(
+      `UPDATE sessions SET ${counterField} = 0, updated_at = ? WHERE id = ?`,
+      [now, sessionId]
+    );
+    console.log(`[ChatService] Reset ${counterField} counter for session ${sessionId}`);
+  }
+
+  return messageIds;
 }
