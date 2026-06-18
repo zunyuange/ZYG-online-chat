@@ -6,7 +6,8 @@ import type { Message, Session, InputMode, TaskStatus, ContentType } from '@shar
 import { MessageList } from '@client/components/chat/MessageList';
 import { MessageInput } from '@client/components/chat/MessageInput';
 import { TopicHeader } from '@client/components/chat/TopicHeader';
-import { Trash2, LogOut } from 'lucide-react';
+import { Trash2, LogOut, ArrowRightLeft, X } from 'lucide-react';
+import { useState } from 'react';
 
 interface StaffChatWindowProps {
   session: Session | null;
@@ -24,6 +25,8 @@ interface StaffChatWindowProps {
   onStatusChange?: (status: TaskStatus) => void;
   onClearMessages?: () => void;
   onEndSession?: () => void;
+  currentStaffId?: number;
+  staffList?: { id: number; name: string; username: string }[];
   t?: (key: string) => string;
 }
 
@@ -43,8 +46,15 @@ export function StaffChatWindow({
   onStatusChange,
   onClearMessages,
   onEndSession,
+  currentStaffId,
+  staffList = [],
   t = (key: string) => key,
 }: StaffChatWindowProps) {
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
+  const [transferReason, setTransferReason] = useState('');
+  const [transferMessage, setTransferMessage] = useState('');
+
   const containerStyle: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
@@ -83,6 +93,41 @@ export function StaffChatWindow({
     fontSize: '14px',
   };
 
+  const handleTransfer = async () => {
+    if (!selectedStaffId || !transferReason.trim()) {
+      setTransferMessage('请选择客服并填写转接原因');
+      return;
+    }
+    try {
+      const response = await fetch('/api/chat/transfer/request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+        },
+        body: JSON.stringify({
+          sessionId: session?.id,
+          toStaffId: selectedStaffId,
+          reason: transferReason,
+        }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        setTransferMessage('转接请求已发送');
+        setTimeout(() => {
+          setShowTransferModal(false);
+          setTransferMessage('');
+          setSelectedStaffId(null);
+          setTransferReason('');
+        }, 1500);
+      } else {
+        setTransferMessage(result.error || '转接失败');
+      }
+    } catch (error) {
+      setTransferMessage('转接失败');
+    }
+  };
+
   if (!session) {
     return (
       <div style={containerStyle}>
@@ -94,115 +139,291 @@ export function StaffChatWindow({
   }
 
   return (
-    <div style={containerStyle}>
-      {/* Header */}
-      <div style={headerStyle}>
-        <div style={infoStyle}>
-          <span style={statusDotStyle(session.status)}></span>
-          <span style={{ fontWeight: 500 }}>{session.visitorName}</span>
-          <span style={{ color: '#999', fontSize: '12px' }}>
-            {new Date(session.createdAt).toLocaleString('zh-CN', {
-              month: 'numeric',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {session.unreadByStaff > 0 && (
-            <span
-              style={{
-                backgroundColor: '#ff4d4f',
-                color: '#fff',
-                padding: '2px 8px',
-                borderRadius: '10px',
-                fontSize: '12px',
-              }}
-            >
-              {session.unreadByStaff} {t('unread')}
+    <>
+      <div style={containerStyle}>
+        {/* Header */}
+        <div style={headerStyle}>
+          <div style={infoStyle}>
+            <span style={statusDotStyle(session.status)}></span>
+            <span style={{ fontWeight: 500 }}>{session.visitorName}</span>
+            <span style={{ color: '#999', fontSize: '12px' }}>
+              {new Date(session.createdAt).toLocaleString('zh-CN', {
+                month: 'numeric',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
             </span>
-          )}
-          {onClearMessages && messages.length > 0 && (
-            <button
-              onClick={onClearMessages}
-              style={{
-                padding: '4px 8px',
-                backgroundColor: 'transparent',
-                border: '1px solid #ff4d4f',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                color: '#ff4d4f',
-                fontSize: '12px',
-              }}
-              title={t('clear_messages')}
-            >
-              <Trash2 size={12} />
-              {t('clear')}
-            </button>
-          )}
-          {onEndSession && session?.status === 'active' && (
-            <button
-              onClick={onEndSession}
-              style={{
-                padding: '4px 8px',
-                backgroundColor: '#ff4d4f',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                color: '#fff',
-                fontSize: '12px',
-              }}
-              title={t('end_session')}
-            >
-              <LogOut size={12} />
-              {t('end')}
-            </button>
-          )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {session.unreadByStaff > 0 && (
+              <span
+                style={{
+                  backgroundColor: '#ff4d4f',
+                  color: '#fff',
+                  padding: '2px 8px',
+                  borderRadius: '10px',
+                  fontSize: '12px',
+                }}
+              >
+                {session.unreadByStaff} {t('unread')}
+              </span>
+            )}
+            {onClearMessages && messages.length > 0 && (
+              <button
+                onClick={onClearMessages}
+                style={{
+                  padding: '4px 8px',
+                  backgroundColor: 'transparent',
+                  border: '1px solid #ff4d4f',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  color: '#ff4d4f',
+                  fontSize: '12px',
+                }}
+                title={t('clear_messages')}
+              >
+                <Trash2 size={12} />
+                {t('clear')}
+              </button>
+            )}
+            {currentStaffId && session?.assignedStaffId === currentStaffId && session?.status === 'active' && staffList.length > 0 && (
+              <button
+                onClick={() => setShowTransferModal(true)}
+                style={{
+                  padding: '4px 8px',
+                  backgroundColor: 'transparent',
+                  border: '1px solid #1890ff',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  color: '#1890ff',
+                  fontSize: '12px',
+                }}
+                title="会话转接"
+              >
+                <ArrowRightLeft size={12} />
+                转接
+              </button>
+            )}
+            {onEndSession && session?.status === 'active' && (
+              <button
+                onClick={onEndSession}
+                style={{
+                  padding: '4px 8px',
+                  backgroundColor: '#ff4d4f',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  color: '#fff',
+                  fontSize: '12px',
+                }}
+                title={t('end_session')}
+              >
+                <LogOut size={12} />
+                {t('end')}
+              </button>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Topic Header */}
-      {session && (
-        <TopicHeader
-          session={session}
-          editable={true}
-          queuePosition={session.queuePosition}
-          estimatedWaitMinutes={session.estimatedWaitMinutes}
-          onTopicChange={onTopicChange}
-          onStatusChange={onStatusChange}
-          compact={false}
+        {/* Topic Header */}
+        {session && (
+          <TopicHeader
+            session={session}
+            editable={true}
+            queuePosition={session.queuePosition}
+            estimatedWaitMinutes={session.estimatedWaitMinutes}
+            onTopicChange={onTopicChange}
+            onStatusChange={onStatusChange}
+            compact={false}
+            t={t}
+          />
+        )}
+
+        {/* Messages */}
+        <MessageList
+          messages={messages}
+          hasMore={hasMore}
+          loading={loading}
+          isOwn={(message) => message.senderType === 'staff'}
+          onLoadMore={onLoadMore}
           t={t}
         />
+
+        {/* Input */}
+        <MessageInput
+          onSend={onSend}
+          onUpload={onUpload}
+          t={t}
+          sending={sending}
+          inputMode={inputMode}
+          onModeChange={onModeChange}
+          showModeToggle={true}
+          isMobile={isMobile}
+        />
+      </div>
+
+      {/* Transfer Modal */}
+      {showTransferModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => {
+            setShowTransferModal(false);
+            setTransferMessage('');
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '8px',
+              padding: '20px',
+              width: '400px',
+              maxWidth: '90%',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '20px',
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: '16px' }}>会话转接</h3>
+              <button
+                onClick={() => {
+                  setShowTransferModal(false);
+                  setTransferMessage('');
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px',
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                选择目标客服
+              </label>
+              <select
+                value={selectedStaffId || ''}
+                onChange={(e) => setSelectedStaffId(parseInt(e.target.value, 10))}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #d9d9d9',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                }}
+              >
+                <option value="">请选择客服</option>
+                {staffList
+                  .filter((staff) => staff.id !== currentStaffId)
+                  .map((staff) => (
+                    <option key={staff.id} value={staff.id}>
+                      {staff.name || staff.username}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
+                转接原因 <span style={{ color: '#ff4d4f' }}>*</span>
+              </label>
+              <textarea
+                value={transferReason}
+                onChange={(e) => setTransferReason(e.target.value)}
+                placeholder="请输入转接原因，以便对方了解情况"
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #d9d9d9',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  minHeight: '80px',
+                  resize: 'vertical',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {transferMessage && (
+              <div
+                style={{
+                  marginBottom: '16px',
+                  padding: '8px 12px',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  backgroundColor: transferMessage.includes('成功') ? '#f6ffed' : '#fff2f0',
+                  color: transferMessage.includes('成功') ? '#52c41a' : '#ff4d4f',
+                }}
+              >
+                {transferMessage}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowTransferModal(false);
+                  setTransferMessage('');
+                }}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #d9d9d9',
+                  borderRadius: '4px',
+                  backgroundColor: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleTransfer}
+                style={{
+                  padding: '8px 16px',
+                  border: 'none',
+                  borderRadius: '4px',
+                  backgroundColor: '#1890ff',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                }}
+              >
+                发送请求
+              </button>
+            </div>
+          </div>
+        </div>
       )}
-
-      {/* Messages */}
-      <MessageList
-        messages={messages}
-        hasMore={hasMore}
-        loading={loading}
-        isOwn={(message) => message.senderType === 'staff'}
-        onLoadMore={onLoadMore}
-        t={t}
-      />
-
-      {/* Input */}
-      <MessageInput
-        onSend={onSend}
-        onUpload={onUpload}
-        t={t}
-        sending={sending}
-        inputMode={inputMode}
-        onModeChange={onModeChange}
-        showModeToggle={true}
-        isMobile={isMobile}
-      />
-    </div>
+    </>
   );
 }

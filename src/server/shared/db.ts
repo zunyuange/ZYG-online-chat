@@ -228,6 +228,20 @@ export async function initializeSchema(): Promise<void> {
     "FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE)"
   );
 
+  // Create transfer_requests table for session transfer (会话转申请表)
+  await database.exec(
+    "CREATE TABLE IF NOT EXISTS transfer_requests (" +
+    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+    "session_id TEXT NOT NULL, " +
+    "from_staff_id INTEGER NOT NULL, " +
+    "to_staff_id INTEGER NOT NULL, " +
+    "reason TEXT, " +
+    "status TEXT NOT NULL DEFAULT 'pending', " +
+    "created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), " +
+    "updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), " +
+    "FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE)"
+  );
+
   // Create staff_users table for multi-user authentication (商家/客服表)
   // business_id = 0 表示商家主账号，business_id > 0 表示归属到该商家的客服
   await database.exec(

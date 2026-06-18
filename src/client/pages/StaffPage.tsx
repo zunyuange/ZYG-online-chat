@@ -95,6 +95,7 @@ export function StaffPage() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [currentPage, setCurrentPage] = useState<'home' | 'staff' | 'code' | 'settings'>('home');
+  const [staffList, setStaffList] = useState<{ id: number; name: string; username: string }[]>([]);
   const [profileForm, setProfileForm] = useState({
     name: '',
     password: '',
@@ -180,7 +181,28 @@ export function StaffPage() {
 
     fetchUserInfo();
     fetchStats();
+    fetchStaffList();
   }, [isAuthenticated]);
+
+  const fetchStaffList = async () => {
+    try {
+      const response = await fetch('/api/staff/users', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+        },
+      });
+      const result = await response.json();
+      if (result.success) {
+        setStaffList(result.data.map((user: any) => ({
+          id: user.id,
+          name: user.name,
+          username: user.username,
+        })));
+      }
+    } catch (error) {
+      console.error('Failed to fetch staff list:', error);
+    }
+  };
 
   const fetchStats = async () => {
     setStatsLoading(true);
@@ -916,6 +938,9 @@ export function StaffPage() {
                 onStatusChange={handleStatusChange}
                 onClearMessages={() => setShowClearConfirm(true)}
                 onEndSession={() => setShowEndSessionConfirm(true)}
+                onTransfer={() => {}}
+                currentStaffId={userInfo?.userId}
+                staffList={staffList}
                 t={t}
               />
             </div>

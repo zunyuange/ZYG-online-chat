@@ -8,6 +8,7 @@ import * as chatService from '../services/chat-service';
 import * as uploadService from '../services/upload-service';
 import * as sseService from '../services/sse-service';
 import * as queueService from '../services/queue-service';
+import * as transferService from '../services/transfer-service';
 import * as barkService from '@server/services/bark-service';
 import { verifyToken } from '@server/module-auth/services/auth-service';
 import { getDb } from '@server/shared/db';
@@ -567,5 +568,95 @@ chatRoutes.get('/staff/online', async (c) => {
   } catch (error) {
     console.error('Get staff online status error:', error);
     return c.json({ success: false, error: '获取客服在线状态失败' }, 500);
+  }
+});
+
+chatRoutes.post('/transfer/request', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { sessionId, toStaffId, reason } = body;
+    
+    if (!sessionId || !toStaffId) {
+      return c.json({ success: false, error: '会话ID和目标客服ID不能为空' }, 400);
+    }
+    
+    const staffId = c.get('userId');
+    
+    const result = await transferService.createTransferRequest({
+      sessionId,
+      fromStaffId: staffId,
+      toStaffId: parseInt(toStaffId, 10),
+      reason: reason || ''
+    });
+    
+    if (!result.success) {
+      return c.json({ success: false, error: result.error }, 400);
+    }
+    
+    return c.json({ success: true, data: result.data });
+  } catch (error) {
+    console.error('Create transfer request error:', error);
+    return c.json({ success: false, error: '创建转接请求失败' }, 500);
+  }
+});
+
+chatRoutes.post('/transfer/:requestId/respond', async (c) => {
+  try {
+    const { requestId } = c.req.param();
+    const body = await c.req.json();
+    const { action } = body;
+    
+    if (!action || (action !== 'accept' && action !== 'reject')) {
+      return c.json({ success: false, error: '无效的操作类型' }, 400);
+    }
+    
+    const staffId = c.get('userId');
+    
+    const result = await transferService.respondToTransferRequest(
+      parseInt(requestId, 10),
+      staffId,
+      action as 'accept' | 'reject'
+    );
+    
+    if (!result.success) {
+      return c.json({ success: false, error: result.error }, 400);
+    }
+    
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Respond to transfer request error:', error);
+    return c.json({ success: false, error: '处理转接请求失败' }, 500);
+  }
+});
+
+chatRoutes.get('/transfer/pending', async (c) => {
+  try {
+    const staffId = c.get('userId');
+    const requests = await transferService.getPendingTransferRequests(staffId);
+    return c.json({ success: true, data: requests });
+  } catch (error) {
+    console.error('Get pending transfer requests error:', error);
+    return c.json({ success: false, error: '获取待处理转接请求失败' }, 500);
+  }
+});
+
+chatRoutes.delete('/transfer/:requestId', async (c) => {
+  try {
+    const { requestId } = c.req.param();
+    const staffId = c.get('userId');
+    
+    const result = await transferService.deleteTransferRequest(
+      parseInt(requestId, 10),
+      staffId
+    );
+    
+    if (!result.success) {
+      return c.json({ success: false, error: result.error }, 400);
+    }
+    
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Delete transfer request error:', error);
+    return c.json({ success: false, error: '删除转接请求失败' }, 500);
   }
 });

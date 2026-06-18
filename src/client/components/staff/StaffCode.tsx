@@ -57,15 +57,15 @@ export function StaffCode() {
   var script = document.createElement('script');
   script.src = '${currentDomain}/embed/chat.js';
   script.async = true;
-  script.dataset.business = '${business?.slug || 'default'}';
+  script.dataset.business = '${business?.business_slug || 'default'}';
   document.head.appendChild(script);
 })();
 </script>`;
 
-  const directLink = `${currentDomain}/chat?business=${business?.slug || 'default'}`;
+  const directLink = `${currentDomain}/chat?business=${business?.business_slug || 'default'}`;
 
   const iframeCode = `<iframe 
-  src="${currentDomain}/chat?business=${business?.slug || 'default'}" 
+  src="${currentDomain}/chat?business=${business?.business_slug || 'default'}" 
   width="400" 
   height="500" 
   frameborder="0" 
