@@ -2,9 +2,10 @@
  * Message Input Component - Text input and file upload
  */
 
-import { useState, useRef } from 'react';
-import { Paperclip, Send, MessageSquare, Pin } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Paperclip, Send, MessageSquare, Pin, Smile } from 'lucide-react';
 import type { ContentType, InputMode } from '@shared/types';
+import 'emoji-picker-element';
 
 interface MessageInputProps {
   onSend: (content: string, type: ContentType) => void;
@@ -30,7 +31,67 @@ export function MessageInput({
   t = (key: string) => key,
 }: MessageInputProps) {
   const [text, setText] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const emojiPickerRef = useRef<HTMLElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Inject emoji picker styles
+  useEffect(() => {
+    if (document.querySelector('#emoji-picker-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'emoji-picker-styles';
+    style.textContent = `
+      emoji-picker {
+        --background: #fff;
+        --border-color: rgba(0, 0, 0, 0.1);
+        --border-radius: 10px;
+        --emoji-padding: 0.4rem;
+        --category-emoji-size: 1.2rem;
+        --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+    `;
+    document.head.appendChild(style);
+  }, []);
+
+  // Handle emoji click
+  useEffect(() => {
+    const picker = emojiPickerRef.current;
+    if (!picker) return;
+
+    const handleEmojiClick = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail?.unicode) {
+        setText((prev) => prev + customEvent.detail.unicode);
+        setShowEmojiPicker(false);
+      }
+    };
+
+    picker.addEventListener('emoji-click', handleEmojiClick);
+    return () => {
+      picker.removeEventListener('emoji-click', handleEmojiClick);
+    };
+  }, []);
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    if (showEmojiPicker) {
+      document.addEventListener('click', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showEmojiPicker]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,6 +219,19 @@ export function MessageInput({
 
   const placeholder = inputMode === 'topic' ? t('please_enter') : t('please_enter_message');
 
+  // Emoji picker styles
+  const emojiPickerContainerStyle: React.CSSProperties = {
+    position: 'absolute',
+    bottom: '50px',
+    left: '0',
+    zIndex: 100,
+    boxShadow: '0 3px 12px rgba(0, 0, 0, 0.15)',
+    opacity: showEmojiPicker ? 1 : 0,
+    transform: showEmojiPicker ? 'translateY(0) scale(1)' : 'translateY(-10px) scale(0.95)',
+    transition: 'opacity 0.3s ease, transform 0.3s ease',
+    display: showEmojiPicker ? 'block' : 'none',
+  };
+
   return (
     <form style={containerStyle} onSubmit={handleSubmit}>
       {/* Mode toggle button (staff only) - 双图标切换 */}
@@ -183,6 +257,25 @@ export function MessageInput({
           </button>
         </div>
       )}
+
+      {/* Emoji button and picker */}
+      <div ref={containerRef} style={{ position: 'relative', flexShrink: 0 }}>
+        <button
+          type="button"
+          style={iconButtonStyle}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowEmojiPicker(!showEmojiPicker);
+          }}
+          disabled={disabled || sending}
+          title="发送表情"
+        >
+          <Smile size={isMobile ? 20 : 22} />
+        </button>
+        <div style={emojiPickerContainerStyle}>
+          <emoji-picker ref={emojiPickerRef as React.RefObject<any>} />
+        </div>
+      </div>
 
       {/* Unified file upload (image, video, file) */}
       <label style={iconButtonStyle} title="发送文件/图片/视频">
