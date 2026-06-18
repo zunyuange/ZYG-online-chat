@@ -323,13 +323,22 @@ export const useStaffStore = create<StaffState>((set, get) => ({
   // Mark session as read
   markAsRead: async (sessionId: string) => {
     try {
-      await authFetch(`/api/staff/read/${sessionId}`, { method: 'PUT' });
+      console.log(`[StaffStore] Calling markAsRead for session ${sessionId}`);
+      const response = await authFetch(`/api/staff/read/${sessionId}`, { method: 'PUT' });
+      const result = await response.json();
+      console.log(`[StaffStore] markAsRead response:`, result);
+
+      if (!result.success) {
+        console.error(`[StaffStore] markAsRead failed: ${result.error}`);
+        return;
+      }
 
       // Update local state
       const { sessions, messages, totalUnread } = get();
       const session = sessions.find((s) => s.id === sessionId);
 
       if (session && session.unreadByStaff > 0) {
+        console.log(`[StaffStore] Updating local state for session ${sessionId}, unreadByStaff: ${session.unreadByStaff}`);
         const newSessions = sessions.map((s) =>
           s.id === sessionId ? { ...s, unreadByStaff: 0 } : s
         );
