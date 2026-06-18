@@ -689,8 +689,18 @@ export async function createStaffUser(params: CreateStaffUserParams): Promise<{ 
 /**
  * List all staff users for a business
  */
-export async function listStaffUsers(businessId: number = 1): Promise<StaffUser[]> {
+export async function listStaffUsers(businessId: number = 1, currentUserId?: number): Promise<StaffUser[]> {
   const db = getDb();
+  
+  // 如果当前用户是主体商家（business_id=0），返回该商家自己和其下级客服
+  if (businessId === 0 && currentUserId) {
+    return await db.all<StaffUser>(
+      'SELECT id, business_id, username, email, name, role, status, created_at, updated_at FROM staff_users WHERE id = ? OR business_id = ? ORDER BY created_at DESC',
+      [currentUserId, currentUserId]
+    );
+  }
+  
+  // 否则返回指定business_id的账号
   return await db.all<StaffUser>(
     'SELECT id, business_id, username, email, name, role, status, created_at, updated_at FROM staff_users WHERE business_id = ? ORDER BY created_at DESC',
     [businessId]

@@ -37,7 +37,11 @@ interface SessionRow {
   visiter_id: string;
   visitor_name: string;
   business_id: number;
+  service_id: number | null;
+  assigned_staff_id: number | null;
+  groupid: number | null;
   status: string;
+  state: string;
   last_message_at: number | null;
   unread_by_visitor: number;
   unread_by_staff: number;
@@ -46,17 +50,24 @@ interface SessionRow {
   task_status_updated_at: number | null;
   queue_position: number | null;
   estimated_wait_minutes: number | null;
+  ip: string | null;
+  from_url: string | null;
+  avatar: string | null;
+  device: string | null;
+  lang: string | null;
+  transfer_history: string | null;
+  response_time: number | null;
   created_at: number;
   updated_at: number;
 }
 
 interface BusinessRow {
   id: number;
-  name: string;
-  slug: string;
-  theme: string;
-  state: string;
-  lang: string;
+  business_slug: string | null;
+  business_name: string | null;
+  // Legacy fields for compatibility
+  slug?: string;
+  name?: string;
 }
 
 interface MessageRow {
@@ -77,8 +88,8 @@ function mapRowToSession(row: SessionRow, business?: BusinessRow): Session {
     id: row.id,
     visitorName: row.visitor_name,
     businessId: row.business_id,
-    businessSlug: business?.slug,
-    businessName: business?.name,
+    businessSlug: business?.business_slug || undefined,
+    businessName: business?.business_name || undefined,
     status: row.status as SessionStatus,
     lastMessageAt: row.last_message_at ? new Date(row.last_message_at) : undefined,
     unreadByVisitor: row.unread_by_visitor || 0,
@@ -117,22 +128,26 @@ function mapRowToMessage(row: MessageRow): Message {
 async function getBusinessBySlug(slug?: string): Promise<BusinessRow | null> {
   const db = getDb();
   
+  console.log('[ChatService] getBusinessBySlug called with slug:', slug);
+  
   if (!slug) {
     // Return default business - find by business_slug = 'default' or business_id = 0
     const business = await db.get<BusinessRow>(
-      'SELECT id, business_slug as slug, business_name as name FROM staff_users WHERE business_slug = ? OR (business_id = 0 AND role = ?)',
+      'SELECT id, business_slug, business_name FROM staff_users WHERE business_slug = ? OR (business_id = 0 AND role = ?)',
       ['default', 'admin']
     );
+    console.log('[ChatService] getBusinessBySlug: no slug provided, returning default business:', business);
     return business || null;
   }
   
   // Try to find by business_slug first (商家使用 business_slug 标识)
   const business = await db.get<BusinessRow>(
-    'SELECT id, business_slug as slug, business_name as name FROM staff_users WHERE business_slug = ? AND role = ?',
+    'SELECT id, business_slug, business_name FROM staff_users WHERE business_slug = ? AND role = ?',
     [slug, 'admin']
   );
   
   if (business) {
+    console.log('[ChatService] getBusinessBySlug: found business by slug:', business);
     return business;
   }
   
@@ -140,12 +155,15 @@ async function getBusinessBySlug(slug?: string): Promise<BusinessRow | null> {
   const id = parseInt(slug, 10);
   if (!isNaN(id)) {
     // Find business by id where business_id = 0 (商家主账号)
-    return db.get<BusinessRow>(
-      'SELECT id, business_slug as slug, business_name as name FROM staff_users WHERE id = ? AND business_id = 0',
+    const businessById = await db.get<BusinessRow>(
+      'SELECT id, business_slug, business_name FROM staff_users WHERE id = ? AND business_id = 0',
       [id]
     );
+    console.log('[ChatService] getBusinessBySlug: searching by id, result:', businessById);
+    return businessById;
   }
   
+  console.log('[ChatService] getBusinessBySlug: no business found for slug:', slug);
   return null;
 }
 
@@ -158,6 +176,8 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
   // Get business info based on slug or id
   const business = await getBusinessBySlug(input.business);
   const businessId = business?.id || 1;
+  
+  console.log('[ChatService] createOrGetSession: input.business =', input.business, '-> businessId =', businessId);
 
   // Generate visitor_id for the session
   const visitorId = input.sessionId || randomUUID();
@@ -211,7 +231,7 @@ export async function getSession(sessionId: string): Promise<Session | null> {
   if (!row) return null;
   
   // Get business info
-  const business = await db.get<BusinessRow>('SELECT id, business_slug as slug, business_name as name FROM staff_users WHERE id = ?', [row.business_id]);
+  const business = await db.get<BusinessRow>('SELECT id, business_slug, business_name FROM staff_users WHERE id = ?', [row.business_id]);
   return mapRowToSession(row, business || undefined);
 }
 
@@ -224,6 +244,8 @@ export async function listSessions(status?: 'active' | 'closed', businessId?: nu
   const params: (string | number)[] = [];
   const conditions: string[] = [];
 
+  console.log('[ChatService] listSessions called with status:', status, 'businessId:', businessId);
+
   if (status) {
     conditions.push('status = ?');
     params.push(status);
@@ -233,6 +255,9 @@ export async function listSessions(status?: 'active' | 'closed', businessId?: nu
   if (businessId && businessId !== 0) {
     conditions.push('business_id = ?');
     params.push(businessId);
+    console.log('[ChatService] Filtering sessions by business_id =', businessId);
+  } else {
+    console.log('[ChatService] No business filter applied (admin or no businessId)');
   }
 
   if (conditions.length > 0) {
@@ -247,7 +272,7 @@ export async function listSessions(status?: 'active' | 'closed', businessId?: nu
   const businessMap = new Map<number, BusinessRow>();
   const businessIds = [...new Set(rows.map(r => r.business_id))];
   for (const bid of businessIds) {
-    const business = await db.get<BusinessRow>('SELECT id, business_slug as slug, business_name as name FROM staff_users WHERE id = ?', [bid]);
+    const business = await db.get<BusinessRow>('SELECT id, business_slug, business_name FROM staff_users WHERE id = ?', [bid]);
     if (business) {
       businessMap.set(bid, business);
     }

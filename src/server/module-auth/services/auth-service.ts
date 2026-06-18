@@ -368,15 +368,20 @@ export async function login(username: string, password: string, clientIp: string
     if (user) {
       // Database user authentication successful
       const u = user as any;
-      const businessId = Number(u.business_id);
+      let businessId = Number(u.business_id);
       const userId = Number(user.id);
       
       // Update last_active timestamp for online status tracking
       await updateStaffLastActive(userId);
       
-      // 商家主账号：business_id = 0，使用自己的business_slug
-      // 客服账号：business_id > 0，需要查找商家信息
-      // 管理员(business_id = 0)保持business_id = 0，这样才能看到所有会话
+      // 商家主账号：business_id = 0，但有 business_slug/business_name，使用自己的ID作为businessId
+      // 这样创建的客服和会话都会关联到这个商家
+      // 系统管理员(admin用户且没有business_slug)：保持business_id = 0，可以看到所有会话
+      if (businessId === 0 && (u.business_slug || u.business_name)) {
+        // 这是商家主账号，使用自己的ID作为businessId
+        businessId = userId;
+      }
+      
       const token = await generateToken(
         userId, 
         user.username, 

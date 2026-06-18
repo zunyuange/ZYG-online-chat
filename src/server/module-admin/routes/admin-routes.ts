@@ -175,8 +175,19 @@ adminRoutes.post('/staff-users', async (c) => {
 
 adminRoutes.get('/staff-users', async (c) => {
   try {
-    const users = await adminService.listUsers();
-    const sanitizedUsers = users.map((user) => ({
+    const db = await import('@server/shared/db').then(m => m.getDb());
+    
+    // Query staff users with business name from staff_users table
+    const users = await db.all(`
+      SELECT 
+        su.*,
+        b.business_name as business_name
+      FROM staff_users su
+      LEFT JOIN staff_users b ON su.business_id = b.id
+      ORDER BY su.created_at DESC
+    `);
+    
+    const sanitizedUsers = users.map((user: any) => ({
       id: user.id,
       username: user.username,
       email: user.email,
@@ -184,6 +195,7 @@ adminRoutes.get('/staff-users', async (c) => {
       role: user.role,
       status: user.status,
       business_id: user.business_id || 0,
+      business_name: user.business_name || null,
       created_at: user.created_at,
     }));
     return c.json({ success: true, data: sanitizedUsers });

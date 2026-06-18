@@ -646,10 +646,15 @@ chatRoutes.post('/transfer/:requestId/respond', requireAuth, async (c) => {
   try {
     const { requestId } = c.req.param();
     const body = await c.req.json();
-    const { action } = body;
+    const { action, reason } = body;
     
     if (!action || (action !== 'accept' && action !== 'reject')) {
       return c.json({ success: false, error: '无效的操作类型' }, 400);
+    }
+    
+    // Validate reject reason
+    if (action === 'reject' && !reason?.trim()) {
+      return c.json({ success: false, error: '拒绝时必须填写原因' }, 400);
     }
     
     const staffId = c.get('userId');
@@ -657,7 +662,8 @@ chatRoutes.post('/transfer/:requestId/respond', requireAuth, async (c) => {
     const result = await transferService.respondToTransferRequest(
       parseInt(requestId, 10),
       staffId,
-      action as 'accept' | 'reject'
+      action as 'accept' | 'reject',
+      reason
     );
     
     if (!result.success) {
@@ -682,7 +688,20 @@ chatRoutes.get('/transfer/pending', requireAuth, async (c) => {
   }
 });
 
-chatRoutes.delete('/transfer/:requestId', async (c) => {
+// Get my transfer requests history (for the requester to view rejected requests)
+chatRoutes.get('/transfer/my', requireAuth, async (c) => {
+  try {
+    const staffId = c.get('userId');
+    const sessionId = c.req.query('sessionId');
+    const requests = await transferService.getMyTransferRequests(staffId, sessionId);
+    return c.json({ success: true, data: requests });
+  } catch (error) {
+    console.error('Get my transfer requests error:', error);
+    return c.json({ success: false, error: '获取我的转接请求历史失败' }, 500);
+  }
+});
+
+chatRoutes.delete('/transfer/:requestId', requireAuth, async (c) => {
   try {
     const { requestId } = c.req.param();
     const staffId = c.get('userId');

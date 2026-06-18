@@ -6,6 +6,7 @@ export interface TransferRequest {
   from_staff_id: number;
   to_staff_id: number;
   reason: string;
+  reject_reason?: string;
   status: 'pending' | 'accepted' | 'rejected';
   created_at: number;
   updated_at: number;
@@ -61,7 +62,12 @@ export async function createTransferRequest(params: CreateTransferRequestParams)
   }
 }
 
-export async function respondToTransferRequest(requestId: number, staffId: number, action: 'accept' | 'reject'): Promise<{ success: boolean; error?: string }> {
+export async function respondToTransferRequest(
+  requestId: number, 
+  staffId: number, 
+  action: 'accept' | 'reject',
+  rejectReason?: string
+): Promise<{ success: boolean; error?: string }> {
   const db = getDb();
   
   try {
@@ -89,12 +95,18 @@ export async function respondToTransferRequest(requestId: number, staffId: numbe
         'UPDATE sessions SET assigned_staff_id = ?, updated_at = ? WHERE id = ?',
         [staffId, Date.now(), request.session_id]
       );
+      
+      await db.run(
+        'UPDATE transfer_requests SET status = ?, updated_at = ? WHERE id = ?',
+        [status, Date.now(), requestId]
+      );
+    } else {
+      // Reject with reason
+      await db.run(
+        'UPDATE transfer_requests SET status = ?, reject_reason = ?, updated_at = ? WHERE id = ?',
+        [status, rejectReason || null, Date.now(), requestId]
+      );
     }
-    
-    await db.run(
-      'UPDATE transfer_requests SET status = ?, updated_at = ? WHERE id = ?',
-      [status, Date.now(), requestId]
-    );
     
     return { success: true };
   } catch (error) {
@@ -103,13 +115,22 @@ export async function respondToTransferRequest(requestId: number, staffId: numbe
   }
 }
 
-export async function getPendingTransferRequests(staffId: number): Promise<TransferRequest[]> {
+export async function getPendingTransferRequests(staffId: number): Promise<any[]> {
   const db = getDb();
   
   try {
-    const requests = await db.all<TransferRequest>(
-      'SELECT * FROM transfer_requests WHERE to_staff_id = ? AND status = ? ORDER BY created_at DESC',
-      [staffId, 'pending']
+    const requests = await db.all(
+      `SELECT 
+        tr.*,
+        s.visitor_name as session_visitor_name,
+        su.name as from_staff_name,
+        su.username as from_staff_username
+      FROM transfer_requests tr
+      JOIN sessions s ON tr.session_id = s.id
+      JOIN staff_users su ON tr.from_staff_id = su.id
+      WHERE tr.to_staff_id = ? AND tr.status = 'pending'
+      ORDER BY tr.created_at DESC`,
+      [staffId]
     );
     
     return requests;
@@ -157,6 +178,39 @@ export async function getTransferRequestsBySession(sessionId: string): Promise<T
     return requests;
   } catch (error) {
     console.error('[TransferService] Get transfer requests by session error:', error);
+    return [];
+  }
+}
+
+export async function getMyTransferRequests(staffId: number, sessionId?: string): Promise<any[]> {
+  const db = getDb();
+  
+  try {
+    let query = `
+      SELECT 
+        tr.*,
+        s.visitor_name as session_visitor_name,
+        su.name as to_staff_name,
+        su.username as to_staff_username
+      FROM transfer_requests tr
+      JOIN sessions s ON tr.session_id = s.id
+      JOIN staff_users su ON tr.to_staff_id = su.id
+      WHERE tr.from_staff_id = ?
+    `;
+    const params: any[] = [staffId];
+    
+    if (sessionId) {
+      query += ' AND tr.session_id = ?';
+      params.push(sessionId);
+    }
+    
+    query += ' ORDER BY tr.created_at DESC';
+    
+    const requests = await db.all(query, params);
+    
+    return requests;
+  } catch (error) {
+    console.error('[TransferService] Get my transfer requests error:', error);
     return [];
   }
 }

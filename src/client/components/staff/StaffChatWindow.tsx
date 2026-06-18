@@ -54,6 +54,7 @@ export function StaffChatWindow({
   const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
   const [transferReason, setTransferReason] = useState('');
   const [transferMessage, setTransferMessage] = useState('');
+  const [recentRejections, setRecentRejections] = useState<any[]>([]);
 
   const containerStyle: React.CSSProperties = {
     display: 'flex',
@@ -123,8 +124,31 @@ export function StaffChatWindow({
       } else {
         setTransferMessage(result.error || '转接失败');
       }
-    } catch (error) {
+    } catch {
       setTransferMessage('转接失败');
+    }
+  };
+
+  // Load recent rejection history when modal opens
+  const loadRecentRejections = async () => {
+    if (!session?.id) return;
+    
+    try {
+      const response = await fetch(`/api/chat/transfer/my?sessionId=${session.id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+        },
+      });
+      const result = await response.json();
+      if (result.success && result.data) {
+        // Filter only rejected requests with reject_reason
+        const rejections = result.data.filter((req: any) => 
+          req.status === 'rejected' && req.reject_reason
+        );
+        setRecentRejections(rejections);
+      }
+    } catch {
+      console.error('Failed to load recent rejections:');
     }
   };
 
@@ -191,7 +215,10 @@ export function StaffChatWindow({
             )}
             {currentStaffId && session?.assignedStaffId === currentStaffId && session?.status === 'active' && staffList.length > 0 && (
               <button
-                onClick={() => setShowTransferModal(true)}
+                onClick={() => {
+                  setShowTransferModal(true);
+                  loadRecentRejections();
+                }}
                 style={{
                   padding: '4px 8px',
                   backgroundColor: 'transparent',
@@ -368,6 +395,38 @@ export function StaffChatWindow({
                 }}
               />
             </div>
+
+            {/* Show recent rejection history */}
+            {recentRejections.length > 0 && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 500, color: '#faad14', marginBottom: '8px' }}>
+                  ️ 最近的拒绝记录
+                </div>
+                {recentRejections.slice(0, 2).map((rejection, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      backgroundColor: '#fff7e6',
+                      border: '1px solid #ffe58f',
+                      borderRadius: '4px',
+                      padding: '8px',
+                      marginBottom: '8px',
+                      fontSize: '12px',
+                    }}
+                  >
+                    <div style={{ marginBottom: '4px', color: '#666' }}>
+                      被客服 <strong>{rejection.to_staff_name || rejection.to_staff_id}</strong> 拒绝
+                    </div>
+                    <div style={{ color: '#999' }}>
+                      拒绝原因: {rejection.reject_reason}
+                    </div>
+                    <div style={{ color: '#bbb', marginTop: '4px' }}>
+                      {new Date(rejection.created_at).toLocaleString('zh-CN')}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {transferMessage && (
               <div

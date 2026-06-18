@@ -60,12 +60,6 @@ interface UserFormData {
   business_id: number;
 }
 
-interface BusinessData {
-  id: number;
-  name: string;
-  slug: string;
-}
-
 interface RoleFormData {
   name: string;
   description: string;
@@ -92,7 +86,6 @@ export function AdminPage() {
   const [adminUsers, setAdminUsers] = useState<UserData[]>([]);
   const [staffUsers, setStaffUsers] = useState<StaffData[]>([]);
   const [roles, setRoles] = useState<RoleData[]>([]);
-  const [businesses, setBusinesses] = useState<BusinessData[]>([]);
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [statistics, setStatistics] = useState<{
     adminCount: number;
@@ -169,22 +162,20 @@ export function AdminPage() {
     try {
       const token = localStorage.getItem('admin_token');
       
-      const [adminRes, staffRes, roleRes, settingsRes, businessRes, onlineStaffRes, sessionsRes] = await Promise.all([
+      const [adminRes, staffRes, roleRes, settingsRes, onlineStaffRes, sessionsRes] = await Promise.all([
         fetch('/api/admin-auth/users', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/admin/staff-users', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/admin/roles', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/admin/settings', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('/api/business/list', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/admin/online-staff', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/chat/sessions?limit=100', { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
-      const [adminData, staffData, roleData, settingsData, businessData, onlineStaffData, sessionsData] = await Promise.all([
+      const [adminData, staffData, roleData, settingsData, onlineStaffData, sessionsData] = await Promise.all([
         adminRes.json(),
         staffRes.json(),
         roleRes.json(),
         settingsRes.json(),
-        businessRes.json(),
         onlineStaffRes.json(),
         sessionsRes.json(),
       ]);
@@ -192,7 +183,6 @@ export function AdminPage() {
       if (adminData.success) setAdminUsers(adminData.data);
       if (staffData.success) setStaffUsers(staffData.data);
       if (roleData.success) setRoles(roleData.data);
-      if (businessData.success) setBusinesses(businessData.data);
       if (sessionsData.success && sessionsData.data) {
         // Enrich sessions with staff names
         const enrichedSessions = sessionsData.data.map((session: SessionData) => {
@@ -963,14 +953,10 @@ export function AdminPage() {
               </tr>
             ) : (
               staffUsers.map((user) => {
-                const businessId = (user as any)?.business_id;
-                let businessName = '-';
-                if (businessId === 0) {
-                  businessName = (user as any)?.business_name || '商家主账号';
-                } else if (businessId > 0) {
-                  const business = businesses.find(b => Number(b.id) === businessId);
-                  businessName = business ? business.name : '未分配';
-                }
+                // Use business_name from backend (already joined with staff_users table)
+                const businessName = user.business_id === 0 
+                  ? (user as any)?.business_name || '商家主账号'
+                  : (user as any)?.business_name || '未分配';
                 return (
                 <tr key={user.id}>
                   <td style={tdStyle}>{user.id}</td>

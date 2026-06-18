@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { MessageCircle, Users, User, LogOut, Code2, Settings, ArrowRightLeft } from 'lucide-react';
+import { MessageCircle, Users, User, LogOut, Code2, Settings, ArrowRightLeft, XCircle } from 'lucide-react';
 import { useStaffStore } from '@client/stores/staffStore';
 import { SessionList } from '@client/components/staff/SessionList';
 import { StaffChatWindow } from '@client/components/staff/StaffChatWindow';
@@ -123,6 +123,19 @@ export function StaffPage() {
   const [pendingTransfers, setPendingTransfers] = useState<any[]>([]);
   const [showTransferNotification, setShowTransferNotification] = useState(false);
   const transferPollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Rejected transfers notification state
+  const [rejectedTransfers, setRejectedTransfers] = useState<any[]>([]);
+  const [showRejectionNotification, setShowRejectionNotification] = useState(false);
+  const rejectionPollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Re-apply transfer state
+  const [selectedReapplyRequest, setSelectedReapplyRequest] = useState<any | null>(null);
+  const [reapplyReason, setReapplyReason] = useState('');
+  
+  // Reject modal state
+  const [selectedRejectRequest, setSelectedRejectRequest] = useState<any | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   // ============ ALL HOOKS MUST BE BEFORE CONDITIONAL RETURNS ============
 
@@ -161,9 +174,16 @@ export function StaffPage() {
     fetchPendingTransfers();
     transferPollingIntervalRef.current = setInterval(fetchPendingTransfers, 10000);
     
+    // Start polling for rejected transfers (notifications)
+    fetchRejectedTransfers();
+    rejectionPollingIntervalRef.current = setInterval(fetchRejectedTransfers, 15000);
+    
     return () => {
       if (transferPollingIntervalRef.current) {
         clearInterval(transferPollingIntervalRef.current);
+      }
+      if (rejectionPollingIntervalRef.current) {
+        clearInterval(rejectionPollingIntervalRef.current);
       }
     };
   }, [isAuthenticated, loadSessions, connectSSE, initFromUrl]);
@@ -275,6 +295,116 @@ export function StaffPage() {
     }
   };
 
+  const fetchRejectedTransfers = async () => {
+    try {
+      const response = await fetch('/api/chat/transfer/my', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+        },
+      });
+      const result = await response.json();
+      if (result.success && result.data) {
+        // Filter only rejected requests with reject_reason
+        const rejected = result.data.filter((req: any) => 
+          req.status === 'rejected' && req.reject_reason
+        );
+        
+        const oldCount = rejectedTransfers.length;
+        const newCount = rejected.length;
+        
+        setRejectedTransfers(rejected);
+        
+        // Show notification if there are new rejections
+        if (newCount > oldCount && newCount > 0) {
+          setShowRejectionNotification(true);
+          // Auto hide after 10 seconds
+          setTimeout(() => {
+            setShowRejectionNotification(false);
+          }, 10000);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch rejected transfers:', error);
+    }
+  };
+
+  const handleCancelRejection = async (requestId: number) => {
+    try {
+      const response = await fetch(`/api/chat/transfer/${requestId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+        },
+      });
+      const result = await response.json();
+      if (result.success) {
+        // Remove from local state
+        setRejectedTransfers(prev => prev.filter(req => req.id !== requestId));
+        // If no more rejected transfers, hide notification
+        if (rejectedTransfers.length <= 1) {
+          setShowRejectionNotification(false);
+        }
+      } else {
+        alert(result.error || '删除失败');
+      }
+    } catch (error) {
+      console.error('Failed to cancel rejection:', error);
+      alert('删除失败');
+    }
+  };
+
+  const handleReapplyTransfer = async () => {
+    if (!selectedReapplyRequest) return;
+    
+    if (!reapplyReason.trim()) {
+      alert('请填写转接原因');
+      return;
+    }
+
+    try {
+      // Create a new transfer request
+      const response = await fetch('/api/chat/transfer/request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+        },
+        body: JSON.stringify({
+          sessionId: selectedReapplyRequest.session_id,
+          toStaffId: selectedReapplyRequest.to_staff_id,
+          reason: reapplyReason,
+        }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        // Delete the old rejected request
+        await fetch(`/api/chat/transfer/${selectedReapplyRequest.id}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+          },
+        });
+        
+        // Update local state
+        setRejectedTransfers(prev => prev.filter(req => req.id !== selectedReapplyRequest.id));
+        setSelectedReapplyRequest(null);
+        setReapplyReason('');
+        
+        // If no more rejected transfers, hide notification
+        if (rejectedTransfers.length <= 1) {
+          setShowRejectionNotification(false);
+        }
+        
+        alert('转接请求已重新发送');
+      } else {
+        alert(result.error || '重新申请失败');
+      }
+    } catch (error) {
+      console.error('Failed to reapply transfer:', error);
+      alert('重新申请失败');
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('staff_token');
     localStorage.removeItem('staff_token_expires');
@@ -307,20 +437,31 @@ export function StaffPage() {
     }
   };
 
-  const handleRejectTransfer = async (requestId: number) => {
+  const handleRejectTransfer = async () => {
+    if (!selectedRejectRequest) return;
+    
+    if (!rejectReason.trim()) {
+      alert('请填写拒绝原因');
+      return;
+    }
+
     try {
-      const response = await fetch(`/api/chat/transfer/${requestId}/respond`, {
+      const response = await fetch(`/api/chat/transfer/${selectedRejectRequest.id}/respond`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
         },
-        body: JSON.stringify({ action: 'reject' }),
+        body: JSON.stringify({ action: 'reject', reason: rejectReason }),
       });
       const result = await response.json();
       if (result.success) {
         // Refresh pending transfers list
         await fetchPendingTransfers();
+        // Close modal and clear form
+        setSelectedRejectRequest(null);
+        setRejectReason('');
+        setShowTransferNotification(false);
       } else {
         alert(result.error || '拒绝失败');
       }
@@ -1356,7 +1497,10 @@ export function StaffPage() {
                     接受
                   </button>
                   <button
-                    onClick={() => handleRejectTransfer(request.id)}
+                    onClick={() => {
+                      setSelectedRejectRequest(request);
+                      setShowTransferNotification(true);
+                    }}
                     style={{
                       flex: 1,
                       padding: '6px 12px',
@@ -1373,6 +1517,296 @@ export function StaffPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Rejected Transfers Notification */}
+      {showRejectionNotification && rejectedTransfers.length > 0 && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '60px',
+            right: '20px',
+            width: '320px',
+            backgroundColor: '#fff',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            zIndex: 1000,
+            maxHeight: '400px',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <div
+            style={{
+              padding: '12px 16px',
+              borderBottom: '1px solid #f0f0f0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: '#ff4d4f',
+              color: '#fff',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <XCircle size={16} />
+              <span style={{ fontWeight: 500 }}>转接被拒绝 ({rejectedTransfers.length})</span>
+            </div>
+            <button
+              onClick={() => setShowRejectionNotification(false)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#fff',
+                cursor: 'pointer',
+                fontSize: '18px',
+                padding: '0',
+                lineHeight: 1,
+              }}
+            >
+              ×
+            </button>
+          </div>
+          <div style={{ overflowY: 'auto', maxHeight: '340px' }}>
+            {rejectedTransfers.slice(0, 5).map((request) => (
+              <div
+                key={request.id}
+                style={{
+                  padding: '12px 16px',
+                  borderBottom: '1px solid #f0f0f0',
+                }}
+              >
+                <div style={{ marginBottom: '8px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 500, color: '#333' }}>
+                    被客服 {request.to_staff_name || request.to_staff_id} 拒绝
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+                    会话: {request.session_visitor_name || request.session_id}
+                  </div>
+                  {request.reject_reason && (
+                    <div style={{ fontSize: '12px', color: '#ff4d4f', marginTop: '4px', padding: '8px', backgroundColor: '#fff1f0', borderRadius: '4px' }}>
+                      拒绝原因: {request.reject_reason}
+                    </div>
+                  )}
+                  <div style={{ fontSize: '11px', color: '#bbb', marginTop: '4px' }}>
+                    {new Date(request.created_at).toLocaleString('zh-CN')}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                  <button
+                    onClick={() => {
+                      setSelectedReapplyRequest(request);
+                      setReapplyReason(request.reason || ''); // Pre-fill with original reason
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '6px 12px',
+                      backgroundColor: '#1890ff',
+                      border: 'none',
+                      borderRadius: '4px',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                    }}
+                  >
+                    继续申请
+                  </button>
+                  <button
+                    onClick={() => handleCancelRejection(request.id)}
+                    style={{
+                      flex: 1,
+                      padding: '6px 12px',
+                      backgroundColor: '#d9d9d9',
+                      border: 'none',
+                      borderRadius: '4px',
+                      color: '#666',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                    }}
+                  >
+                    取消
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Reject Reason Modal */}
+      {selectedRejectRequest && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1001,
+          }}
+          onClick={() => {
+            setSelectedRejectRequest(null);
+            setRejectReason('');
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '8px',
+              padding: '24px',
+              width: '90%',
+              maxWidth: '400px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 'bold' }}>
+              拒绝转接请求
+            </h3>
+            <div style={{ marginBottom: '16px', fontSize: '14px', color: '#666' }}>
+              您正在拒绝来自客服 <strong>{selectedRejectRequest.from_staff_name || selectedRejectRequest.from_staff_id}</strong> 的转接申请
+            </div>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="请输入拒绝原因（必填）"
+              rows={4}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #d9d9d9',
+                borderRadius: '4px',
+                fontSize: '14px',
+                resize: 'vertical',
+                boxSizing: 'border-box',
+                marginBottom: '16px',
+              }}
+            />
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setSelectedRejectRequest(null);
+                  setRejectReason('');
+                }}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #d9d9d9',
+                  borderRadius: '4px',
+                  backgroundColor: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  color: '#666',
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleRejectTransfer}
+                disabled={!rejectReason.trim()}
+                style={{
+                  padding: '8px 16px',
+                  border: 'none',
+                  borderRadius: '4px',
+                  backgroundColor: rejectReason.trim() ? '#ff4d4f' : '#d9d9d9',
+                  cursor: rejectReason.trim() ? 'pointer' : 'not-allowed',
+                  fontSize: '14px',
+                  color: '#fff',
+                }}
+              >
+                确认拒绝
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Re-apply Transfer Modal */}
+      {selectedReapplyRequest && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1001,
+          }}
+          onClick={() => {
+            setSelectedReapplyRequest(null);
+            setReapplyReason('');
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '8px',
+              padding: '24px',
+              width: '90%',
+              maxWidth: '400px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 'bold' }}>
+              重新发起转接请求
+            </h3>
+            <div style={{ marginBottom: '16px', fontSize: '14px', color: '#666' }}>
+              您正在向客服 <strong>{selectedReapplyRequest.to_staff_name || selectedReapplyRequest.to_staff_id}</strong> 重新发起转接申请
+            </div>
+            <div style={{ marginBottom: '16px', fontSize: '12px', color: '#999' }}>
+              会话: {selectedReapplyRequest.session_visitor_name || selectedReapplyRequest.session_id}
+            </div>
+            <textarea
+              value={reapplyReason}
+              onChange={(e) => setReapplyReason(e.target.value)}
+              placeholder="请输入转接原因（必填）"
+              rows={4}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #d9d9d9',
+                borderRadius: '4px',
+                fontSize: '14px',
+                resize: 'vertical',
+                boxSizing: 'border-box',
+                marginBottom: '16px',
+              }}
+            />
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setSelectedReapplyRequest(null);
+                  setReapplyReason('');
+                }}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #d9d9d9',
+                  borderRadius: '4px',
+                  backgroundColor: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  color: '#666',
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleReapplyTransfer}
+                disabled={!reapplyReason.trim()}
+                style={{
+                  padding: '8px 16px',
+                  border: 'none',
+                  borderRadius: '4px',
+                  backgroundColor: reapplyReason.trim() ? '#1890ff' : '#d9d9d9',
+                  cursor: reapplyReason.trim() ? 'pointer' : 'not-allowed',
+                  fontSize: '14px',
+                  color: '#fff',
+                }}
+              >
+                发送请求
+              </button>
+            </div>
           </div>
         </div>
       )}

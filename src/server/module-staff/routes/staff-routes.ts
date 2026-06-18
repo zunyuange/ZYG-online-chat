@@ -663,6 +663,11 @@ staffRoutes.post('/users', async (c) => {
     }
 
     const businessId = c.get('businessId');
+    const userId = c.get('userId');
+    
+    // 如果当前用户是主体商家（business_id=0），使用用户自己的ID作为businessId
+    // 这样创建的客服账号会关联到这个商家
+    const effectiveBusinessId = businessId === 0 ? userId : businessId;
     
     const result = await createStaffUser({
       username,
@@ -670,7 +675,7 @@ staffRoutes.post('/users', async (c) => {
       name,
       email,
       role,
-      businessId,
+      businessId: effectiveBusinessId,
     });
 
     if (!result.success) {
@@ -688,7 +693,8 @@ staffRoutes.post('/users', async (c) => {
 staffRoutes.get('/users', async (c) => {
   try {
     const businessId = c.get('businessId');
-    const users = await listStaffUsers(businessId);
+    const userId = c.get('userId');
+    const users = await listStaffUsers(businessId, userId);
     return c.json({ success: true, data: users });
   } catch (error) {
     console.error('List staff users error:', error);
