@@ -43,6 +43,7 @@ interface ChatState {
   error: string | null;
   sseConnected: boolean;
   usePolling: boolean; // Fallback for Workers environment
+  staffOnline: boolean; // 是否有客服在线
 
   // Actions
   initSession: () => Promise<void>;
@@ -59,6 +60,7 @@ interface ChatState {
   startPolling: () => void;
   stopPolling: () => void;
   clearError: () => void;
+  checkStaffOnline: () => Promise<void>;
 }
 
 // EventSource reference
@@ -78,6 +80,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   error: null,
   sseConnected: false,
   usePolling: false,
+  staffOnline: false,
 
   // Initialize session from URL, localStorage or create new
   initSession: async () => {
@@ -554,5 +557,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     // Initialize new session
     await get().initSession();
+  },
+
+  // Check if staff is online
+  checkStaffOnline: async () => {
+    try {
+      const business = getUrlBusiness();
+      const params = new URLSearchParams();
+      if (business) {
+        params.set('business', business);
+      }
+      
+      const response = await fetch(`/api/chat/staff/online?${params}`);
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        set({ staffOnline: result.data.isOnline });
+      }
+    } catch (error) {
+      console.error('Check staff online error:', error);
+    }
   },
 }));

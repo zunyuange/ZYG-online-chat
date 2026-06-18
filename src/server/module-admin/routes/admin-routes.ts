@@ -413,6 +413,17 @@ adminRoutes.delete('/roles/:id', async (c) => {
   }
 });
 
+// Online Staff Statistics
+adminRoutes.get('/online-staff', async (c) => {
+  try {
+    const count = await adminService.getOnlineStaffCount();
+    return c.json({ success: true, data: count });
+  } catch (error) {
+    console.error('[Admin] Get online staff count error:', error);
+    return c.json({ success: false, error: '获取在线商家数量失败' }, 500);
+  }
+});
+
 // Settings Management (系统设置管理)
 adminRoutes.get('/settings', async (c) => {
   try {

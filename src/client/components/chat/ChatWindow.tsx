@@ -26,6 +26,7 @@ interface ChatWindowProps {
   visitorName?: string;
   sseConnected?: boolean;
   usePolling?: boolean;
+  staffOnline?: boolean;
   session?: Session | null;
   t?: (key: string) => string;
   locale?: string;
@@ -47,6 +48,7 @@ export function ChatWindow({
   visitorName,
   sseConnected,
   usePolling,
+  staffOnline,
   session,
   t = (key: string) => key,
   locale,
@@ -86,7 +88,7 @@ export function ChatWindow({
     width: '8px',
     height: '8px',
     borderRadius: '50%',
-    backgroundColor: sseConnected ? '#52c41a' : usePolling ? '#faad14' : '#ff4d4f',
+    backgroundColor: staffOnline === false ? '#999' : (sseConnected ? '#52c41a' : (usePolling ? '#faad14' : '#ff4d4f')),
   };
 
   const langButtonStyle: React.CSSProperties = {
@@ -157,6 +159,7 @@ export function ChatWindow({
   };
 
   const getStatusText = () => {
+    if (staffOnline === false) return t('service_offline');
     if (sseConnected) return t('service_online');
     if (usePolling) return 'Polling...';
     return 'Connecting...';

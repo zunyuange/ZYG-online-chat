@@ -205,3 +205,42 @@ export async function verifyPassword(username: string, password: string): Promis
   console.log('[AdminService] Password verified successfully');
   return user;
 }
+
+export async function getOnlineStaffCount(): Promise<number> {
+  const db = getDb();
+  const now = Date.now();
+  const onlineThreshold = 5 * 60 * 1000;
+  
+  const result = await db.get<{ count: number }>(
+    `SELECT COUNT(*) as count FROM staff_users 
+     WHERE role = 'staff' AND status = 'active' 
+     AND (last_active IS NULL OR last_active > ?)`,
+    [now - onlineThreshold]
+  );
+  
+  return result?.count || 0;
+}
+
+export async function updateStaffLastActive(staffId: number): Promise<void> {
+  const db = getDb();
+  await db.run(
+    'UPDATE staff_users SET last_active = ? WHERE id = ?',
+    [Date.now(), staffId]
+  );
+}
+
+export async function getStaffWithOnlineStatus(): Promise<(StaffUser & { isOnline: boolean })[]> {
+  const db = getDb();
+  const now = Date.now();
+  const onlineThreshold = 5 * 60 * 1000;
+  
+  const users = await db.all<StaffUser & { last_active: number | null }>(
+    'SELECT *, last_active FROM staff_users WHERE role = ? ORDER BY created_at DESC',
+    ['staff']
+  );
+  
+  return users.map(user => ({
+    ...user,
+    isOnline: user.last_active === null || user.last_active > now - onlineThreshold,
+  }));
+}

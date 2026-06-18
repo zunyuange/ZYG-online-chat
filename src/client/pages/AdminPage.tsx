@@ -156,20 +156,22 @@ export function AdminPage() {
     try {
       const token = localStorage.getItem('admin_token');
       
-      const [adminRes, staffRes, roleRes, settingsRes, businessRes] = await Promise.all([
+      const [adminRes, staffRes, roleRes, settingsRes, businessRes, onlineStaffRes] = await Promise.all([
         fetch('/api/admin-auth/users', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/admin/staff-users', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/admin/roles', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/admin/settings', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/business/list', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/admin/online-staff', { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
-      const [adminData, staffData, roleData, settingsData, businessData] = await Promise.all([
+      const [adminData, staffData, roleData, settingsData, businessData, onlineStaffData] = await Promise.all([
         adminRes.json(),
         staffRes.json(),
         roleRes.json(),
         settingsRes.json(),
         businessRes.json(),
+        onlineStaffRes.json(),
       ]);
 
       if (adminData.success) setAdminUsers(adminData.data);
@@ -190,7 +192,7 @@ export function AdminPage() {
         adminCount: adminData.success ? adminData.data.length : 0,
         staffCount: staffData.success ? staffData.data.length : 0,
         roleCount: roleData.success ? roleData.data.length : 0,
-        onlineStaff: 0,
+        onlineStaff: onlineStaffData.success ? onlineStaffData.data : 0,
       });
     } catch (err) {
       setError(t('load_failed'));
@@ -867,7 +869,8 @@ export function AdminPage() {
       {/* Recent Staff */}
       <div style={cardStyle}>
         <h2 style={{ fontSize: '16px', fontWeight: 500, marginBottom: '16px' }}>{t('recent_staff')}</h2>
-        <table style={tableStyle}>
+        <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+          <table style={tableStyle}>
           <thead>
             <tr>
               <th style={thStyle}>{t('username')}</th>
@@ -893,7 +896,8 @@ export function AdminPage() {
               </tr>
             )}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
     </div>
   );

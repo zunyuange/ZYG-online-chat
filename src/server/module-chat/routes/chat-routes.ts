@@ -529,3 +529,43 @@ chatRoutes.post('/banword/check', async (c) => {
     return c.json({ blocked: false });
   }
 });
+
+// ==========================================
+// Staff Online Status Route
+// ==========================================
+
+chatRoutes.get('/staff/online', async (c) => {
+  try {
+    const businessSlug = c.req.query('business');
+    const db = getDb();
+    const now = Date.now();
+    const onlineThreshold = 5 * 60 * 1000;
+
+    let query = `
+      SELECT COUNT(*) as count 
+      FROM staff_users 
+      WHERE role = 'staff' AND status = 'active' 
+      AND (last_active IS NULL OR last_active > ?)
+    `;
+    
+    const params: unknown[] = [now - onlineThreshold];
+
+    if (businessSlug) {
+      query += ' AND business_slug = ?';
+      params.push(businessSlug);
+    }
+
+    const result = await db.get<{ count: number }>(query, params);
+
+    return c.json({ 
+      success: true, 
+      data: { 
+        onlineCount: result?.count || 0,
+        isOnline: (result?.count || 0) > 0 
+      } 
+    });
+  } catch (error) {
+    console.error('Get staff online status error:', error);
+    return c.json({ success: false, error: '获取客服在线状态失败' }, 500);
+  }
+});

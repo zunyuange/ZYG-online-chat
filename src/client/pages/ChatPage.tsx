@@ -22,6 +22,7 @@ export function ChatPage() {
     sending,
     sseConnected,
     usePolling,
+    staffOnline,
     error,
     initSession,
     loadMessages,
@@ -30,12 +31,14 @@ export function ChatPage() {
     markAsRead,
     clearError,
     resetSession,
+    checkStaffOnline,
   } = useChatStore();
 
   // Initialize session on mount
   useEffect(() => {
     initSession();
-  }, [initSession]);
+    checkStaffOnline();
+  }, [initSession, checkStaffOnline]);
 
   // Mark as read when window gets focus
   useEffect(() => {
@@ -148,6 +151,7 @@ export function ChatPage() {
         visitorName={session?.visitorName}
         sseConnected={sseConnected}
         usePolling={usePolling}
+        staffOnline={staffOnline}
         session={session}
         t={t}
         locale={locale}
