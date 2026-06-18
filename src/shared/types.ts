@@ -67,6 +67,8 @@ export interface Session {
   lastMessageAt?: Date;
   unreadByVisitor: number;
   unreadByStaff: number;
+  assignedStaffId?: number; // 分配的客服ID
+  assignedStaffName?: string; // 分配的客服名称
   // 新增字段
   topic?: string;
   taskStatus: TaskStatus;

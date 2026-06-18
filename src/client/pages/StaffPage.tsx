@@ -80,6 +80,7 @@ export function StaffPage() {
     connectSSE,
     clearError,
     setInputMode,
+    setUser,
     updateTopic,
     updateTaskStatus,
     clearMessages,
@@ -171,6 +172,12 @@ export function StaffPage() {
             businessId: result.businessId,
             businessSlug: result.businessSlug,
             businessName: result.businessName,
+            role: result.role,
+          });
+          setUser({
+            userId: result.userId,
+            username: result.username || '管理员',
+            businessId: result.businessId,
             role: result.role,
           });
         }

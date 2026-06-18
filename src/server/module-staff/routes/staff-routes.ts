@@ -48,12 +48,15 @@ staffRoutes.use('*', requireAuth);
 // Session Routes
 // ==========================================
 
-// List all sessions
+// List all sessions (with permission filtering)
 staffRoutes.get('/sessions', async (c) => {
   try {
     const status = c.req.query('status') as 'active' | 'closed' | undefined;
     const businessId = c.get('businessId');
-    const sessions = await staffService.listSessionsWithPreview(status, businessId);
+    const staffId = c.get('userId');
+    const role = c.get('role');
+    
+    const sessions = await staffService.listSessionsWithPreview(status, businessId, staffId, role);
     return c.json({ success: true, data: sessions });
   } catch (error) {
     console.error('List sessions error:', error);

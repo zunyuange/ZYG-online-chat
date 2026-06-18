@@ -83,6 +83,8 @@ function mapRowToSession(row: SessionRow, business?: BusinessRow): Session {
     lastMessageAt: row.last_message_at ? new Date(row.last_message_at) : undefined,
     unreadByVisitor: row.unread_by_visitor || 0,
     unreadByStaff: row.unread_by_staff || 0,
+    assignedStaffId: row.assigned_staff_id || undefined,
+    assignedStaffName: undefined,
     topic: row.topic || undefined,
     taskStatus: (row.task_status as TaskStatus) || 'requirement_discussion',
     taskStatusUpdatedAt: row.task_status_updated_at ? new Date(row.task_status_updated_at) : undefined,

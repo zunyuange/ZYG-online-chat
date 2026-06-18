@@ -276,6 +276,39 @@ chatRoutes.get('/queue/:sessionId', async (c) => {
 });
 
 // ==========================================
+// Accept Session Route (客服接收会话)
+// ==========================================
+
+chatRoutes.post('/sessions/:id/accept', requireAuth, async (c) => {
+  try {
+    const sessionId = c.req.param('id');
+    const businessId = c.get('businessId');
+    const staffId = c.get('userId');
+
+    const db = getDb();
+
+    const session = await db.get('SELECT * FROM sessions WHERE id = ? AND business_id = ?', [sessionId, businessId]);
+    if (!session) {
+      return c.json({ success: false, error: '会话不存在' }, 404);
+    }
+
+    if (session.assigned_staff_id !== null && session.assigned_staff_id !== staffId) {
+      return c.json({ success: false, error: '会话已被其他客服接收' }, 400);
+    }
+
+    await db.run(
+      'UPDATE sessions SET assigned_staff_id = ?, updated_at = ? WHERE id = ?',
+      [staffId, Date.now(), sessionId]
+    );
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Accept session error:', error);
+    return c.json({ success: false, error: 'Failed to accept session' }, 500);
+  }
+});
+
+// ==========================================
 // Transfer Session Route
 // ==========================================
 

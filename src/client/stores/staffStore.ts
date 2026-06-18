@@ -21,6 +21,7 @@ interface StaffState {
   messages: Map<string, Message[]>;
   hasMore: Map<string, boolean>;
   totalUnread: number;
+  user: { userId: number; username: string; businessId: number; role: string } | null;
 
   // UI state
   loading: boolean;
@@ -47,6 +48,7 @@ interface StaffState {
   startPolling: () => void;
   stopPolling: () => void;
   clearError: () => void;
+  setUser: (user: { userId: number; username: string; businessId: number; role: string }) => void;
   // 新增：主题和状态管理
   setInputMode: (mode: InputMode) => void;
   updateTopic: (sessionId: string, topic: string) => Promise<void>;
@@ -65,6 +67,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
   messages: new Map(),
   hasMore: new Map(),
   totalUnread: 0,
+  user: null,
   loading: false,
   messagesLoading: false,
   sending: false,
@@ -101,9 +104,28 @@ export const useStaffStore = create<StaffState>((set, get) => ({
 
   // Select a session and load messages
   selectSession: async (sessionId: string) => {
-    const { messages } = get();
+    const { messages, sessions } = get();
 
     set({ currentSessionId: sessionId, messagesLoading: true, error: null });
+
+    const session = sessions.find(s => s.id === sessionId);
+    
+    if (session && !session.assignedStaffId) {
+      try {
+        const response = await authFetch(`/api/chat/sessions/${sessionId}/accept`, {
+          method: 'POST',
+        });
+        const result = await response.json();
+        if (result.success) {
+          const newSessions = sessions.map(s => 
+            s.id === sessionId ? { ...s, assignedStaffId: get().user?.userId } : s
+          );
+          set({ sessions: newSessions });
+        }
+      } catch (error) {
+        console.error('Failed to accept session:', error);
+      }
+    }
 
     // Only load if not already loaded
     if (!messages.has(sessionId)) {
@@ -544,6 +566,9 @@ export const useStaffStore = create<StaffState>((set, get) => ({
 
   // Clear error
   clearError: () => set({ error: null }),
+
+  // Set user info
+  setUser: (user) => set({ user }),
 
   // Set input mode
   setInputMode: (mode: InputMode) => set({ inputMode: mode }),

@@ -124,9 +124,9 @@ export async function getSessionWithPreview(sessionId: string): Promise<{
 }
 
 /**
- * List sessions with last message preview (filtered by business)
+ * List sessions with last message preview (filtered by business and permission)
  */
-export async function listSessionsWithPreview(status?: SessionStatus, businessId?: number): Promise<
+export async function listSessionsWithPreview(status?: SessionStatus, businessId?: number, staffId?: number, role?: string): Promise<
   (Session & {
     lastMessage?: {
       content: string;
@@ -135,10 +135,19 @@ export async function listSessionsWithPreview(status?: SessionStatus, businessId
     };
   })[]
 > {
-  const sessions = await listSessionsBase(status, businessId);
+  let sessions = await listSessionsBase(status, businessId);
 
   if (sessions.length === 0) {
     return [];
+  }
+
+  // Filter sessions by permission:
+  // - Admin can see all sessions
+  // - Regular staff can see unassigned sessions + sessions assigned to them
+  if (role !== 'admin' && staffId) {
+    sessions = sessions.filter(session => 
+      !session.assignedStaffId || session.assignedStaffId === staffId
+    );
   }
 
   // Get last messages for all sessions
