@@ -376,7 +376,7 @@ staffRoutes.post('/sessions/:sessionId/end', async (c) => {
 // Queue Routes (Staff view)
 // ==========================================
 
-// Get queue list
+// Get queue list (all waiting sessions)
 staffRoutes.get('/queue', async (c) => {
   try {
     const queueList = await queueService.getQueueList();
@@ -384,6 +384,18 @@ staffRoutes.get('/queue', async (c) => {
   } catch (error) {
     console.error('Get queue list error:', error);
     return c.json({ success: false, error: 'Failed to get queue list' }, 500);
+  }
+});
+
+// Get current staff's queue (their sessions + pending transfer requests)
+staffRoutes.get('/queue/my', requireAuth, async (c) => {
+  try {
+    const staffId = parseInt(c.get('userId'), 10);
+    const staffQueue = await queueService.getStaffQueueList(staffId);
+    return c.json({ success: true, data: staffQueue });
+  } catch (error) {
+    console.error('Get staff queue list error:', error);
+    return c.json({ success: false, error: 'Failed to get staff queue list' }, 500);
   }
 });
 
