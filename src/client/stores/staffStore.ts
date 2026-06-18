@@ -245,6 +245,13 @@ export const useStaffStore = create<StaffState>((set, get) => ({
             const newMessages = new Map(messages);
             newMessages.set(currentSessionId, [...updatedMessages, ...toAdd]);
             set({ messages: newMessages });
+            
+            // Auto-mark as read when receiving new messages in current session
+            // This ensures visitor sees "read" status without requiring staff to click
+            if (toAdd.length > 0) {
+              console.log(`[StaffStore] Auto-marking session ${currentSessionId} as read after receiving ${toAdd.length} new messages`);
+              get().markAsRead(currentSessionId);
+            }
           }
         }
       }
@@ -276,6 +283,8 @@ export const useStaffStore = create<StaffState>((set, get) => ({
       if (result.success && result.data) {
         get().addMessage(result.data);
         set({ sending: false });
+        // Auto-mark as read after sending message (so visitor sees "read" status)
+        get().markAsRead(currentSessionId);
       } else {
         set({ error: result.error || 'Failed to send message', sending: false });
       }
