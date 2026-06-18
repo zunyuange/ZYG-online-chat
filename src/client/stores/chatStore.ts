@@ -173,23 +173,31 @@ export const useChatStore = create<ChatState>((set, get) => ({
   // Check for new messages (used by polling)
   checkNewMessages: async () => {
     const { session, messages } = get();
-    if (!session) return;
+    if (!session) {
+      console.log('[ChatStore] No session, skipping polling');
+      return;
+    }
+
+    console.log(`[ChatStore] Checking new messages for session ${session.id}, current status: ${session.status}`);
 
     try {
       // First check session status
+      console.log('[ChatStore] Fetching session status...');
       const sessionResponse = await fetch('/api/chat/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: session.id }),
       });
       const sessionResult = await sessionResponse.json();
+      console.log('[ChatStore] Session status response:', JSON.stringify(sessionResult));
 
       if (sessionResult.success && sessionResult.data) {
         const updatedSession = sessionResult.data;
+        console.log(`[ChatStore] Updated session status: ${updatedSession.status}, current status: ${session.status}`);
         
         // If session is now closed and was not closed before, update state immediately
         if (updatedSession.status === 'closed' && session.status !== 'closed') {
-          console.log('[ChatStore] Session closed detected, clearing messages and stopping polling');
+          console.log('[ChatStore] Session closed detected! Clearing messages and stopping polling');
           // Clear messages when session is closed
           set({ session: updatedSession, messages: [] });
           // Stop polling since session is closed
@@ -202,34 +210,45 @@ export const useChatStore = create<ChatState>((set, get) => ({
         // Update session if there are any changes
         if (updatedSession.status !== session.status || 
             updatedSession.unreadByVisitor !== session.unreadByVisitor) {
+          console.log('[ChatStore] Updating session state');
           set({ session: updatedSession });
         }
+      } else {
+        console.log('[ChatStore] Failed to get session status:', sessionResult.error);
       }
 
       // Only check messages if session is still active
       if (session.status !== 'closed') {
+        console.log('[ChatStore] Session is active, checking for new messages');
         const params = new URLSearchParams({ sessionId: session.id, limit: '20' });
         const response = await fetch(`/api/chat/messages?${params}`);
         const result = await response.json();
 
         if (result.success && result.data) {
           const newMessages = result.data as Message[];
+          console.log(`[ChatStore] Found ${newMessages.length} messages from server`);
           // Find messages newer than our last known message
           const latestTime = messages.length > 0 ? messages[messages.length - 1].createdAt : 0;
           const freshMessages = newMessages.filter((m) => m.createdAt > latestTime);
+          console.log(`[ChatStore] Found ${freshMessages.length} fresh messages`);
 
           if (freshMessages.length > 0) {
             // Add only new messages (avoid duplicates)
             const existingIds = new Set(messages.map((m) => m.id));
             const toAdd = freshMessages.filter((m) => !existingIds.has(m.id));
+            console.log(`[ChatStore] Adding ${toAdd.length} new messages`);
             if (toAdd.length > 0) {
               set({ messages: [...messages, ...toAdd] });
             }
           }
+        } else {
+          console.log('[ChatStore] Failed to get messages:', result.error);
         }
+      } else {
+        console.log('[ChatStore] Session is closed, skipping message check');
       }
     } catch (error) {
-      console.error('Polling error:', error);
+      console.error('[ChatStore] Polling error:', error);
     }
   },
 
@@ -445,13 +464,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   // Start polling for new messages
   startPolling: () => {
-    if (pollingInterval) return; // Already polling
+    if (pollingInterval) {
+      console.log('[ChatStore] Polling already running, skipping');
+      return; // Already polling
+    }
 
     set({ usePolling: true });
-    console.log('Starting message polling (SSE fallback)');
+    console.log('[ChatStore] Starting message polling (SSE fallback)');
 
     // Poll every 3 seconds
     pollingInterval = setInterval(() => {
+      console.log('[ChatStore] Polling for new messages...');
       get().checkNewMessages();
     }, 3000);
   },

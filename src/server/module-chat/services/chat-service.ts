@@ -164,6 +164,7 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
   if (input.sessionId) {
     const row = await db.get<SessionRow>('SELECT * FROM sessions WHERE id = ?', [input.sessionId]);
     if (row) {
+      console.log(`[ChatService] Found existing session ${input.sessionId} with status: ${row.status}`);
       return mapRowToSession(row, business || undefined);
     }
   }

@@ -64,37 +64,22 @@ export async function endSession(sessionId: string): Promise<Session | null> {
   const db = getDb();
   const now = Date.now();
 
-  // Use transaction to ensure both operations succeed or fail together
-  try {
-    // Begin transaction
-    await db.exec('BEGIN');
+  console.log(`[StaffService] Ending session ${sessionId}`);
 
-    // Delete all messages for this session
-    const deleteResult = await db.run('DELETE FROM messages WHERE session_id = ?', [sessionId]);
-    console.log(`[StaffService] Deleted ${deleteResult.changes} messages for session ${sessionId}`);
+  // Delete all messages for this session
+  const deleteResult = await db.run('DELETE FROM messages WHERE session_id = ?', [sessionId]);
+  console.log(`[StaffService] Deleted ${deleteResult.changes} messages for session ${sessionId}`);
 
-    // Update session status to closed
-    await db.run(
-      'UPDATE sessions SET status = ?, updated_at = ? WHERE id = ?',
-      ['closed', now, sessionId]
-    );
+  // Update session status to closed
+  const updateResult = await db.run(
+    'UPDATE sessions SET status = ?, updated_at = ? WHERE id = ?',
+    ['closed', now, sessionId]
+  );
+  console.log(`[StaffService] Updated ${updateResult.changes} sessions, status set to closed`);
 
-    // Commit transaction
-    await db.exec('COMMIT');
-
-    const updatedSession = await getSessionBase(sessionId);
-    console.log(`[StaffService] Session ${sessionId} ended successfully`);
-    return updatedSession;
-  } catch (error) {
-    // Rollback on error
-    try {
-      await db.exec('ROLLBACK');
-    } catch (rollbackError) {
-      console.error('[StaffService] Rollback failed:', rollbackError);
-    }
-    console.error('[StaffService] End session error:', error);
-    throw error;
-  }
+  const updatedSession = await getSessionBase(sessionId);
+  console.log(`[StaffService] Session ${sessionId} ended successfully, status: ${updatedSession?.status}`);
+  return updatedSession;
 }
 
 /**
