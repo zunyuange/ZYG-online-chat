@@ -642,7 +642,7 @@ chatRoutes.post('/transfer/request', requireAuth, async (c) => {
   }
 });
 
-chatRoutes.post('/transfer/:requestId/respond', async (c) => {
+chatRoutes.post('/transfer/:requestId/respond', requireAuth, async (c) => {
   try {
     const { requestId } = c.req.param();
     const body = await c.req.json();
@@ -671,7 +671,7 @@ chatRoutes.post('/transfer/:requestId/respond', async (c) => {
   }
 });
 
-chatRoutes.get('/transfer/pending', async (c) => {
+chatRoutes.get('/transfer/pending', requireAuth, async (c) => {
   try {
     const staffId = c.get('userId');
     const requests = await transferService.getPendingTransferRequests(staffId);

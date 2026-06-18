@@ -28,17 +28,18 @@ bucket_name = "zyg-online-chat-uploads"
 command = "npm run build:worker"
 
 [env.production]
-name = "zyg-online-chat-prod"
+name = "zyg-online-chat"
 
 [env.production.vars]
 BARK_API = "https://api.day.app"
 STAFF_URL_BASE = "https://zyg-online-chat.dyyz1993.workers.dev/staff"
+REQUIRE_AUTH = "true"
 
-[env.production.d1_databases]
+[[env.production.d1_databases]]
 binding = "DB"
 database_name = "zyg-online-chat-db"
-database_id = "22d3de4b-18a7-4571-b6b7-3393fdf50a91"
+database_id = "91fad6d8-e535-4bc0-95fc-2b69c32c7d22"
 
-[env.production.r2_buckets]
+[[env.production.r2_buckets]]
 binding = "BUCKET"
 bucket_name = "zyg-online-chat-uploads"

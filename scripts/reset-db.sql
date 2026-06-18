@@ -273,6 +273,17 @@ status TEXT NOT NULL DEFAULT 'active',
 created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), 
 updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000));
 
+-- Create transfer_requests table for session transfer management
+CREATE TABLE IF NOT EXISTS transfer_requests (
+id INTEGER PRIMARY KEY AUTOINCREMENT, 
+session_id TEXT NOT NULL, 
+from_staff_id INTEGER NOT NULL, 
+to_staff_id INTEGER NOT NULL, 
+reason TEXT, 
+status TEXT NOT NULL DEFAULT 'pending', 
+created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), 
+updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000));
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS messages_session_id_idx ON messages(session_id);
 CREATE INDEX IF NOT EXISTS messages_created_at_idx ON messages(created_at);
@@ -291,6 +302,8 @@ CREATE INDEX IF NOT EXISTS visitors_business_id_idx ON visitors(business_id);
 CREATE INDEX IF NOT EXISTS visitors_visitor_id_idx ON visitors(visitor_id);
 CREATE INDEX IF NOT EXISTS admin_users_username_idx ON admin_users(username);
 CREATE INDEX IF NOT EXISTS roles_name_idx ON roles(name);
+CREATE INDEX IF NOT EXISTS transfer_requests_session_id_idx ON transfer_requests(session_id);
+CREATE INDEX IF NOT EXISTS transfer_requests_to_staff_id_idx ON transfer_requests(to_staff_id);
 
 -- Initialize default admin user (username: admin, password: 123456)
 -- Password hash for '123456' using SHA-256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855

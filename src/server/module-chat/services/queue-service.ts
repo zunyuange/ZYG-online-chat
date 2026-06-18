@@ -185,7 +185,7 @@ export async function getStaffQueueList(staffId: number): Promise<{
       u.name as fromStaffName
     FROM transfer_requests tr
     JOIN sessions s ON tr.session_id = s.id
-    JOIN users u ON tr.from_staff_id = u.id
+    JOIN staff_users u ON tr.from_staff_id = u.id
     WHERE tr.to_staff_id = ?
     AND tr.status = 'pending'
     ORDER BY tr.created_at DESC`,

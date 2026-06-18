@@ -409,7 +409,7 @@ export function QueueList({ isOpen, onClose, onSelectSession }: QueueListProps) 
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                         <span style={{ fontWeight: 500, fontSize: '14px' }}>
-                          {request.session?.visitor_name || '未知访客'}
+                          {request.visitorName || request.session?.visitor_name || '未知访客'}
                         </span>
                         <span
                           style={{
@@ -424,7 +424,7 @@ export function QueueList({ isOpen, onClose, onSelectSession }: QueueListProps) 
                         </span>
                       </div>
                       <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
-                        来自客服: {request.from_staff_name || request.from_staff_id}
+                        来自客服: {request.fromStaffName || request.from_staff_name || request.fromStaffUsername || request.from_staff_id}
                       </div>
                       {request.reason && (
                         <div style={{ fontSize: '12px', color: '#999', fontStyle: 'italic' }}>
