@@ -300,9 +300,12 @@ function DocsContent() {
               <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 500 }}>方法三：直接链接</h3>
               <p style={{ fontSize: '14px', color: '#666', marginBottom: '16px', lineHeight: '1.8' }}>
                 直接使用 URL 链接打开客服页面，适合在按钮、菜单等位置添加客服入口。
+                通过 <strong>URL 查询参数</strong> 传递访客信息，客服端即可识别访客身份。
               </p>
 
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
+              {/* 基础链接 */}
+              <p style={{ fontSize: '14px', fontWeight: 600, color: '#333', marginBottom: '8px' }}>🔗 基础链接</p>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px' }}>
                 <code style={{
                   flex: 1,
                   padding: '12px 16px',
@@ -335,12 +338,236 @@ function DocsContent() {
                   {copied === 'url' ? '已复制' : '复制'}
                 </button>
               </div>
+
+              {/* URL 结构分解 */}
+              <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 500 }}>📌 URL 结构分解</h3>
+              <p style={{ fontSize: '14px', color: '#666', marginBottom: '16px', lineHeight: '1.8' }}>
+                完整 URL 由 <strong>基础路径</strong> + <strong>查询参数</strong> 拼接而成。以下是各部分的颜色说明：
+              </p>
+              <div style={{
+                backgroundColor: '#1e1e1e',
+                padding: '20px',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontFamily: "'Fira Code', 'Consolas', monospace",
+                lineHeight: '2',
+                overflowX: 'auto',
+                marginBottom: '20px',
+              }}>
+                <span style={{ color: '#569cd6' }}>{currentDomain}/chat</span>
+                <span style={{ color: '#d4d4d4' }}>?</span>
+                <span style={{ color: '#ce9178' }}>business=default</span>
+                <span style={{ color: '#d4d4d4' }}>&</span>
+                <span style={{ color: '#9cdcfe' }}>userName=张三</span>
+                <span style={{ color: '#d4d4d4' }}>&</span>
+                <span style={{ color: '#9cdcfe' }}>email=zhangsan@example.com</span>
+                <span style={{ color: '#d4d4d4' }}>&</span>
+                <span style={{ color: '#9cdcfe' }}>phone=13800138000</span>
+                <span style={{ color: '#d4d4d4' }}>&</span>
+                <span style={{ color: '#9cdcfe' }}>pid=user123</span>
+                <span style={{ color: '#d4d4d4' }}>&</span>
+                <span style={{ color: '#b5cea8' }}>params={"{...}"}</span>
+                <span style={{ color: '#d4d4d4' }}>&</span>
+                <span style={{ color: '#4ec9b0' }}>lang=zh-CN</span>
+              </div>
+              <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', marginBottom: '24px', fontSize: '12px', color: '#888' }}>
+                <span>🔵 <code style={{ color: '#569cd6' }}>域名+路径</code> — 固定不变</span>
+                <span>🟠 <code style={{ color: '#ce9178' }}>business</code> — 必填参数</span>
+                <span>🟦 <code style={{ color: '#9cdcfe' }}>身份参数</code> — 可选</span>
+                <span>🟢 <code style={{ color: '#b5cea8' }}>params</code> — 自定义</span>
+                <span>🟩 <code style={{ color: '#4ec9b0' }}>lang</code> — 语言</span>
+              </div>
             </div>
 
+            {/* 可选参数参考表 */}
             <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '24px', marginBottom: '24px' }}>
-              <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 500 }}>📌 完整示例</h3>
-              <p style={{ fontSize: '14px', color: '#666', marginBottom: '16px' }}>
-                带所有可选参数的完整链接示例：
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 500 }}>📌 可选参数说明</h3>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#fafafa', borderBottom: '2px solid #e8e8e8' }}>
+                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>参数名</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>示例值</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>必填</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>说明</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { param: 'business', example: 'default', required: '是', desc: '商家标识（slug），每个商家唯一' },
+                      { param: 'userName', example: '张三', required: '否', desc: '访客姓名，客服端会显示在会话头部' },
+                      { param: 'email', example: 'zhangsan@example.com', required: '否', desc: '访客邮箱，用于后续联系' },
+                      { param: 'phone', example: '13800138000', required: '否', desc: '访客手机号' },
+                      { param: 'pid', example: 'user123', required: '否', desc: '跨系统用户唯一标识，用于关联自有系统用户' },
+                      { param: 'params', example: '{"source":"website","level":"vip"}', required: '否', desc: '自定义参数，JSON 字符串格式' },
+                      { param: 'lang', example: 'zh-CN', required: '否', desc: '语言偏好：zh-CN（中文）/ en-US（英文）' },
+                    ].map((row, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                        <td style={{ padding: '10px 16px', fontFamily: 'monospace', fontSize: '13px', color: '#c41d7f' }}>{row.param}</td>
+                        <td style={{ padding: '10px 16px', fontFamily: 'monospace', fontSize: '13px', color: '#666' }}>{row.example}</td>
+                        <td style={{ padding: '10px 16px', color: row.required === '是' ? '#ff4d4f' : '#52c41a', fontWeight: 500 }}>{row.required}</td>
+                        <td style={{ padding: '10px 16px', color: '#333' }}>{row.desc}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* URL 拼接教程 */}
+            <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '24px', marginBottom: '24px' }}>
+              <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 500 }}>📌 URL 拼接教程</h3>
+              <p style={{ fontSize: '14px', color: '#666', marginBottom: '16px', lineHeight: '1.8' }}>
+                下面以实际场景为例，逐步展示如何拼接一个带访客信息的完整客服链接。
+              </p>
+
+              {/* 步骤1：基础链接 */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: '#1890ff', marginBottom: '6px' }}>
+                  步骤 1：确定基础链接
+                </div>
+                <p style={{ fontSize: '13px', color: '#666', margin: '0 0 8px 0' }}>
+                  基础链接格式为 <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>域名/chat?business=你的商家标识</code>，
+                  其中 <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>business</code> 是必填参数。
+                </p>
+                <pre style={{
+                  backgroundColor: '#f6f8fa',
+                  border: '1px solid #e1e4e8',
+                  borderRadius: '6px',
+                  padding: '12px 16px',
+                  fontSize: '13px',
+                  fontFamily: "'Fira Code', 'Consolas', monospace",
+                  margin: 0,
+                  color: '#333',
+                  overflowX: 'auto',
+                }}>
+                  {`${currentDomain}/chat?business=default`}
+                </pre>
+              </div>
+
+              {/* 步骤2：追加身份参数 */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: '#1890ff', marginBottom: '6px' }}>
+                  步骤 2：追加访客身份参数（可选）
+                </div>
+                <p style={{ fontSize: '13px', color: '#666', margin: '0 0 8px 0' }}>
+                  用 <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>&</code> 符号连接多个参数。
+                  建议至少传入 <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>userName</code> 和 <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>pid</code>，方便客服识别来访用户。
+                </p>
+                <pre style={{
+                  backgroundColor: '#f6f8fa',
+                  border: '1px solid #e1e4e8',
+                  borderRadius: '6px',
+                  padding: '12px 16px',
+                  fontSize: '13px',
+                  fontFamily: "'Fira Code', 'Consolas', monospace",
+                  margin: 0,
+                  color: '#333',
+                  overflowX: 'auto',
+                }}>
+                  {`${currentDomain}/chat?business=default&userName=张三&pid=user123`}
+                </pre>
+              </div>
+
+              {/* 步骤3：追加自定义参数 */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: '#1890ff', marginBottom: '6px' }}>
+                  步骤 3：追加自定义参数 <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px', fontSize: '13px' }}>params</code>（可选）
+                </div>
+                <p style={{ fontSize: '13px', color: '#666', margin: '0 0 8px 0', lineHeight: '1.8' }}>
+                  <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>params</code> 的值是 <strong>JSON 字符串</strong>。由于 URL 不能直接包含 <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>{{</code> <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>}}</code> 等特殊字符，需要用 <strong>URL 编码</strong> 处理。
+                  <span style={{ display: 'block', marginTop: '6px' }}>
+                    示例：<code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>{'{"source":"website","level":"vip"}'}</code>
+                    → 编码后 → <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>%7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D</code>
+                  </span>
+                </p>
+                <pre style={{
+                  backgroundColor: '#f6f8fa',
+                  border: '1px solid #e1e4e8',
+                  borderRadius: '6px',
+                  padding: '12px 16px',
+                  fontSize: '13px',
+                  fontFamily: "'Fira Code', 'Consolas', monospace",
+                  margin: 0,
+                  color: '#333',
+                  overflowX: 'auto',
+                }}>
+                  {`${currentDomain}/chat?business=default&userName=张三&pid=user123&params=${encodeURIComponent('{"source":"website","level":"vip"}')}`}
+                </pre>
+              </div>
+
+              {/* 步骤4：追加语言 */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: '#1890ff', marginBottom: '6px' }}>
+                  步骤 4：追加语言偏好 <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px', fontSize: '13px' }}>lang</code>（可选）
+                </div>
+                <p style={{ fontSize: '13px', color: '#666', margin: '0 0 8px 0' }}>
+                  指定访客端界面语言：<code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>zh-CN</code> 中文 / <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>en-US</code> 英文。
+                </p>
+                <pre style={{
+                  backgroundColor: '#f6f8fa',
+                  border: '1px solid #e1e4e8',
+                  borderRadius: '6px',
+                  padding: '12px 16px',
+                  fontSize: '13px',
+                  fontFamily: "'Fira Code', 'Consolas', monospace",
+                  margin: 0,
+                  color: '#333',
+                  overflowX: 'auto',
+                }}>
+                  {`${currentDomain}/chat?business=default&userName=张三&pid=user123&params=${encodeURIComponent('{"source":"website","level":"vip"}')}&lang=zh-CN`}
+                </pre>
+              </div>
+
+              {/* 完整最终链接 */}
+              <div style={{ marginBottom: '0' }}>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: '#52c41a', marginBottom: '6px' }}>
+                  ✅ 最终完整链接
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <pre style={{
+                    backgroundColor: '#1e1e1e',
+                    color: '#d4d4d4',
+                    padding: '20px',
+                    borderRadius: '6px',
+                    overflowX: 'auto',
+                    fontSize: '13px',
+                    lineHeight: '1.8',
+                    margin: 0,
+                    fontFamily: "'Fira Code', 'Consolas', monospace",
+                  }}>
+{`${directUrl}&userName=张三&email=zhangsan@example.com&phone=13800138000&pid=user123&params={"source":"website","level":"vip"}&lang=zh-CN`}
+                  </pre>
+                  <button
+                    onClick={() => copyToClipboard(`${directUrl}&userName=张三&email=zhangsan@example.com&phone=13800138000&pid=user123&params={"source":"website","level":"vip"}&lang=zh-CN`, 'fullUrl')}
+                    style={{
+                      position: 'absolute',
+                      top: '12px',
+                      right: '12px',
+                      padding: '6px 12px',
+                      border: 'none',
+                      borderRadius: '4px',
+                      backgroundColor: copied === 'fullUrl' ? '#52c41a' : 'rgba(255,255,255,0.15)',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '12px',
+                    }}
+                  >
+                    {copied === 'fullUrl' ? <Check size={14} /> : <Copy size={14} />}
+                    {copied === 'fullUrl' ? '已复制' : '复制'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* JavaScript 代码示例 */}
+            <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '24px', marginBottom: '24px' }}>
+              <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 500 }}>💻 前端代码示例</h3>
+              <p style={{ fontSize: '14px', color: '#666', marginBottom: '16px', lineHeight: '1.8' }}>
+                以下 JavaScript 代码展示如何在后端或前端动态拼接客服链接，适合在页面中动态生成按钮链接。
               </p>
               <div style={{ position: 'relative' }}>
                 <pre style={{
@@ -354,10 +581,47 @@ function DocsContent() {
                   margin: 0,
                   fontFamily: "'Fira Code', 'Consolas', monospace",
                 }}>
-{`${directUrl}&userName=张三&email=zhangsan@example.com&phone=13800138000&pid=user123&params={"source":"website","level":"vip"}&lang=zh-CN`}
+{`// 基础配置
+const BASE_URL = '${currentDomain}/chat';
+const BUSINESS = 'default'; // 替换为你的商家标识
+
+// 用户信息（从你的系统获取）
+const user = {
+  userName: '张三',
+  email: 'zhangsan@example.com',
+  phone: '13800138000',
+  pid: 'user123',
+};
+
+// 自定义参数
+const customParams = {
+  source: 'website',
+  level: 'vip',
+  page: window.location.pathname,
+};
+
+// 拼接 URL
+const params = new URLSearchParams();
+params.set('business', BUSINESS);
+if (user.userName) params.set('userName', user.userName);
+if (user.email) params.set('email', user.email);
+if (user.phone) params.set('phone', user.phone);
+if (user.pid) params.set('pid', user.pid);
+params.set('params', JSON.stringify(customParams));
+params.set('lang', 'zh-CN');
+
+const chatUrl = \`\${BASE_URL}?\${params.toString()}\`;
+
+// 用法1：跳转链接
+// <a href={chatUrl}>联系客服</a>
+
+// 用法2：按钮点击
+document.getElementById('chatBtn').addEventListener('click', () => {
+  window.open(chatUrl, '_blank', 'width=400,height=560');
+});`}
                 </pre>
                 <button
-                  onClick={() => copyToClipboard(`${directUrl}&userName=张三&email=zhangsan@example.com&phone=13800138000&pid=user123&params={"source":"website","level":"vip"}&lang=zh-CN`, 'fullUrl')}
+                  onClick={() => copyToClipboard(`// 基础配置\nconst BASE_URL = '${currentDomain}/chat';\nconst BUSINESS = 'default';\n\n// 用户信息\nconst user = {\n  userName: '张三',\n  email: 'zhangsan@example.com',\n  phone: '13800138000',\n  pid: 'user123',\n};\n\n// 自定义参数\nconst customParams = {\n  source: 'website',\n  level: 'vip',\n  page: window.location.pathname,\n};\n\n// 拼接 URL\nconst params = new URLSearchParams();\nparams.set('business', BUSINESS);\nif (user.userName) params.set('userName', user.userName);\nif (user.email) params.set('email', user.email);\nif (user.phone) params.set('phone', user.phone);\nif (user.pid) params.set('pid', user.pid);\nparams.set('params', JSON.stringify(customParams));\nparams.set('lang', 'zh-CN');\n\nconst chatUrl = \`\${BASE_URL}?\${params.toString()}\`;\n\n// 用法1：跳转链接\n// <a href={chatUrl}>联系客服</a>\n\n// 用法2：按钮点击\ndocument.getElementById('chatBtn').addEventListener('click', () => {\n  window.open(chatUrl, '_blank', 'width=400,height=560');\n});`, 'jsCode')}
                   style={{
                     position: 'absolute',
                     top: '12px',
@@ -365,7 +629,7 @@ function DocsContent() {
                     padding: '6px 12px',
                     border: 'none',
                     borderRadius: '4px',
-                    backgroundColor: copied === 'fullUrl' ? '#52c41a' : 'rgba(255,255,255,0.15)',
+                    backgroundColor: copied === 'jsCode' ? '#52c41a' : 'rgba(255,255,255,0.15)',
                     color: '#fff',
                     cursor: 'pointer',
                     display: 'flex',
@@ -374,8 +638,8 @@ function DocsContent() {
                     fontSize: '12px',
                   }}
                 >
-                  {copied === 'fullUrl' ? <Check size={14} /> : <Copy size={14} />}
-                  {copied === 'fullUrl' ? '已复制' : '复制'}
+                  {copied === 'jsCode' ? <Check size={14} /> : <Copy size={14} />}
+                  {copied === 'jsCode' ? '已复制' : '复制'}
                 </button>
               </div>
             </div>
