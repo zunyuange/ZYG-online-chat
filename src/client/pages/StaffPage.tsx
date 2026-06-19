@@ -379,11 +379,11 @@ export function StaffPage() {
           setShowRejectionNotification(false);
         }
       } else {
-        alert(result.error || '删除失败');
+        alert(result.error || t('delete_failed'));
       }
     } catch (error) {
       console.error('Failed to cancel rejection:', error);
-      alert('删除失败');
+      alert(t('delete_failed'));
     }
   };
 
@@ -391,7 +391,7 @@ export function StaffPage() {
     if (!selectedReapplyRequest) return;
     
     if (!reapplyReason.trim()) {
-      alert('请填写转接原因');
+      alert(t('please_fill_transfer_reason'));
       return;
     }
 
@@ -429,13 +429,13 @@ export function StaffPage() {
           setShowRejectionNotification(false);
         }
         
-        alert('转接请求已重新发送');
+        alert(t('transfer_request_resent'));
       } else {
-        alert(result.error || '重新申请失败');
+        alert(result.error || t('resend_failed'));
       }
     } catch (error) {
       console.error('Failed to reapply transfer:', error);
-      alert('重新申请失败');
+      alert(t('resend_failed'));
     }
   };
 
@@ -461,13 +461,13 @@ export function StaffPage() {
         await fetchPendingTransfers();
         // Reload sessions to show the new session
         await loadSessions();
-        alert('已接受转接请求');
+        alert(t('transfer_accepted'));
       } else {
-        alert(result.error || '接受失败');
+        alert(result.error || t('accept_failed'));
       }
     } catch (error) {
       console.error('Failed to accept transfer:', error);
-      alert('接受失败');
+      alert(t('accept_failed'));
     }
   };
 
@@ -475,7 +475,7 @@ export function StaffPage() {
     if (!selectedRejectRequest) return;
     
     if (!rejectReason.trim()) {
-      alert('请填写拒绝原因');
+      alert(t('please_fill_reject_reason'));
       return;
     }
 
@@ -497,11 +497,11 @@ export function StaffPage() {
         setRejectReason('');
         setShowTransferNotification(false);
       } else {
-        alert(result.error || '拒绝失败');
+        alert(result.error || t('reject_failed'));
       }
     } catch (error) {
       console.error('Failed to reject transfer:', error);
-      alert('拒绝失败');
+      alert(t('reject_failed'));
     }
   };
 
@@ -522,12 +522,12 @@ export function StaffPage() {
     setProfileMessage('');
     
     if (profileForm.password !== profileForm.confirmPassword) {
-      setProfileMessage('两次输入的密码不一致');
+      setProfileMessage(t('password_mismatch'));
       return;
     }
 
     if (!profileForm.name && !profileForm.password) {
-      setProfileMessage('请至少修改一项内容');
+      setProfileMessage(t('please_modify_at_least_one'));
       return;
     }
 
@@ -547,15 +547,15 @@ export function StaffPage() {
 
       const result = await response.json();
       if (result.success) {
-        setProfileMessage('修改成功');
+        setProfileMessage(t('modify_success'));
         setTimeout(() => {
           handleCloseProfile();
         }, 1500);
       } else {
-        setProfileMessage(result.error || '修改失败');
+        setProfileMessage(result.error || t('modify_failed'));
       }
     } catch (error) {
-      setProfileMessage('修改失败');
+      setProfileMessage(t('modify_failed'));
     }
   };
 
@@ -655,7 +655,7 @@ export function StaffPage() {
             borderRadius: '50%',
             margin: '0 auto 16px',
           }}></div>
-          <p style={{ color: '#6b7280' }}>加载中...</p>
+          <p style={{ color: '#6b7280' }}>{t('loading')}</p>
         </div>
       </div>
     );
@@ -835,7 +835,7 @@ export function StaffPage() {
               gap: '4px',
               fontSize: '13px',
             }}
-            title="查看任务队列"
+            title={t('view_task_queue')}
           >
             <Users size={14} />
             <span style={{ display: isMobile ? 'none' : 'inline' }}>{t('queue')}</span>
@@ -877,7 +877,7 @@ export function StaffPage() {
                 fontSize: '13px',
                 fontWeight: 500,
               }}
-              title="有待处理的转接请求"
+              title={t('pending_transfer_requests')}
             >
               <ArrowRightLeft size={14} />
               <span>{pendingTransfers.length}</span>
@@ -901,7 +901,7 @@ export function StaffPage() {
               }}
             >
               <User size={14} />
-              <span>{userInfo?.username || '登录'}</span>
+              <span>{userInfo?.username || t('login')}</span>
             </button>
             {showUserMenu && (
               <div

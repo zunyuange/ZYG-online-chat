@@ -122,13 +122,13 @@ export function AdminPage() {
   ];
 
   const allPermissions = [
-    { key: 'admin_view', label: '查看管理后台' },
-    { key: 'admin_edit', label: '编辑管理员' },
-    { key: 'staff_view', label: '查看商家' },
-    { key: 'staff_edit', label: '编辑商家' },
-    { key: 'role_view', label: '查看角色' },
-    { key: 'role_edit', label: '编辑角色' },
-    { key: 'settings', label: '系统设置' },
+    { key: 'admin_view', label: t('permission_admin_view') },
+    { key: 'admin_edit', label: t('permission_admin_edit') },
+    { key: 'staff_view', label: t('permission_staff_view') },
+    { key: 'staff_edit', label: t('permission_staff_edit') },
+    { key: 'role_view', label: t('permission_role_view') },
+    { key: 'role_edit', label: t('permission_role_edit') },
+    { key: 'settings', label: t('permission_settings') },
   ];
 
   useEffect(() => {
@@ -193,7 +193,7 @@ export function AdminPage() {
       if (settingsData.success) {
         const data = settingsData.data;
         setSettings({
-          siteName: data.siteName?.value || data.site_name?.value || '在线客服系统',
+          siteName: data.siteName?.value || data.site_name?.value || t('default_site_name'),
           defaultLanguage: data.defaultLanguage?.value || data.default_language?.value || 'zh-CN',
           enableAuth: (data.enableAuth?.value || data.enable_auth?.value || 'true') === 'true',
         });
@@ -958,8 +958,8 @@ export function AdminPage() {
               staffUsers.map((user) => {
                 // Use business_name from backend (already joined with staff_users table)
                 const businessName = user.business_id === 0 
-                  ? (user as any)?.business_name || '商家主账号'
-                  : (user as any)?.business_name || '未分配';
+                  ? (user as any)?.business_name || t('staff_primary_account')
+                  : (user as any)?.business_name || t('unassigned');
                 return (
                 <tr key={user.id}>
                   <td style={tdStyle}>{user.id}</td>
@@ -1400,13 +1400,13 @@ export function AdminPage() {
                 placeholder={t('enter_name')}
               />
 
-              <label style={labelStyle}>Email</label>
+              <label style={labelStyle}>{t('email') || 'Email'}</label>
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 style={inputStyle}
-                placeholder="enter email"
+                placeholder={t('please_enter_email')}
               />
 
               {activeTab === 'staff' ? (
@@ -1430,8 +1430,8 @@ export function AdminPage() {
                       onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                       style={inputStyle}
                     >
-                      <option value="staff">客服</option>
-                      <option value="admin">管理员</option>
+                      <option value="staff">{t('role_staff')}</option>
+                      <option value="admin">{t('role_admin')}</option>
                     </select>
                   </>
                 )

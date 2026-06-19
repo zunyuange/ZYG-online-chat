@@ -221,4 +221,73 @@ export const zhCN = {
   // 连接状态
   polling: '轮询中',
   connecting: '连接中...',
+
+  // 加载状态
+  loading: '加载中...',
+
+  // 个人资料修改
+  edit_profile: '修改个人资料',
+  new_password: '新密码',
+  enter_new_name: '输入新姓名（留空则不修改）',
+  enter_new_password_hint: '输入新密码（留空则不修改）',
+  confirm_password: '确认密码',
+  confirm_password_hint: '再次输入新密码',
+  password_mismatch: '两次输入的密码不一致',
+  please_modify_at_least_one: '请至少修改一项内容',
+  modify_success: '修改成功',
+  modify_failed: '修改失败',
+
+  // 转接请求
+  view_task_queue: '查看任务队列',
+  pending_transfer_requests: '有待处理的转接请求',
+  pending_transfer: '待处理转接请求',
+  please_fill_transfer_reason: '请填写转接原因',
+  transfer_request_resent: '转接请求已重新发送',
+  resend_failed: '重新申请失败',
+  transfer_accepted: '已接受转接请求',
+  accept_failed: '接受失败',
+  please_fill_reject_reason: '请填写拒绝原因',
+  reject_failed: '拒绝失败',
+  from_prefix: '来自: ',
+  session_prefix: '会话: ',
+  reason_prefix: '原因: ',
+  accept: '接受',
+  reject: '拒绝',
+  transfer_rejected: '转接被拒绝',
+  rejected_by_staff: '被客服 ',
+  reject_reason_prefix: '拒绝原因: ',
+  continue_apply: '继续申请',
+  confirm_reject: '确认拒绝',
+  send_request: '发送请求',
+  resend_transfer_request: '重新发起转接请求',
+  reject_transfer_request: '拒绝转接请求',
+  rejecting_transfer_from: '您正在拒绝来自客服',
+  reapply_transfer_to: '您正在向客服',
+
+  // 导航标签
+  staff_management_status: '客服管理',
+  visitor_fields: '访客字段',
+  code_tab: '代码',
+  statistics_overview: '统计概览',
+  today_sessions: '今日会话',
+  active_sessions: '活跃会话',
+  queue_count: '排队人数',
+  today_messages: '今日消息',
+
+  // 管理员
+  administrator: '管理员',
+
+  // AdminPage 权限和角色相关
+  default_site_name: '在线客服系统',
+  permission_admin_view: '查看管理后台',
+  permission_admin_edit: '编辑管理员',
+  permission_staff_view: '查看商家',
+  permission_staff_edit: '编辑商家',
+  permission_role_view: '查看角色',
+  permission_role_edit: '编辑角色',
+  permission_settings: '系统设置',
+  role_admin: '管理员',
+  role_staff: '客服',
+  staff_primary_account: '商家主账号',
+  unassigned: '未分配',
 };
