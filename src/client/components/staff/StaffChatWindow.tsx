@@ -176,7 +176,7 @@ export function StaffChatWindow({
             <span style={statusDotStyle(session.status)}></span>
             <span style={{ fontWeight: 500, fontSize: '15px' }}>{session.visitorName}</span>
             <span style={{ color: '#999', fontSize: '12px' }}>
-              {new Date(session.createdAt).toLocaleString('zh-CN', {
+              {new Date(session.createdAt).toLocaleString(navigator.language || 'en', {
                 month: 'numeric',
                 day: 'numeric',
                 hour: '2-digit',
@@ -428,7 +428,7 @@ export function StaffChatWindow({
                       {t('reject_reason_prefix')}{rejection.reject_reason}
                     </div>
                     <div style={{ color: '#bbb', marginTop: '4px' }}>
-                      {new Date(rejection.created_at).toLocaleString('zh-CN')}
+                      {new Date(rejection.created_at).toLocaleString(navigator.language || 'en')}
                     </div>
                   </div>
                 ))}
@@ -537,7 +537,7 @@ function SourcePanel({ session }: { session: Session }) {
         <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px solid #d6e4ff' }}>
           {fromUrl && (
             <SourceUrlRow
-              label="🔗 进入链接"
+              label={t('staff_chat_entry_url')}
               url={fromUrl}
               color="#1890ff"
               bgColor="#e6f7ff"

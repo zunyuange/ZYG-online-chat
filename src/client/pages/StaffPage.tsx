@@ -263,9 +263,10 @@ export function StaffPage() {
       const result = await response.json();
       if (result.success) {
         // 合并固定字段和自定义字段定义，全部参与动态渲染
+        // 固定字段的 label 通过 i18n 翻译，不再使用服务器返回的中文原文
         const fixedDefs: VisitorFieldDef[] = (result.data.fixedFields || []).map((f: any) => ({
           fieldKey: f.fieldKey,
-          label: f.label,
+          label: t(`fixed_field_${f.fieldKey}`),
           type: f.type,
           isFixed: true,
         }));

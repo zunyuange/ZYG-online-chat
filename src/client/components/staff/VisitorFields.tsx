@@ -158,6 +158,16 @@ export function VisitorFields() {
     return field.label;
   };
 
+  const getFieldRemark = (field: FieldDef) => {
+    if (field.isFixed) {
+      const remarkKey = `fixed_field_remark_${field.fieldKey}`;
+      const translated = t(remarkKey);
+      // 如果翻译键不存在（返回键名本身），回退到原始 remark
+      return translated === remarkKey ? (field.remark || '-') : translated;
+    }
+    return field.remark || '-';
+  };
+
   if (loading) {
     return (
       <div style={{ padding: '24px', textAlign: 'center' }}>
@@ -362,7 +372,7 @@ export function VisitorFields() {
                   <td style={{ padding: '10px 20px', fontSize: '13px', color: '#333', fontFamily: 'monospace' }}>{field.fieldKey}</td>
                   <td style={{ padding: '10px 20px', fontSize: '13px', color: '#333' }}>{getFieldLabel(field)}</td>
                   <td style={{ padding: '10px 20px', fontSize: '13px', color: '#999' }}>{getTypeLabel(field.type)}</td>
-                  <td style={{ padding: '10px 20px', fontSize: '13px', color: '#666' }}>{field.remark || '-'}</td>
+                  <td style={{ padding: '10px 20px', fontSize: '13px', color: '#666' }}>{getFieldRemark(field)}</td>
                 </tr>
               ))}
             </tbody>
