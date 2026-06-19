@@ -1,0 +1,11 @@
+[
+  {
+    "id": "msg-1781899301021-x6z7bx",
+    "from": "list-fixer",
+    "to": "team-lead",
+    "type": "message",
+    "content": "三个组件的国际化改造已完成，所有文件通过 lint 检查，无错误。\n\n## SessionList.tsx\n- 添加了 `t?: (key: string) => string` prop，默认值 `(s: string) => s`\n- 替换了所有硬编码中文文本：\n  - `'刚刚'` → `t('just_now')`\n  - `` `${minutes}分钟前` `` → `` `${minutes}${t('minutes_ago_suffix')}` ``\n  - `` `${hours}小时前` `` → `` `${hours}${t('hours_ago_suffix')}` ``\n  - `` `${days}天前` `` → `` `${days}${t('days_ago_suffix')}` ``\n  - `'暂无消息'` → `t('no_messages')`\n  - `'[图片]'` → `t('image_placeholder')`\n  - `'[视频]'` → `t('video_placeholder')`\n  - `'会话列表'` → `t('sessions')`\n  - `'加载中...'` → `t('loading')`\n  - `'暂无会话'` → `t('no_sessions')`\n  - `` `客服: ${staff}` `` → `` `${t('staff')}: ${staff}` ``\n\n## QueueList.tsx\n- 添加了 `t?: (key: string) => string` prop，默认值 `(s: string) => s`\n- 替换了所有硬编码中文文本：\n  - `'任务队列'` → `t('task_queue')`\n  - `` `${waitingCount} 个等待` `` → `` `${waitingCount} ${t('queue_waiting_suffix')}` ``\n  - `title=\"刷新\"` → `title={t('refresh')}`\n  - `'刷新'` → `t('refresh')`\n  - `'加载中...'` → `t('loading')`\n  - `'暂无排队中的任务'` → `t('no_queue_items')`\n  - `'我的会话'` → `t('my_sessions')`\n  - `'分钟'` → `t('minutes_unit')`\n\n## LoginForm.tsx\n- 添加了 `t?: (key: string) => string` prop，默认值 `(s: string) => s`\n- 替换了所有硬编码中文文本：\n  - `'🔐 客服后台'` → `t('staff_login_title_page')`\n  - `'请输入账号密码登录客服工作台'` → `t('login_desc')`\n  - `'剩余尝试次数:'` → `t('remaining_attempts')`\n  - `'尝试次数过多，请 10 分钟后重试'` → `t('too_many_attempts')`\n  - placeholder `'用户名'` → `t('please_enter_username')`\n  - placeholder `'密码'` → `t('please_enter_password')`\n  - `'登录中...'` → `t('logging_in')`\n  - `'登录'` → `t('login')`\n\n## 新增的翻译 key（需要添加到翻译文件中）\n以下 key 在现有翻译中可能不存在，需要补充：\n- `just_now`\n- `minutes_ago_suffix`\n- `hours_ago_suffix`\n- `days_ago_suffix`\n- `no_messages`\n- `image_placeholder`\n- `video_placeholder`\n- `no_sessions`\n- `task_queue`\n- `queue_waiting_suffix`\n- `no_queue_items`\n- `my_sessions`\n- `minutes_unit`\n- `staff_login_title_page`",
+    "timestamp": "2026-06-19T20:01:41.021Z",
+    "read": true
+  }
+]

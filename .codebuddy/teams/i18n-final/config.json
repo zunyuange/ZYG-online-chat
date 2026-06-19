@@ -1,0 +1,53 @@
+{
+  "name": "i18n-final",
+  "leadAgentId": "1cd2c8a13e394907b1f53a5b7e50fc09",
+  "workspacePath": "g:/二开研究项目/CFWorker项目/ZYG-online-chat",
+  "createdAt": "2026-06-19T19:59:21.605Z",
+  "options": {
+    "workspacePath": "g:/二开研究项目/CFWorker项目/ZYG-online-chat",
+    "isAutoTeam": false
+  },
+  "members": [
+    {
+      "memberId": "team-lead@i18n-final",
+      "name": "team-lead",
+      "role": "Team Lead - coordinates the team and interacts with the user"
+    },
+    {
+      "memberId": "staffchat-fixer@i18n-final",
+      "name": "staffchat-fixer",
+      "role": "Read and fix StaffChatWindow"
+    },
+    {
+      "memberId": "list-fixer@i18n-final",
+      "name": "list-fixer",
+      "role": "Fix SessionList QueueList LoginForm"
+    },
+    {
+      "memberId": "chat-fixer@i18n-final",
+      "name": "chat-fixer",
+      "role": "Fix chat components"
+    },
+    {
+      "memberId": "settings-fixer@i18n-final",
+      "name": "settings-fixer",
+      "role": "Fix settings and visitor fields"
+    },
+    {
+      "memberId": "packs-group1@i18n-final",
+      "name": "packs-group1",
+      "role": "Update language packs group 1"
+    },
+    {
+      "memberId": "packs-group2@i18n-final",
+      "name": "packs-group2",
+      "role": "Update language packs group 2"
+    },
+    {
+      "memberId": "packs-group3@i18n-final",
+      "name": "packs-group3",
+      "role": "Update language packs group 3"
+    }
+  ],
+  "isAutoTeam": false
+}
