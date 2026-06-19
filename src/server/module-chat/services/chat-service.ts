@@ -124,8 +124,14 @@ function mapRowToMessage(row: MessageRow): Message {
 }
 
 /**
- * Get business by slug or id
+ * Get business by slug, id, or name
  * Now using staff_users table where business_id = 0 indicates a business owner account
+ *
+ * 查找优先级:
+ * 1. 按 business_slug 匹配 (字符串标识)
+ * 2. 按 id 匹配 (数字标识，business_id=0 的商家主账号)
+ * 3. 按 business_id 字段匹配 (非0的客服账号所属商家)
+ * 4. 都找不到返回 null
  */
 async function getBusinessBySlug(slug?: string): Promise<BusinessRow | null> {
   const db = getDb()
@@ -156,16 +162,30 @@ async function getBusinessBySlug(slug?: string): Promise<BusinessRow | null> {
     return business
   }
 
-  // Try by id (numeric slug)
+  // Try by id (numeric slug) — 商家主账号 (business_id=0)
   const id = parseInt(slug, 10)
   if (!isNaN(id)) {
-    // Find business by id where business_id = 0 (商家主账号)
     const businessById = await db.get<BusinessRow>(
       'SELECT id, business_slug, business_name FROM staff_users WHERE id = ? AND business_id = 0',
       [id]
     )
-    console.log('[ChatService] getBusinessBySlug: searching by id, result:', businessById)
-    return businessById
+    if (businessById) {
+      console.log('[ChatService] getBusinessBySlug: found business by id (owner):', businessById)
+      return businessById
+    }
+
+    // Try by business_id — 客服账号所属的商家 (business_id 指向商家主账号)
+    const businessByBid = await db.get<BusinessRow>(
+      `SELECT u2.id, u2.business_slug, u2.business_name 
+       FROM staff_users u1 
+       JOIN staff_users u2 ON u1.business_id = u2.id 
+       WHERE u1.id = ? AND u2.business_id = 0`,
+      [id]
+    )
+    if (businessByBid) {
+      console.log('[ChatService] getBusinessBySlug: found business by staff business_id:', businessByBid)
+      return businessByBid
+    }
   }
 
   console.log('[ChatService] getBusinessBySlug: no business found for slug:', slug)
@@ -180,6 +200,7 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
 
   // Get business info based on slug or id
   const business = await getBusinessBySlug(input.business)
+  // 如果没找到匹配的商家，使用默认商家（id=1）作为兜底
   const businessId = business?.id || 1
 
   console.log(

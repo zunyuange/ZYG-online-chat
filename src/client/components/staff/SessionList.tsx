@@ -165,6 +165,12 @@ export function SessionList({
                       : formatTime(session.createdAt)}
                   </span>
                 </div>
+                {/* 商家归属标识：通过 business_slug 绑定，确保会话归属正确商家 */}
+                {session.businessName && (
+                  <div style={{ fontSize: '11px', color: '#722ed1', marginBottom: '4px' }}>
+                    🏢 {session.businessName}
+                  </div>
+                )}
                 <div style={previewStyle}>
                   {getLastMessagePreview(session)}
                 </div>
