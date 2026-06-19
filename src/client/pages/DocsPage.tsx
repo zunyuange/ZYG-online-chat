@@ -5,7 +5,105 @@
 import { useState, useEffect } from 'react';
 import { I18nProvider } from '@client/context/I18nContext';
 import { useI18n } from '@client/context/I18nContext';
-import { Copy, Check, Code2, Link2, Monitor, Smartphone } from 'lucide-react';
+import { Copy, Check, Code2, Link2, Monitor, Smartphone, Globe } from 'lucide-react';
+
+function LanguageSwitcher() {
+  const { locale, setLocale, supportedLocales } = useI18n();
+  const [open, setOpen] = useState(false);
+
+  const currentLocale = supportedLocales.find((l) => l.code === locale);
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '6px 14px',
+          border: '1px solid rgba(255,255,255,0.3)',
+          borderRadius: '6px',
+          backgroundColor: open ? 'rgba(255,255,255,0.15)' : 'transparent',
+          color: '#fff',
+          cursor: 'pointer',
+          fontSize: '13px',
+          transition: 'all 0.2s',
+        }}
+      >
+        <Globe size={14} />
+        {currentLocale?.nativeName || locale}
+        <span style={{ fontSize: '10px', marginLeft: '2px' }}>▾</span>
+      </button>
+      {open && (
+        <>
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 99,
+            }}
+            onClick={() => setOpen(false)}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: '100%',
+              right: 0,
+              marginTop: '4px',
+              backgroundColor: '#fff',
+              borderRadius: '8px',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+              minWidth: '180px',
+              maxHeight: '300px',
+              overflowY: 'auto',
+              zIndex: 100,
+            }}
+          >
+            {supportedLocales.map((l) => (
+              <button
+                key={l.code}
+                onClick={() => {
+                  setLocale(l.code);
+                  setOpen(false);
+                }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '10px 16px',
+                  border: 'none',
+                  backgroundColor: locale === l.code ? '#e6f7ff' : 'transparent',
+                  color: locale === l.code ? '#1890ff' : '#333',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  textAlign: 'left',
+                  fontWeight: locale === l.code ? 600 : 400,
+                  transition: 'background-color 0.15s',
+                }}
+                onMouseEnter={(e) => {
+                  if (locale !== l.code) {
+                    (e.target as HTMLButtonElement).style.backgroundColor = '#f5f5f5';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (locale !== l.code) {
+                    (e.target as HTMLButtonElement).style.backgroundColor = 'transparent';
+                  }
+                }}
+              >
+                <span>{l.nativeName}</span>
+                <span style={{ marginLeft: '8px', fontSize: '11px', color: '#999' }}>{l.name}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 function DocsContent() {
   const { t } = useI18n();
@@ -71,17 +169,100 @@ function DocsContent() {
     };
   }, []);
 
+  // Script embed parameter table data
+  const scriptParams = [
+    { param: 'data-business', type: 'string', required: t('docs_required_yes'), desc: '商家标识（slug），用于区分不同商家' },
+    { param: 'data-userName', type: 'string', required: t('docs_required_no'), desc: '访客姓名，不传则使用默认名称' },
+    { param: 'data-email', type: 'string', required: t('docs_required_no'), desc: '访客邮箱' },
+    { param: 'data-phone', type: 'string', required: t('docs_required_no'), desc: '访客手机号' },
+    { param: 'data-pid', type: 'string', required: t('docs_required_no'), desc: '跨系统用户唯一标识' },
+    { param: 'data-params', type: 'JSON', required: t('docs_required_no'), desc: '自定义参数（JSON字符串）' },
+    { param: 'data-lang', type: 'string', required: t('docs_required_no'), desc: '语言偏好（zh-CN / en-US）' },
+  ];
+
+  // URL parameter table data
+  const urlParamsIframe = [
+    { param: 'business', type: 'string', required: t('docs_required_yes'), desc: '商家标识（slug）' },
+    { param: 'userName', type: 'string', required: t('docs_required_no'), desc: '访客姓名' },
+    { param: 'email', type: 'string', required: t('docs_required_no'), desc: '访客邮箱' },
+    { param: 'phone', type: 'string', required: t('docs_required_no'), desc: '访客手机号' },
+    { param: 'pid', type: 'string', required: t('docs_required_no'), desc: '跨系统用户唯一标识' },
+    { param: 'params', type: 'JSON', required: t('docs_required_no'), desc: '自定义参数（JSON字符串）' },
+    { param: 'lang', type: 'string', required: t('docs_required_no'), desc: '语言偏好（zh-CN / en-US）' },
+  ];
+
+  const urlParamsTable = [
+    { param: 'business', example: 'default', required: t('docs_required_yes'), desc: '商家标识（slug），每个商家唯一' },
+    { param: 'userName', example: '张三', required: t('docs_required_no'), desc: '访客姓名，客服端会显示在会话头部' },
+    { param: 'email', example: 'zhangsan@example.com', required: t('docs_required_no'), desc: '访客邮箱，用于后续联系' },
+    { param: 'phone', example: '13800138000', required: t('docs_required_no'), desc: '访客手机号' },
+    { param: 'pid', example: 'user123', required: t('docs_required_no'), desc: '跨系统用户唯一标识，用于关联自有系统用户' },
+    { param: 'params', example: '{"source":"website","level":"vip"}', required: t('docs_required_no'), desc: '自定义参数，JSON 字符串格式' },
+    { param: 'lang', example: 'zh-CN', required: t('docs_required_no'), desc: '语言偏好：zh-CN（中文）/ en-US（英文）' },
+  ];
+
+  // API reference table data
+  const apiRefs = [
+    { path: '/api/chat/session', method: 'POST', desc: '创建/获取会话，传入访客信息' },
+    { path: '/api/chat/session/:id/messages', method: 'GET', desc: '获取会话消息列表' },
+    { path: '/api/chat/session/:id/messages', method: 'POST', desc: '发送消息' },
+    { path: '/api/chat/stats', method: 'GET', desc: '获取统计信息（需认证）' },
+    { path: '/api/site-settings', method: 'GET', desc: '获取站点配置（公开）' },
+  ];
+
+  const jsCodeText = `// 基础配置
+const BASE_URL = '${currentDomain}/chat';
+const BUSINESS = 'default'; // 替换为你的商家标识
+
+// 用户信息（从你的系统获取）
+const user = {
+  userName: '张三',
+  email: 'zhangsan@example.com',
+  phone: '13800138000',
+  pid: 'user123',
+};
+
+// 自定义参数
+const customParams = {
+  source: 'website',
+  level: 'vip',
+  page: window.location.pathname,
+};
+
+// 拼接 URL
+const params = new URLSearchParams();
+params.set('business', BUSINESS);
+if (user.userName) params.set('userName', user.userName);
+if (user.email) params.set('email', user.email);
+if (user.phone) params.set('phone', user.phone);
+if (user.pid) params.set('pid', user.pid);
+params.set('params', JSON.stringify(customParams));
+params.set('lang', 'zh-CN');
+
+const chatUrl = \`\${BASE_URL}?\${params.toString()}\`;
+
+// 用法1：跳转链接
+// <a href={chatUrl}>联系客服</a>
+
+// 用法2：按钮点击
+document.getElementById('chatBtn').addEventListener('click', () => {
+  window.open(chatUrl, '_blank', 'width=400,height=560');
+});`;
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f5f7fa' }}>
       {/* Header */}
       <div style={{ backgroundColor: '#001529', color: '#fff', padding: '24px 32px' }}>
-        <div style={{ maxWidth: '960px', margin: '0 auto' }}>
-          <h1 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: 600 }}>
-            📋 {t('docs_title')}
-          </h1>
-          <p style={{ margin: 0, fontSize: '14px', color: 'rgba(255,255,255,0.7)' }}>
-            {t('docs_subtitle')}
-          </p>
+        <div style={{ maxWidth: '960px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <h1 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: 600 }}>
+              📋 {t('docs_title')}
+            </h1>
+            <p style={{ margin: 0, fontSize: '14px', color: 'rgba(255,255,255,0.7)' }}>
+              {t('docs_subtitle')}
+            </p>
+          </div>
+          <LanguageSwitcher />
         </div>
       </div>
 
@@ -97,7 +278,7 @@ function DocsContent() {
         </div>
 
         {/* Integration Methods */}
-        <h2 style={{ fontSize: '20px', fontWeight: 600, margin: '0 0 16px 0', color: '#333' }}>接入方式</h2>
+        <h2 style={{ fontSize: '20px', fontWeight: 600, margin: '0 0 16px 0', color: '#333' }}>{t('docs_integration_methods')}</h2>
 
         {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '2px solid #e8e8e8', marginBottom: '24px' }}>
@@ -132,10 +313,9 @@ function DocsContent() {
         {activeTab === 'script' && (
           <div>
             <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '24px', marginBottom: '24px' }}>
-              <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 500 }}>方法一：JavaScript 脚本嵌入</h3>
+              <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 500 }}>{t('docs_method_script_title')}</h3>
               <p style={{ fontSize: '14px', color: '#666', marginBottom: '16px', lineHeight: '1.8' }}>
-                将以下代码添加到您网站的 <code style={{ backgroundColor: '#f0f0f0', padding: '2px 6px', borderRadius: '3px' }}>&lt;head&gt;</code> 或 <code style={{ backgroundColor: '#f0f0f0', padding: '2px 6px', borderRadius: '3px' }}>&lt;body&gt;</code> 标签中，
-                页面加载后会自动在右下角显示客服按钮。
+                {t('docs_method_script_desc')}
               </p>
 
               <div style={{ position: 'relative' }}>
@@ -177,31 +357,23 @@ function DocsContent() {
             </div>
 
             <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '24px' }}>
-              <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 500 }}>📌 可选参数说明</h3>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 500 }}>{t('docs_param_table_title')}</h3>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                   <thead>
                     <tr style={{ backgroundColor: '#fafafa', borderBottom: '2px solid #e8e8e8' }}>
-                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>参数</th>
-                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>类型</th>
-                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>必填</th>
-                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>说明</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>{t('docs_param_table_header_param')}</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>{t('docs_param_table_header_type')}</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>{t('docs_param_table_header_required')}</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>{t('docs_param_table_header_desc')}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {[
-                      { param: 'data-business', type: 'string', required: '是', desc: '商家标识（slug），用于区分不同商家' },
-                      { param: 'data-userName', type: 'string', required: '否', desc: '访客姓名，不传则使用默认名称' },
-                      { param: 'data-email', type: 'string', required: '否', desc: '访客邮箱' },
-                      { param: 'data-phone', type: 'string', required: '否', desc: '访客手机号' },
-                      { param: 'data-pid', type: 'string', required: '否', desc: '跨系统用户唯一标识' },
-                      { param: 'data-params', type: 'JSON', required: '否', desc: '自定义参数（JSON字符串）' },
-                      { param: 'data-lang', type: 'string', required: '否', desc: '语言偏好（zh-CN / en-US）' },
-                    ].map((row, i) => (
+                    {scriptParams.map((row, i) => (
                       <tr key={i} style={{ borderBottom: '1px solid #f0f0f0' }}>
                         <td style={{ padding: '10px 16px', fontFamily: 'monospace', fontSize: '13px', color: '#c41d7f' }}>{row.param}</td>
                         <td style={{ padding: '10px 16px', color: '#666' }}>{row.type}</td>
-                        <td style={{ padding: '10px 16px', color: row.required === '是' ? '#ff4d4f' : '#52c41a' }}>{row.required}</td>
+                        <td style={{ padding: '10px 16px', color: row.required === t('docs_required_yes') ? '#ff4d4f' : '#52c41a' }}>{row.required}</td>
                         <td style={{ padding: '10px 16px', color: '#333' }}>{row.desc}</td>
                       </tr>
                     ))}
@@ -215,9 +387,9 @@ function DocsContent() {
         {activeTab === 'iframe' && (
           <div>
             <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '24px', marginBottom: '24px' }}>
-              <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 500 }}>方法二：iframe 嵌入</h3>
+              <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 500 }}>{t('docs_method_iframe_title')}</h3>
               <p style={{ fontSize: '14px', color: '#666', marginBottom: '16px', lineHeight: '1.8' }}>
-                使用 iframe 将客服窗口直接嵌入到页面中，可自定义宽高和位置。适合需要在页面固定位置展示客服窗口的场景。
+                {t('docs_method_iframe_desc')}
               </p>
 
               <div style={{ position: 'relative' }}>
@@ -253,37 +425,29 @@ function DocsContent() {
                   }}
                 >
                   {copied === 'iframe' ? <Check size={14} /> : <Copy size={14} />}
-                  {copied === 'iframe' ? '已复制' : '复制'}
+                  {copied === 'iframe' ? t('copied') : t('copy')}
                 </button>
               </div>
             </div>
 
             <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '24px' }}>
-              <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 500 }}>📌 URL 参数说明</h3>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 500 }}>{t('docs_url_params_title')}</h3>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                   <thead>
                     <tr style={{ backgroundColor: '#fafafa', borderBottom: '2px solid #e8e8e8' }}>
-                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>参数</th>
-                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>类型</th>
-                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>必填</th>
-                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>说明</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>{t('docs_param_table_header_param')}</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>{t('docs_param_table_header_type')}</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>{t('docs_param_table_header_required')}</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>{t('docs_param_table_header_desc')}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {[
-                      { param: 'business', type: 'string', required: '是', desc: '商家标识（slug）' },
-                      { param: 'userName', type: 'string', required: '否', desc: '访客姓名' },
-                      { param: 'email', type: 'string', required: '否', desc: '访客邮箱' },
-                      { param: 'phone', type: 'string', required: '否', desc: '访客手机号' },
-                      { param: 'pid', type: 'string', required: '否', desc: '跨系统用户唯一标识' },
-                      { param: 'params', type: 'JSON', required: '否', desc: '自定义参数（JSON字符串）' },
-                      { param: 'lang', type: 'string', required: '否', desc: '语言偏好（zh-CN / en-US）' },
-                    ].map((row, i) => (
+                    {urlParamsIframe.map((row, i) => (
                       <tr key={i} style={{ borderBottom: '1px solid #f0f0f0' }}>
                         <td style={{ padding: '10px 16px', fontFamily: 'monospace', fontSize: '13px', color: '#c41d7f' }}>{row.param}</td>
                         <td style={{ padding: '10px 16px', color: '#666' }}>{row.type}</td>
-                        <td style={{ padding: '10px 16px', color: row.required === '是' ? '#ff4d4f' : '#52c41a' }}>{row.required}</td>
+                        <td style={{ padding: '10px 16px', color: row.required === t('docs_required_yes') ? '#ff4d4f' : '#52c41a' }}>{row.required}</td>
                         <td style={{ padding: '10px 16px', color: '#333' }}>{row.desc}</td>
                       </tr>
                     ))}
@@ -303,7 +467,7 @@ function DocsContent() {
               </p>
 
               {/* 基础链接 */}
-              <p style={{ fontSize: '14px', fontWeight: 600, color: '#333', marginBottom: '8px' }}>🔗 基础链接</p>
+              <p style={{ fontSize: '14px', fontWeight: 600, color: '#333', marginBottom: '8px' }}>{t('docs_basic_link')}</p>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px' }}>
                 <code style={{
                   flex: 1,
@@ -334,14 +498,14 @@ function DocsContent() {
                   }}
                 >
                   {copied === 'url' ? <Check size={16} /> : <Copy size={16} />}
-                  {copied === 'url' ? '已复制' : '复制'}
+                  {copied === 'url' ? t('copied') : t('copy')}
                 </button>
               </div>
 
               {/* URL 结构分解 */}
-              <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 500 }}>📌 URL 结构分解</h3>
+              <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 500 }}>{t('docs_url_structure')}</h3>
               <p style={{ fontSize: '14px', color: '#666', marginBottom: '16px', lineHeight: '1.8' }}>
-                完整 URL 由 <strong>基础路径</strong> + <strong>查询参数</strong> 拼接而成。以下是各部分的颜色说明：
+                {t('docs_url_structure_desc')}
               </p>
               <div style={{
                 backgroundColor: '#1e1e1e',
@@ -370,41 +534,33 @@ function DocsContent() {
                 <span style={{ color: '#4ec9b0' }}>lang=zh-CN</span>
               </div>
               <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', marginBottom: '24px', fontSize: '12px', color: '#888' }}>
-                <span>🔵 <code style={{ color: '#569cd6' }}>域名+路径</code> — 固定不变</span>
-                <span>🟠 <code style={{ color: '#ce9178' }}>business</code> — 必填参数</span>
-                <span>🟦 <code style={{ color: '#9cdcfe' }}>身份参数</code> — 可选</span>
-                <span>🟢 <code style={{ color: '#b5cea8' }}>params</code> — 自定义</span>
-                <span>🟩 <code style={{ color: '#4ec9b0' }}>lang</code> — 语言</span>
+                <span>🔵 <code style={{ color: '#569cd6' }}>{t('docs_url_structure_legend_domain')}</code></span>
+                <span>🟠 <code style={{ color: '#ce9178' }}>{t('docs_url_structure_legend_business')}</code></span>
+                <span>🟦 <code style={{ color: '#9cdcfe' }}>{t('docs_url_structure_legend_identity')}</code></span>
+                <span>🟢 <code style={{ color: '#b5cea8' }}>{t('docs_url_structure_legend_custom')}</code></span>
+                <span>🟩 <code style={{ color: '#4ec9b0' }}>{t('docs_url_structure_legend_lang')}</code></span>
               </div>
             </div>
 
             {/* 可选参数参考表 */}
             <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '24px', marginBottom: '24px' }}>
-              <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 500 }}>📌 可选参数说明</h3>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 500 }}>{t('docs_param_table_title')}</h3>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                   <thead>
                     <tr style={{ backgroundColor: '#fafafa', borderBottom: '2px solid #e8e8e8' }}>
-                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>参数名</th>
-                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>示例值</th>
-                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>必填</th>
-                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>说明</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>{t('docs_param_table_header_param_name')}</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>{t('docs_param_table_header_example')}</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>{t('docs_param_table_header_required')}</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>{t('docs_param_table_header_desc')}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {[
-                      { param: 'business', example: 'default', required: '是', desc: '商家标识（slug），每个商家唯一' },
-                      { param: 'userName', example: '张三', required: '否', desc: '访客姓名，客服端会显示在会话头部' },
-                      { param: 'email', example: 'zhangsan@example.com', required: '否', desc: '访客邮箱，用于后续联系' },
-                      { param: 'phone', example: '13800138000', required: '否', desc: '访客手机号' },
-                      { param: 'pid', example: 'user123', required: '否', desc: '跨系统用户唯一标识，用于关联自有系统用户' },
-                      { param: 'params', example: '{"source":"website","level":"vip"}', required: '否', desc: '自定义参数，JSON 字符串格式' },
-                      { param: 'lang', example: 'zh-CN', required: '否', desc: '语言偏好：zh-CN（中文）/ en-US（英文）' },
-                    ].map((row, i) => (
+                    {urlParamsTable.map((row, i) => (
                       <tr key={i} style={{ borderBottom: '1px solid #f0f0f0' }}>
                         <td style={{ padding: '10px 16px', fontFamily: 'monospace', fontSize: '13px', color: '#c41d7f' }}>{row.param}</td>
                         <td style={{ padding: '10px 16px', fontFamily: 'monospace', fontSize: '13px', color: '#666' }}>{row.example}</td>
-                        <td style={{ padding: '10px 16px', color: row.required === '是' ? '#ff4d4f' : '#52c41a', fontWeight: 500 }}>{row.required}</td>
+                        <td style={{ padding: '10px 16px', color: row.required === t('docs_required_yes') ? '#ff4d4f' : '#52c41a', fontWeight: 500 }}>{row.required}</td>
                         <td style={{ padding: '10px 16px', color: '#333' }}>{row.desc}</td>
                       </tr>
                     ))}
@@ -415,19 +571,18 @@ function DocsContent() {
 
             {/* URL 拼接教程 */}
             <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '24px', marginBottom: '24px' }}>
-              <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 500 }}>📌 URL 拼接教程</h3>
+              <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 500 }}>{t('docs_url_tutorial')}</h3>
               <p style={{ fontSize: '14px', color: '#666', marginBottom: '16px', lineHeight: '1.8' }}>
-                下面以实际场景为例，逐步展示如何拼接一个带访客信息的完整客服链接。
+                {t('docs_url_tutorial_desc')}
               </p>
 
               {/* 步骤1：基础链接 */}
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ fontSize: '14px', fontWeight: 600, color: '#1890ff', marginBottom: '6px' }}>
-                  步骤 1：确定基础链接
+                  {t('docs_step1_title')}
                 </div>
                 <p style={{ fontSize: '13px', color: '#666', margin: '0 0 8px 0' }}>
-                  基础链接格式为 <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>域名/chat?business=你的商家标识</code>，
-                  其中 <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>business</code> 是必填参数。
+                  {t('docs_step1_desc')}
                 </p>
                 <pre style={{
                   backgroundColor: '#f6f8fa',
@@ -447,11 +602,10 @@ function DocsContent() {
               {/* 步骤2：追加身份参数 */}
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ fontSize: '14px', fontWeight: 600, color: '#1890ff', marginBottom: '6px' }}>
-                  步骤 2：追加访客身份参数（可选）
+                  {t('docs_step2_title')}
                 </div>
                 <p style={{ fontSize: '13px', color: '#666', margin: '0 0 8px 0' }}>
-                  用 <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>&</code> 符号连接多个参数。
-                  建议至少传入 <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>userName</code> 和 <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>pid</code>，方便客服识别来访用户。
+                  {t('docs_step2_desc')}
                 </p>
                 <pre style={{
                   backgroundColor: '#f6f8fa',
@@ -471,14 +625,10 @@ function DocsContent() {
               {/* 步骤3：追加自定义参数 */}
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ fontSize: '14px', fontWeight: 600, color: '#1890ff', marginBottom: '6px' }}>
-                  步骤 3：追加自定义参数 <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px', fontSize: '13px' }}>params</code>（可选）
+                  {t('docs_step3_title')}
                 </div>
                 <p style={{ fontSize: '13px', color: '#666', margin: '0 0 8px 0', lineHeight: '1.8' }}>
-                  <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>params</code> 的值是 <strong>JSON 字符串</strong>。由于 URL 不能直接包含 <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>{'{'}</code> <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>{'}'}</code> 等特殊字符，需要用 <strong>URL 编码</strong> 处理。
-                  <span style={{ display: 'block', marginTop: '6px' }}>
-                    示例：<code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>{'{"source":"website","level":"vip"}'}</code>
-                    → 编码后 → <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>%7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D</code>
-                  </span>
+                  {t('docs_step3_desc')}
                 </p>
                 <pre style={{
                   backgroundColor: '#f6f8fa',
@@ -498,10 +648,10 @@ function DocsContent() {
               {/* 步骤4：追加语言 */}
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ fontSize: '14px', fontWeight: 600, color: '#1890ff', marginBottom: '6px' }}>
-                  步骤 4：追加语言偏好 <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px', fontSize: '13px' }}>lang</code>（可选）
+                  {t('docs_step4_title')}
                 </div>
                 <p style={{ fontSize: '13px', color: '#666', margin: '0 0 8px 0' }}>
-                  指定访客端界面语言：<code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>zh-CN</code> 中文 / <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>en-US</code> 英文。
+                  {t('docs_step4_desc')}
                 </p>
                 <pre style={{
                   backgroundColor: '#f6f8fa',
@@ -521,7 +671,7 @@ function DocsContent() {
               {/* 完整最终链接 */}
               <div style={{ marginBottom: '0' }}>
                 <div style={{ fontSize: '14px', fontWeight: 600, color: '#52c41a', marginBottom: '6px' }}>
-                  ✅ 最终完整链接
+                  {t('docs_final_url')}
                 </div>
                 <div style={{ position: 'relative' }}>
                   <pre style={{
@@ -556,7 +706,7 @@ function DocsContent() {
                     }}
                   >
                     {copied === 'fullUrl' ? <Check size={14} /> : <Copy size={14} />}
-                    {copied === 'fullUrl' ? '已复制' : '复制'}
+                    {copied === 'fullUrl' ? t('copied') : t('copy')}
                   </button>
                 </div>
               </div>
@@ -564,9 +714,9 @@ function DocsContent() {
 
             {/* JavaScript 代码示例 */}
             <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '24px', marginBottom: '24px' }}>
-              <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 500 }}>💻 前端代码示例</h3>
+              <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 500 }}>{t('docs_code_example')}</h3>
               <p style={{ fontSize: '14px', color: '#666', marginBottom: '16px', lineHeight: '1.8' }}>
-                以下 JavaScript 代码展示如何在后端或前端动态拼接客服链接，适合在页面中动态生成按钮链接。
+                {t('docs_code_example_desc')}
               </p>
               <div style={{ position: 'relative' }}>
                 <pre style={{
@@ -580,44 +730,7 @@ function DocsContent() {
                   margin: 0,
                   fontFamily: "'Fira Code', 'Consolas', monospace",
                 }}>
-{`// 基础配置
-const BASE_URL = '${currentDomain}/chat';
-const BUSINESS = 'default'; // 替换为你的商家标识
-
-// 用户信息（从你的系统获取）
-const user = {
-  userName: '张三',
-  email: 'zhangsan@example.com',
-  phone: '13800138000',
-  pid: 'user123',
-};
-
-// 自定义参数
-const customParams = {
-  source: 'website',
-  level: 'vip',
-  page: window.location.pathname,
-};
-
-// 拼接 URL
-const params = new URLSearchParams();
-params.set('business', BUSINESS);
-if (user.userName) params.set('userName', user.userName);
-if (user.email) params.set('email', user.email);
-if (user.phone) params.set('phone', user.phone);
-if (user.pid) params.set('pid', user.pid);
-params.set('params', JSON.stringify(customParams));
-params.set('lang', 'zh-CN');
-
-const chatUrl = \`\${BASE_URL}?\${params.toString()}\`;
-
-// 用法1：跳转链接
-// <a href={chatUrl}>联系客服</a>
-
-// 用法2：按钮点击
-document.getElementById('chatBtn').addEventListener('click', () => {
-  window.open(chatUrl, '_blank', 'width=400,height=560');
-});`}
+                  {jsCodeText}
                 </pre>
                 <button
                   onClick={() => copyToClipboard(`// 基础配置\nconst BASE_URL = '${currentDomain}/chat';\nconst BUSINESS = 'default';\n\n// 用户信息\nconst user = {\n  userName: '张三',\n  email: 'zhangsan@example.com',\n  phone: '13800138000',\n  pid: 'user123',\n};\n\n// 自定义参数\nconst customParams = {\n  source: 'website',\n  level: 'vip',\n  page: window.location.pathname,\n};\n\n// 拼接 URL\nconst params = new URLSearchParams();\nparams.set('business', BUSINESS);\nif (user.userName) params.set('userName', user.userName);\nif (user.email) params.set('email', user.email);\nif (user.phone) params.set('phone', user.phone);\nif (user.pid) params.set('pid', user.pid);\nparams.set('params', JSON.stringify(customParams));\nparams.set('lang', 'zh-CN');\n\nconst chatUrl = \`\${BASE_URL}?\${params.toString()}\`;\n\n// 用法1：跳转链接\n// <a href={chatUrl}>联系客服</a>\n\n// 用法2：按钮点击\ndocument.getElementById('chatBtn').addEventListener('click', () => {\n  window.open(chatUrl, '_blank', 'width=400,height=560');\n});`, 'jsCode')}
@@ -638,7 +751,7 @@ document.getElementById('chatBtn').addEventListener('click', () => {
                   }}
                 >
                   {copied === 'jsCode' ? <Check size={14} /> : <Copy size={14} />}
-                  {copied === 'jsCode' ? '已复制' : '复制'}
+                  {copied === 'jsCode' ? t('copied') : t('copy')}
                 </button>
               </div>
             </div>
@@ -646,26 +759,20 @@ document.getElementById('chatBtn').addEventListener('click', () => {
         )}
 
         {/* API Reference */}
-        <h2 style={{ fontSize: '20px', fontWeight: 600, margin: '32px 0 16px 0', color: '#333' }}>后端 API 参考</h2>
+        <h2 style={{ fontSize: '20px', fontWeight: 600, margin: '32px 0 16px 0', color: '#333' }}>{t('docs_api_reference')}</h2>
 
         <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '24px' }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
               <thead>
                 <tr style={{ backgroundColor: '#fafafa', borderBottom: '2px solid #e8e8e8' }}>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>接口</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>方法</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>说明</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>{t('docs_api_header_endpoint')}</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>{t('docs_api_header_method')}</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 500, color: '#666' }}>{t('docs_api_header_desc')}</th>
                 </tr>
               </thead>
               <tbody>
-                {[
-                  { path: '/api/chat/session', method: 'POST', desc: '创建/获取会话，传入访客信息' },
-                  { path: '/api/chat/session/:id/messages', method: 'GET', desc: '获取会话消息列表' },
-                  { path: '/api/chat/session/:id/messages', method: 'POST', desc: '发送消息' },
-                  { path: '/api/chat/stats', method: 'GET', desc: '获取统计信息（需认证）' },
-                  { path: '/api/site-settings', method: 'GET', desc: '获取站点配置（公开）' },
-                ].map((row, i) => (
+                {apiRefs.map((row, i) => (
                   <tr key={i} style={{ borderBottom: '1px solid #f0f0f0' }}>
                     <td style={{ padding: '10px 16px', fontFamily: 'monospace', fontSize: '13px', color: '#333' }}>{row.path}</td>
                     <td style={{ padding: '10px 16px' }}>
@@ -690,7 +797,7 @@ document.getElementById('chatBtn').addEventListener('click', () => {
 
         {/* Footer */}
         <div style={{ marginTop: '48px', paddingTop: '24px', borderTop: '1px solid #e8e8e8', textAlign: 'center', color: '#999', fontSize: '13px' }}>
-          <p>在线客服系统 - 对接文档</p>
+          <p>{t('docs_footer')}</p>
         </div>
       </div>
     </div>
