@@ -76,9 +76,11 @@ function getCtxString(c: any, key: string, defaultVal = ''): string {
 // Returns { businessId, isSuperAdmin } or sends a 403 response and returns null.
 //
 // 多租户隔离核心逻辑：
-// - 超级管理员 (role=admin, businessSlug='default'): 可查看所有商家数据
-// - 商家管理员 (role=admin, businessSlug!=default): 只能查看自己商家的数据
+// - default 商家 admin (role=admin, businessSlug='default'): 超级管理员，可查看所有商家数据
+//   但 businessId 仍返回自己的实际值（即 userId），用于自身商家的数据操作
+// - 其他商家管理员 (role=admin, businessSlug!=default): 只能查看自己商家的数据
 // - 普通客服 (role=staff): 只能查看自己商家的数据
+// 注：isSuperAdmin 用于判断是否有跨商家权限（如查看所有商家会话、管理所有商家等）
 function requireBusiness(c: any): { businessId: number; isSuperAdmin: boolean } | null {
   const businessId = getCtxNumber(c, 'businessId')
   const role = getCtxString(c, 'role')
@@ -93,8 +95,8 @@ function requireBusiness(c: any): { businessId: number; isSuperAdmin: boolean } 
     return null
   }
 
-  // 非超级管理员返回具体的 businessId 用于过滤；超级管理员返回 0 表示不过滤
-  return { businessId: isSuperAdmin ? 0 : businessId!, isSuperAdmin }
+  // 返回实际的 businessId 用于数据过滤；isSuperAdmin 用于额外权限判断
+  return { businessId: businessId!, isSuperAdmin }
 }
 
 // ==========================================
@@ -115,7 +117,8 @@ staffRoutes.get('/sessions', async c => {
       status,
       bizCtx.businessId,
       staffId,
-      role
+      role,
+      getCtxString(c, 'businessSlug')
     )
     return c.json({ success: true, data: sessions })
   } catch (error) {

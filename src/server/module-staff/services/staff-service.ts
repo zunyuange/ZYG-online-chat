@@ -208,22 +208,23 @@ export async function listSessionsWithPreview(
     }
   })[]
 > {
-  // 使用路由层传入的 businessId 判断是否过滤
-  // businessId = 0 表示超级管理员（不过滤），businessId > 0 表示特定商家（过滤）
-  // 如果 businessId 是 undefined，说明上下文缺失，不应该返回任何数据
-  const isSuperAdmin = businessId === 0
+  // 多租户隔离逻辑：
+  // - businessSlug='default' + role='admin' = 超级管理员，不过滤，查看所有商家会话
+  // - 其他情况：按 businessId 过滤，只查看自己商家的会话
+  // - businessId 为 undefined：无上下文，不返回数据
+  const isSuperAdmin = role === 'admin' && businessSlug === 'default'
   if (businessId === undefined) {
     console.error('[StaffService] listSessionsWithPreview: businessId is undefined, no sessions returned')
     return []
   }
-  let sessions = await listSessionsBase(status, isSuperAdmin ? undefined : businessId)
+  let sessions = await listSessionsBase(status, isSuperAdmin ? 0 : businessId)
 
   if (sessions.length === 0) {
     return []
   }
 
   // Filter sessions by permission:
-  // - Admin can see all sessions within their business
+  // - Admin (including super admin) can see all sessions within their business
   // - Regular staff can see unassigned sessions + sessions assigned to them
   if (role !== 'admin' && staffId) {
     sessions = sessions.filter(
