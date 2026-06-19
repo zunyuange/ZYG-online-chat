@@ -20,14 +20,16 @@ async function requireAuth(c: any, next: any) {
   if (!result.valid) {
     const adminResult = await verifyAdminToken(token);
     if (adminResult.valid) {
-      c.set('businessId', 1);
+      // admin_users 的管理员 token，使用默认商家 id=1
+      c.set('businessId', adminResult.userId || 1);
       await next();
       return;
     }
     return c.json({ success: false, error: 'Token 无效' }, 401);
   }
 
-  if (result.businessId) {
+  // businessId 可能是 0（超级管理员），需要用 !== undefined 判断
+  if (result.businessId !== undefined) {
     c.set('businessId', result.businessId);
   }
 
@@ -35,7 +37,7 @@ async function requireAuth(c: any, next: any) {
 }
 
 businessRoutes.use('/settings', (c, next) => {
-  if (c.req.method === 'POST') {
+  if (c.req.method === 'POST' || c.req.method === 'GET') {
     return requireAuth(c, next);
   }
   return next();
@@ -126,9 +128,21 @@ businessRoutes.get('/settings', async (c) => {
         [slug]
       );
     } else {
-      settings = await db.get(
-        'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang FROM staff_users WHERE business_slug = "default"'
-      );
+      // 从认证上下文中获取 businessId
+      const businessId = c.get('businessId');
+      if (businessId) {
+        settings = await db.get(
+          'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang FROM staff_users WHERE id = ?',
+          [businessId]
+        );
+      }
+      
+      // 兜底
+      if (!settings) {
+        settings = await db.get(
+          'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang FROM staff_users WHERE business_slug = "default"'
+        );
+      }
     }
 
     if (!settings) {
@@ -162,7 +176,20 @@ businessRoutes.post('/info', requireAuth, async (c) => {
       query += 'id = ?';
       params.push(businessId);
     } else {
-      query += 'business_slug = "default"';
+      // 从 token 中获取 businessId
+      const authHeader = c.req.header('Authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        const result = await verifyToken(token);
+        if (result.valid && result.businessId) {
+          query += 'id = ?';
+          params.push(result.businessId);
+        } else {
+          query += 'business_slug = "default"';
+        }
+      } else {
+        query += 'business_slug = "default"';
+      }
     }
 
     await db.run(query, params);
@@ -174,7 +201,7 @@ businessRoutes.post('/info', requireAuth, async (c) => {
   }
 });
 
-businessRoutes.post('/settings', async (c) => {
+businessRoutes.post('/settings', requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const { enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang, business_id, business_slug } = body;
@@ -196,7 +223,20 @@ businessRoutes.post('/settings', async (c) => {
         query += 'id = ?';
         params.push(businessId);
       } else {
-        query += 'business_slug = "default"';
+        // 没有 business context，回退到从 token 解析
+        const authHeader = c.req.header('Authorization');
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+          const token = authHeader.substring(7);
+          const result = await verifyToken(token);
+          if (result.valid && result.businessId) {
+            query += 'id = ?';
+            params.push(result.businessId);
+          } else {
+            return c.json({ success: false, error: '无法确定商家身份' }, 400);
+          }
+        } else {
+          return c.json({ success: false, error: '缺少认证信息' }, 401);
+        }
       }
     }
 

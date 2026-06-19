@@ -35,13 +35,14 @@ async function requireAuth(c: any, next: any) {
   }
 
   // Attach businessId, businessSlug, userId and role to context for downstream use
-  if (result.businessId) {
+  // 注意：businessId 可能是 0（超级管理员），需要用 !== undefined 判断
+  if (result.businessId !== undefined) {
     c.set('businessId', result.businessId)
   }
   if (result.businessSlug) {
     c.set('businessSlug', result.businessSlug)
   }
-  if (result.userId) {
+  if (result.userId !== undefined) {
     c.set('userId', result.userId)
   }
   if (result.role) {

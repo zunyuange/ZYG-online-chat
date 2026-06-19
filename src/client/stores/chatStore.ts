@@ -186,10 +186,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       // First check session status
       console.log('[ChatStore] Fetching session status...');
+      const business = getUrlBusiness();
       const sessionResponse = await fetch('/api/chat/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: session.id }),
+        body: JSON.stringify({ sessionId: session.id, business }),
       });
       const sessionResult = await sessionResponse.json();
       console.log('[ChatStore] Session status response:', JSON.stringify(sessionResult));

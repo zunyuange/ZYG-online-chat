@@ -306,11 +306,11 @@ CREATE INDEX IF NOT EXISTS transfer_requests_session_id_idx ON transfer_requests
 CREATE INDEX IF NOT EXISTS transfer_requests_to_staff_id_idx ON transfer_requests(to_staff_id);
 
 -- Initialize default admin user (username: admin, password: 123456)
--- Password hash for '123456' using SHA-256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-INSERT OR REPLACE INTO admin_users (username, password_hash, email, name, status) VALUES ('admin', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'admin@example.com', '系统管理员', 'active');
+-- Password hash for '123456' using SHA-256: 8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92
+INSERT OR REPLACE INTO admin_users (username, password_hash, email, name, status) VALUES ('admin', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'admin@example.com', '系统管理员', 'active');
 
 -- Initialize default staff user (business admin)
-INSERT OR REPLACE INTO staff_users (username, password_hash, email, name, role, status, business_id, business_slug, business_name) VALUES ('admin', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'admin@example.com', '系统管理员', 'admin', 'active', 0, 'default', '默认商家');
+INSERT OR REPLACE INTO staff_users (username, password_hash, email, name, role, status, business_id, business_slug, business_name) VALUES ('admin', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'admin@example.com', '系统管理员', 'admin', 'active', 0, 'default', '默认商家');
 
 -- Initialize default super admin role
 INSERT OR REPLACE INTO roles (name, description, permissions, is_system, status) VALUES ('超级管理员', '系统默认超级管理员，拥有所有权限', '["admin_view","admin_edit","staff_view","staff_edit","role_view","role_edit","settings"]', 1, 'active');

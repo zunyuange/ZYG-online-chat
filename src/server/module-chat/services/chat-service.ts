@@ -65,9 +65,6 @@ interface BusinessRow {
   id: number
   business_slug: string | null
   business_name: string | null
-  // Legacy fields for compatibility
-  slug?: string
-  name?: string
 }
 
 interface MessageRow {
@@ -139,9 +136,9 @@ async function getBusinessBySlug(slug?: string): Promise<BusinessRow | null> {
   console.log('[ChatService] getBusinessBySlug called with slug:', slug)
 
   if (!slug) {
-    // Return default business - find by business_slug = 'default' or business_id = 0
+    // Return default business - find by business_slug = 'default' and business_id = 0
     const business = await db.get<BusinessRow>(
-      'SELECT id, business_slug, business_name FROM staff_users WHERE business_slug = ? OR (business_id = 0 AND role = ?)',
+      'SELECT id, business_slug, business_name FROM staff_users WHERE business_slug = ? AND business_id = 0 AND role = ?',
       ['default', 'admin']
     )
     console.log(
@@ -153,7 +150,7 @@ async function getBusinessBySlug(slug?: string): Promise<BusinessRow | null> {
 
   // Try to find by business_slug first (商家使用 business_slug 标识)
   const business = await db.get<BusinessRow>(
-    'SELECT id, business_slug, business_name FROM staff_users WHERE business_slug = ? AND role = ?',
+    'SELECT id, business_slug, business_name FROM staff_users WHERE business_slug = ? AND business_id = 0 AND role = ?',
     [slug, 'admin']
   )
 
@@ -200,8 +197,11 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
 
   // Get business info based on slug or id
   const business = await getBusinessBySlug(input.business)
-  // 如果没找到匹配的商家，使用默认商家（id=1）作为兜底
+  // 如果没找到匹配的商家，使用默认商家作为兜底
+  // 如果连默认商家都没有，使用 id=1 作为最后的兜底
   const businessId = business?.id || 1
+  const businessName = business?.business_name || '默认商家'
+  const businessSlug = business?.business_slug || 'default'
 
   console.log(
     '[ChatService] createOrGetSession: input.business =',
@@ -248,8 +248,8 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
     id: sessionId,
     visitorName,
     businessId,
-    businessSlug: business?.slug,
-    businessName: business?.name,
+    businessSlug: business?.business_slug || 'default',
+    businessName: business?.business_name || '默认商家',
     status: 'active',
     taskStatus: 'requirement_discussion',
     unreadByVisitor: 0,

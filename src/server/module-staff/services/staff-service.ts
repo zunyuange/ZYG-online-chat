@@ -208,9 +208,14 @@ export async function listSessionsWithPreview(
     }
   })[]
 > {
-  // 使用路由层传入的 isSuperAdmin 判断（通过 businessId=0 或 undefined 表示不过滤）
-  // 不再在 service 层重复判断 role/businessSlug，避免与路由层不一致导致隔离漏洞
-  const isSuperAdmin = businessId === 0 || businessId === undefined
+  // 使用路由层传入的 businessId 判断是否过滤
+  // businessId = 0 表示超级管理员（不过滤），businessId > 0 表示特定商家（过滤）
+  // 如果 businessId 是 undefined，说明上下文缺失，不应该返回任何数据
+  const isSuperAdmin = businessId === 0
+  if (businessId === undefined) {
+    console.error('[StaffService] listSessionsWithPreview: businessId is undefined, no sessions returned')
+    return []
+  }
   let sessions = await listSessionsBase(status, isSuperAdmin ? undefined : businessId)
 
   if (sessions.length === 0) {

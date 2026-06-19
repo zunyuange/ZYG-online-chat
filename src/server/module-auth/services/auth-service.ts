@@ -377,10 +377,12 @@ export async function login(username: string, password: string, clientIp: string
       
       // 商家主账号：business_id = 0，但有 business_slug/business_name，使用自己的ID作为businessId
       // 这样创建的客服和会话都会关联到这个商家
-      // 系统管理员(admin用户且没有business_slug)：保持business_id = 0，可以看到所有会话
+      // 系统管理员(admin用户且business_slug为'default')：保持business_id = 0，可以看到所有会话
       if (businessId === 0 && (u.business_slug || u.business_name)) {
-        // 这是商家主账号，使用自己的ID作为businessId
-        businessId = userId;
+        // default 商家保持 businessId=0（超级管理员权限）
+        if (u.business_slug !== 'default') {
+          businessId = userId;
+        }
       }
       
       const token = await generateToken(
