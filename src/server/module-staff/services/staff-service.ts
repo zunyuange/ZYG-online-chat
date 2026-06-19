@@ -172,6 +172,9 @@ export async function getSessionWithPreview(
 
 /**
  * List sessions with last message preview (filtered by business and permission)
+ *
+ * 多租户隔离：businessId=0 表示超级管理员不过滤，其他值按 business_id 过滤。
+ * isSuperAdmin 由路由层统一判断后传入，service 层不再重复计算。
  */
 export async function listSessionsWithPreview(
   status?: SessionStatus,
@@ -188,9 +191,9 @@ export async function listSessionsWithPreview(
     }
   })[]
 > {
-  // 仅超级管理员(default商家,businessSlug='default')可看到所有商家的会话
-  // 其他商家管理员只能看到自己商家的会话
-  const isSuperAdmin = role === 'admin' && businessSlug === 'default'
+  // 使用路由层传入的 isSuperAdmin 判断（通过 businessId=0 或 undefined 表示不过滤）
+  // 不再在 service 层重复判断 role/businessSlug，避免与路由层不一致导致隔离漏洞
+  const isSuperAdmin = businessId === 0 || businessId === undefined
   let sessions = await listSessionsBase(status, isSuperAdmin ? undefined : businessId)
 
   if (sessions.length === 0) {
@@ -198,7 +201,7 @@ export async function listSessionsWithPreview(
   }
 
   // Filter sessions by permission:
-  // - Admin can see all sessions
+  // - Admin can see all sessions within their business
   // - Regular staff can see unassigned sessions + sessions assigned to them
   if (role !== 'admin' && staffId) {
     sessions = sessions.filter(

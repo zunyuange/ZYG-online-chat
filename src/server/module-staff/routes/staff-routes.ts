@@ -73,19 +73,27 @@ function getCtxString(c: any, key: string, defaultVal = ''): string {
 
 // Ensure that a valid business context exists for staff routes.
 // Returns { businessId, isSuperAdmin } or sends a 403 response and returns null.
-function requireBusiness(c: any): { businessId?: number; isSuperAdmin: boolean } | null {
+//
+// 多租户隔离核心逻辑：
+// - 超级管理员 (role=admin, businessSlug='default', businessId=0): 可查看所有商家数据
+// - 商家管理员 (role=admin, businessSlug!=default): 只能查看自己商家的数据
+// - 普通客服 (role=staff): 只能查看自己商家的数据
+function requireBusiness(c: any): { businessId: number; isSuperAdmin: boolean } | null {
   const businessId = getCtxNumber(c, 'businessId')
   const role = getCtxString(c, 'role')
   const businessSlug = getCtxString(c, 'businessSlug')
-  const isSuperAdmin = role === 'admin' && businessSlug === 'default'
+  // 只有 default 商家的 admin 才是超级管理员（businessId=0）
+  const isSuperAdmin = role === 'admin' && businessSlug === 'default' && businessId === 0
 
-  if (businessId === undefined && !isSuperAdmin) {
+  // 非超级管理员必须有 businessId
+  if (!isSuperAdmin && (businessId === undefined || businessId === 0)) {
     c.status(403)
     c.json({ success: false, error: '缺失商家上下文或无权限' })
     return null
   }
 
-  return { businessId: businessId ?? undefined, isSuperAdmin }
+  // 非超级管理员返回具体的 businessId 用于过滤；超级管理员返回 0 表示不过滤
+  return { businessId: isSuperAdmin ? 0 : businessId!, isSuperAdmin }
 }
 
 // ==========================================
@@ -93,22 +101,20 @@ function requireBusiness(c: any): { businessId?: number; isSuperAdmin: boolean }
 // ==========================================
 
 // List all sessions (with permission filtering)
+// 多租户隔离：businessId=0 表示超级管理员可查看所有商家会话
 staffRoutes.get('/sessions', async c => {
   try {
     const status = c.req.query('status') as 'active' | 'closed' | undefined
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
-    const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
     const staffId = getCtxNumber(c, 'userId') || undefined
     const role = getCtxString(c, 'role')
-    const businessSlug = getCtxString(c, 'businessSlug')
 
     const sessions = await staffService.listSessionsWithPreview(
       status,
-      businessId,
+      bizCtx.businessId,
       staffId,
-      role,
-      businessSlug
+      role
     )
     return c.json({ success: true, data: sessions })
   } catch (error) {
@@ -123,11 +129,11 @@ staffRoutes.get('/sessions/:sessionId', async c => {
     const sessionId = c.req.param('sessionId')
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
-    const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
-    const role = getCtxString(c, 'role')
-    const businessSlug = getCtxString(c, 'businessSlug')
-    const isSuperAdmin = role === 'admin' && businessSlug === 'default'
-    const result = await staffService.getSessionWithPreview(sessionId, businessId, isSuperAdmin)
+    const result = await staffService.getSessionWithPreview(
+      sessionId,
+      bizCtx.businessId,
+      bizCtx.isSuperAdmin
+    )
     if (!result.session) {
       return c.json({ success: false, error: 'Session not found' }, 404)
     }
@@ -143,8 +149,7 @@ staffRoutes.get('/unread', async c => {
   try {
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
-    const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId
-    const count = await staffService.getTotalUnreadCount(businessId)
+    const count = await staffService.getTotalUnreadCount(bizCtx.businessId)
     return c.json({ success: true, data: { count } })
   } catch (error) {
     console.error('Get unread count error:', error)
@@ -157,6 +162,7 @@ staffRoutes.get('/unread', async c => {
 // ==========================================
 
 // Get messages for a session
+// 多租户隔离：验证 session 归属后再返回消息
 staffRoutes.get('/messages', async c => {
   try {
     const sessionId = c.req.query('sessionId')
@@ -168,9 +174,8 @@ staffRoutes.get('/messages', async c => {
     const limit = c.req.query('limit') ? parseInt(c.req.query('limit')!) : 20
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
-    const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
 
-    const result = await staffService.getMessages(sessionId, before, limit, businessId)
+    const result = await staffService.getMessages(sessionId, before, limit, bizCtx.businessId)
     return c.json({ success: true, data: result.messages, hasMore: result.hasMore })
   } catch (error) {
     console.error('Get messages error:', error)
@@ -190,7 +195,6 @@ staffRoutes.post('/messages', async c => {
 
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
-    const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
 
     const message = await staffService.sendMessage(
       {
@@ -202,14 +206,14 @@ staffRoutes.post('/messages', async c => {
         fileName,
         fileSize,
       },
-      businessId
+      bizCtx.businessId
     )
 
     // Broadcast to SSE clients
     await sseService.broadcastMessage(message)
 
     // Broadcast session update to staff
-    const session = await chatService.getSession(sessionId, businessId)
+    const session = await chatService.getSession(sessionId, bizCtx.businessId)
     if (session) {
       await sseService.broadcastSessionUpdate(session)
     }
@@ -253,9 +257,8 @@ staffRoutes.post('/upload', async c => {
     const uploadResult = await uploadService.saveFileBuffer(buffer, file.name, file.type)
 
     // Create message
-      const bizCtx = requireBusiness(c)
-      if (!bizCtx) return
-      const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
+    const bizCtx = requireBusiness(c)
+    if (!bizCtx) return
     const message = await staffService.sendMessage(
       {
         sessionId,
@@ -266,7 +269,7 @@ staffRoutes.post('/upload', async c => {
         fileName: uploadResult.fileName,
         fileSize: uploadResult.fileSize,
       },
-      businessId
+      bizCtx.businessId
     )
 
     // Broadcast to SSE clients
@@ -286,11 +289,11 @@ staffRoutes.post('/upload', async c => {
 staffRoutes.get('/sse', async c => {
   const bizCtx = requireBusiness(c)
   if (!bizCtx) return
-  const staffBid = bizCtx.isSuperAdmin ? 0 : bizCtx.businessId!
 
   return streamSSE(c, async stream => {
     // Add staff client to connection pool with business isolation
-    sseService.addStaffClient(stream, staffBid)
+    // businessId=0 for super admin (receives all), others receive only their own
+    sseService.addStaffClient(stream, bizCtx.businessId)
 
     // Send connected event
     await stream.writeSSE({
@@ -303,7 +306,7 @@ staffRoutes.get('/sse', async c => {
 
     const cleanup = () => {
       isConnected = false
-      sseService.removeStaffClient(stream, staffBid)
+      sseService.removeStaffClient(stream, bizCtx.businessId)
     }
 
     // Send periodic heartbeats
@@ -329,10 +332,9 @@ staffRoutes.get('/sse', async c => {
 staffRoutes.put('/read/:sessionId', async c => {
   try {
     const sessionId = c.req.param('sessionId')
-      const bizCtx = requireBusiness(c)
-      if (!bizCtx) return
-      const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
-    const messageIds = await staffService.markAsRead(sessionId, 'staff', businessId)
+    const bizCtx = requireBusiness(c)
+    if (!bizCtx) return
+    const messageIds = await staffService.markAsRead(sessionId, 'staff', bizCtx.businessId)
 
     // Broadcast message read status to visitor
     if (messageIds.length > 0) {
@@ -340,7 +342,7 @@ staffRoutes.put('/read/:sessionId', async c => {
     }
 
     // Broadcast session update (ensure session belongs to this business)
-    const session = await chatService.getSession(sessionId, businessId)
+    const session = await chatService.getSession(sessionId, bizCtx.businessId)
     if (session) {
       await sseService.broadcastSessionUpdate(session)
     }
@@ -362,15 +364,14 @@ staffRoutes.put('/sessions/:sessionId/topic', async c => {
     const sessionId = c.req.param('sessionId')
     const body = await c.req.json()
     const { topic } = body
-      const bizCtx = requireBusiness(c)
-      if (!bizCtx) return
-      const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
+    const bizCtx = requireBusiness(c)
+    if (!bizCtx) return
 
     if (typeof topic !== 'string') {
       return c.json({ success: false, error: 'Topic must be a string' }, 400)
     }
 
-    const session = await staffService.updateSessionTopic(sessionId, topic, businessId)
+    const session = await staffService.updateSessionTopic(sessionId, topic, bizCtx.businessId)
     if (!session) {
       return c.json({ success: false, error: 'Session not found' }, 404)
     }
@@ -391,9 +392,8 @@ staffRoutes.put('/sessions/:sessionId/status', async c => {
     const sessionId = c.req.param('sessionId')
     const body = await c.req.json()
     const { taskStatus } = body
-      const bizCtx = requireBusiness(c)
-      if (!bizCtx) return
-      const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
+    const bizCtx = requireBusiness(c)
+    if (!bizCtx) return
 
     const validStatuses = [
       'requirement_discussion',
@@ -406,7 +406,7 @@ staffRoutes.put('/sessions/:sessionId/status', async c => {
       return c.json({ success: false, error: 'Invalid task status' }, 400)
     }
 
-    const session = await staffService.updateTaskStatus(sessionId, taskStatus, businessId)
+    const session = await staffService.updateTaskStatus(sessionId, taskStatus, bizCtx.businessId)
     if (!session) {
       return c.json({ success: false, error: 'Session not found' }, 404)
     }
@@ -429,11 +429,10 @@ staffRoutes.put('/sessions/:sessionId/status', async c => {
 staffRoutes.delete('/messages/:sessionId', async c => {
   try {
     const sessionId = c.req.param('sessionId')
-      const bizCtx = requireBusiness(c)
-      if (!bizCtx) return
-      const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
+    const bizCtx = requireBusiness(c)
+    if (!bizCtx) return
 
-    const result = await staffService.deleteSessionMessages(sessionId, businessId)
+    const result = await staffService.deleteSessionMessages(sessionId, bizCtx.businessId)
 
     if (result.success) {
       return c.json({ success: true, message: 'Messages deleted successfully' })
@@ -450,11 +449,10 @@ staffRoutes.delete('/messages/:sessionId', async c => {
 staffRoutes.post('/sessions/:sessionId/end', async c => {
   try {
     const sessionId = c.req.param('sessionId')
-      const bizCtx = requireBusiness(c)
-      if (!bizCtx) return
-      const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
+    const bizCtx = requireBusiness(c)
+    if (!bizCtx) return
 
-    const session = await staffService.endSession(sessionId, businessId)
+    const session = await staffService.endSession(sessionId, bizCtx.businessId)
     if (!session) {
       return c.json({ success: false, error: 'Session not found' }, 404)
     }
@@ -478,10 +476,9 @@ staffRoutes.post('/sessions/:sessionId/end', async c => {
 // Get queue list (all waiting sessions)
 staffRoutes.get('/queue', async c => {
   try {
-      const bizCtx = requireBusiness(c)
-      if (!bizCtx) return
-      const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
-    const queueList = await queueService.getQueueList(businessId)
+    const bizCtx = requireBusiness(c)
+    if (!bizCtx) return
+    const queueList = await queueService.getQueueList(bizCtx.businessId)
     return c.json({ success: true, data: queueList })
   } catch (error) {
     console.error('Get queue list error:', error)
@@ -490,8 +487,11 @@ staffRoutes.get('/queue', async c => {
 })
 
 // Get current staff's queue (their sessions + pending transfer requests)
-staffRoutes.get('/queue/my', requireAuth, async c => {
+// 多租户隔离：通过 staffId 查询，该 staffId 已在 JWT 中绑定 business_id
+staffRoutes.get('/queue/my', async c => {
   try {
+    const bizCtx = requireBusiness(c)
+    if (!bizCtx) return
     const staffId = getCtxNumber(c, 'userId')
     if (!staffId) return c.json({ success: false, error: 'Missing user id' }, 401)
     const staffQueue = await queueService.getStaffQueueList(staffId)
@@ -509,10 +509,9 @@ staffRoutes.get('/queue/my', requireAuth, async c => {
 // Get staff dashboard statistics
 staffRoutes.get('/statistics', async c => {
   try {
-      const bizCtx = requireBusiness(c)
-      if (!bizCtx) return
-      const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
-    const stats = await staffService.getStaffStatistics(businessId)
+    const bizCtx = requireBusiness(c)
+    if (!bizCtx) return
+    const stats = await staffService.getStaffStatistics(bizCtx.businessId)
     return c.json({ success: true, data: stats })
   } catch (error) {
     console.error('Get statistics error:', error)
@@ -525,10 +524,9 @@ staffRoutes.get('/visitors', async c => {
   try {
     const state = c.req.query('state') as string | undefined
     const groupid = c.req.query('groupid') as string | undefined
-      const bizCtx = requireBusiness(c)
-      if (!bizCtx) return
-      const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
-    const visitors = await staffService.getVisitorList(state, groupid, businessId)
+    const bizCtx = requireBusiness(c)
+    if (!bizCtx) return
+    const visitors = await staffService.getVisitorList(state, groupid, bizCtx.businessId)
     return c.json({ success: true, data: visitors })
   } catch (error) {
     console.error('Get visitor list error:', error)
@@ -545,8 +543,7 @@ staffRoutes.get('/sentences', async c => {
   try {
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
-    const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
-    const sentences = await staffService.getSentences(businessId)
+    const sentences = await staffService.getSentences(bizCtx.businessId)
     return c.json({ success: true, data: sentences })
   } catch (error) {
     console.error('Get sentences error:', error)
@@ -566,10 +563,9 @@ staffRoutes.post('/sentences', async c => {
 
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
-    const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
     const staffId = getCtxNumber(c, 'userId') || undefined
 
-    const sentence = await staffService.addSentence({ content, tag, lang, staffId, businessId })
+    const sentence = await staffService.addSentence({ content, tag, lang, staffId, businessId: bizCtx.businessId })
     return c.json({ success: true, data: sentence })
   } catch (error) {
     console.error('Add sentence error:', error)
@@ -585,9 +581,8 @@ staffRoutes.put('/sentences/:id', async c => {
     const { content, tag, state } = body
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
-    const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
 
-    const sentence = await staffService.updateSentence(id, { content, tag, state, businessId })
+    const sentence = await staffService.updateSentence(id, { content, tag, state, businessId: bizCtx.businessId })
     if (!sentence) {
       return c.json({ success: false, error: 'Sentence not found' }, 404)
     }
@@ -605,8 +600,7 @@ staffRoutes.delete('/sentences/:id', async c => {
     const id = parseInt(c.req.param('id'), 10)
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
-    const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
-    const result = await staffService.deleteSentence(id, businessId)
+    const result = await staffService.deleteSentence(id, bizCtx.businessId)
 
     if (!result) {
       return c.json({ success: false, error: 'Sentence not found' }, 404)
@@ -628,8 +622,7 @@ staffRoutes.get('/offline-messages', async c => {
   try {
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
-    const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
-    const messages = await staffService.getOfflineMessages(businessId)
+    const messages = await staffService.getOfflineMessages(bizCtx.businessId)
     return c.json({ success: true, data: messages })
   } catch (error) {
     console.error('Get offline messages error:', error)
@@ -645,9 +638,8 @@ staffRoutes.put('/offline-messages/:id', async c => {
     const { status } = body
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
-    const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
 
-    const message = await staffService.updateOfflineMessageStatus(id, status, businessId)
+    const message = await staffService.updateOfflineMessageStatus(id, status, bizCtx.businessId)
     if (!message) {
       return c.json({ success: false, error: 'Message not found' }, 404)
     }
@@ -675,9 +667,8 @@ staffRoutes.post('/blacklist', async c => {
 
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
-    const numericBusinessId = bizCtx.isSuperAdmin ? 0 : bizCtx.businessId!
 
-    const result = await staffService.addToBlacklist(visitorId, numericBusinessId, reason)
+    const result = await staffService.addToBlacklist(visitorId, bizCtx.businessId, reason)
     return c.json({ success: true, data: result })
   } catch (error) {
     console.error('Add to blacklist error:', error)
@@ -691,8 +682,7 @@ staffRoutes.delete('/blacklist/:visitorId', async c => {
     const visitorId = c.req.param('visitorId')
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
-    const numericBusinessId = bizCtx.isSuperAdmin ? 0 : bizCtx.businessId!
-    const result = await staffService.removeFromBlacklist(visitorId, numericBusinessId)
+    const result = await staffService.removeFromBlacklist(visitorId, bizCtx.businessId)
 
     if (!result) {
       return c.json({ success: false, error: 'Visitor not found in blacklist' }, 404)
@@ -710,8 +700,7 @@ staffRoutes.get('/blacklist', async c => {
   try {
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
-    const numericBusinessId = bizCtx.isSuperAdmin ? 0 : bizCtx.businessId!
-    const blacklist = await staffService.getBlacklist(numericBusinessId)
+    const blacklist = await staffService.getBlacklist(bizCtx.businessId)
     return c.json({ success: true, data: blacklist })
   } catch (error) {
     console.error('Get blacklist error:', error)
@@ -729,8 +718,7 @@ staffRoutes.get('/transfer/staff', async c => {
     const currentStaffId = c.req.query('excludeStaffId')
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
-    const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
-    const staff = await staffService.getAvailableStaffForTransfer(currentStaffId, businessId)
+    const staff = await staffService.getAvailableStaffForTransfer(currentStaffId, bizCtx.businessId)
     return c.json({ success: true, data: staff })
   } catch (error) {
     console.error('Get available staff error:', error)
@@ -746,7 +734,6 @@ staffRoutes.post('/transfer/:sessionId', async c => {
     const { targetStaffId, reason } = body
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
-    const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
 
     if (!targetStaffId) {
       return c.json({ success: false, error: 'Target staff ID is required' }, 400)
@@ -756,7 +743,7 @@ staffRoutes.post('/transfer/:sessionId', async c => {
       sessionId,
       parseInt(targetStaffId, 10),
       reason,
-      businessId
+      bizCtx.businessId
     )
     if (!result.success) {
       return c.json({ success: false, error: result.error }, 400)
@@ -778,8 +765,7 @@ staffRoutes.get('/evaluation-settings', async c => {
   try {
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
-    const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
-    const settings = await staffService.getEvaluationSettings(businessId)
+    const settings = await staffService.getEvaluationSettings(bizCtx.businessId)
     return c.json({ success: true, data: settings })
   } catch (error) {
     console.error('Get evaluation settings error:', error)
@@ -793,8 +779,7 @@ staffRoutes.put('/evaluation-settings', async c => {
     const body = await c.req.json()
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
-    const businessId = bizCtx.isSuperAdmin ? undefined : bizCtx.businessId!
-    const settings = await staffService.updateEvaluationSettings(body, businessId)
+    const settings = await staffService.updateEvaluationSettings(body, bizCtx.businessId)
     return c.json({ success: true, data: settings })
   } catch (error) {
     console.error('Update evaluation settings error:', error)
@@ -819,11 +804,10 @@ staffRoutes.post('/users', async c => {
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
     const userId = getCtxNumber(c, 'userId') || undefined
-    const currentBizIdVal = bizCtx.isSuperAdmin ? 0 : bizCtx.businessId!
 
-    // 如果当前用户是主体商家（business_id=0），使用用户自己的ID作为businessId
+    // 如果当前用户是超级管理员（businessId=0），使用用户自己的ID作为businessId
     // 这样创建的客服账号会关联到这个商家
-    const effectiveBusinessId = currentBizIdVal === 0 ? userId : currentBizIdVal
+    const effectiveBusinessId = bizCtx.businessId === 0 ? userId : bizCtx.businessId
 
     const result = await createStaffUser({
       username,
@@ -850,9 +834,8 @@ staffRoutes.get('/users', async c => {
   try {
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
-    const businessId = bizCtx.isSuperAdmin ? 0 : bizCtx.businessId!
     const userId = getCtxNumber(c, 'userId') || undefined
-    const users = await listStaffUsers(businessId, userId)
+    const users = await listStaffUsers(bizCtx.businessId, userId)
     return c.json({ success: true, data: users })
   } catch (error) {
     console.error('List staff users error:', error)
@@ -872,9 +855,8 @@ staffRoutes.put('/users', async c => {
 
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
-    const businessId = bizCtx.isSuperAdmin ? 0 : bizCtx.businessId!
 
-    const result = await updateStaffUser(parseInt(id, 10), businessId, {
+    const result = await updateStaffUser(parseInt(id, 10), bizCtx.businessId, {
       username,
       password,
       name,
@@ -899,13 +881,12 @@ staffRoutes.delete('/users/:id', async c => {
     const id = parseInt(c.req.param('id'), 10)
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
-    const businessId = bizCtx.isSuperAdmin ? 0 : bizCtx.businessId!
 
     if (!id) {
       return c.json({ success: false, error: 'Invalid user ID' }, 400)
     }
 
-    const result = await deleteStaffUser(id, businessId)
+    const result = await deleteStaffUser(id, bizCtx.businessId)
     if (!result.success) {
       return c.json({ success: false, error: result.error }, 400)
     }

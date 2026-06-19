@@ -297,6 +297,7 @@ chatRoutes.get('/queue/:sessionId', async c => {
 
 // ==========================================
 // Accept Session Route (客服接收会话)
+// 多租户隔离：必须验证 session 的 business_id 归属
 // ==========================================
 
 chatRoutes.post('/sessions/:id/accept', requireAuth, async c => {
@@ -305,12 +306,22 @@ chatRoutes.post('/sessions/:id/accept', requireAuth, async c => {
     const businessId = getCtxNumber(c, 'businessId')
     const staffId = getCtxNumber(c, 'userId')
 
+    if (!staffId) {
+      return c.json({ success: false, error: '未授权' }, 401)
+    }
+
     const db = getDb()
 
-    const session = await db.get('SELECT * FROM sessions WHERE id = ? AND business_id = ?', [
-      sessionId,
-      businessId,
-    ])
+    // 多租户隔离：只允许操作本商家的会话（businessId=0 为超管，可操作所有）
+    let session
+    if (businessId === 0) {
+      session = await db.get('SELECT * FROM sessions WHERE id = ?', [sessionId])
+    } else {
+      session = await db.get('SELECT * FROM sessions WHERE id = ? AND business_id = ?', [
+        sessionId,
+        businessId,
+      ])
+    }
     if (!session) {
       return c.json({ success: false, error: '会话不存在' }, 404)
     }
@@ -345,20 +356,35 @@ chatRoutes.post('/sessions/:id/transfer', requireAuth, async c => {
 
     const db = getDb()
 
-    const session = await db.get('SELECT * FROM sessions WHERE id = ? AND business_id = ?', [
-      sessionId,
-      businessId,
-    ])
+    // 多租户隔离：只允许操作本商家的会话
+    let session
+    if (businessId === 0) {
+      session = await db.get('SELECT * FROM sessions WHERE id = ?', [sessionId])
+    } else {
+      session = await db.get('SELECT * FROM sessions WHERE id = ? AND business_id = ?', [
+        sessionId,
+        businessId,
+      ])
+    }
     if (!session) {
       return c.json({ success: false, error: '会话不存在' }, 404)
     }
 
-    const targetStaff = await db.get(
-      'SELECT id, username, name FROM staff_users WHERE id = ? AND status = "active"',
-      [targetStaffId]
-    )
+    // 多租户隔离：目标客服必须属于同一商家（或为超管）
+    let targetStaff
+    if (businessId === 0) {
+      targetStaff = await db.get(
+        'SELECT id, username, name FROM staff_users WHERE id = ? AND status = "active"',
+        [targetStaffId]
+      )
+    } else {
+      targetStaff = await db.get(
+        'SELECT id, username, name FROM staff_users WHERE id = ? AND status = "active" AND (business_id = ? OR id = ?)',
+        [targetStaffId, businessId, businessId]
+      )
+    }
     if (!targetStaff) {
-      return c.json({ success: false, error: '目标客服不存在或未激活' }, 400)
+      return c.json({ success: false, error: '目标客服不存在、未激活或不属于同一商家' }, 400)
     }
 
     await db.run('UPDATE sessions SET assigned_staff_id = ?, updated_at = ? WHERE id = ?', [
@@ -409,9 +435,12 @@ chatRoutes.post('/messages/:id/delete', requireAuth, async c => {
       return c.json({ success: false, error: '消息不存在' }, 404)
     }
 
-    const session = await db.get('SELECT business_id FROM sessions WHERE id = ?', [sessionId])
-    if (!session || session.business_id !== businessId) {
-      return c.json({ success: false, error: '无权操作此消息' }, 403)
+    // 多租户隔离：非超管只能操作自己商家的消息
+    if (businessId !== 0) {
+      const session = await db.get('SELECT business_id FROM sessions WHERE id = ?', [sessionId])
+      if (!session || session.business_id !== businessId) {
+        return c.json({ success: false, error: '无权操作此消息' }, 403)
+      }
     }
 
     const now = Date.now()
