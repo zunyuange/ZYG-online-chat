@@ -124,7 +124,7 @@ export function TopicHeader({
             onChange={(e) => setEditTopic(e.target.value)}
             onBlur={handleTopicSubmit}
             onKeyDown={handleKeyDown}
-            placeholder="输入主题..."
+            placeholder="输入通知..."
             style={inputStyle}
             autoFocus
           />
@@ -133,7 +133,7 @@ export function TopicHeader({
             style={{ ...topicTextStyle, color: '#999', fontStyle: 'italic' }}
             onClick={handleClick}
           >
-            点击添加主题...
+            点击添加通知
           </span>
         ) : (
           <span
@@ -141,7 +141,7 @@ export function TopicHeader({
             onClick={handleClick}
             title={session.topic || undefined}
           >
-            {session.topic || noticeLabel}
+            {session.topic || (t('no_notice') || '暂无通知')}
           </span>
         )}
       </div>

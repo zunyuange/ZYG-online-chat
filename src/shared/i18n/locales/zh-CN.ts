@@ -4,6 +4,7 @@ export const zhCN = {
   service_offline: '客服已经下线',
   status_requirement_discussion: '需求讨论',
   important_notice: '重要通知',
+  no_notice: '暂无通知',
   status_requirement_confirmed: '需求确认',
   status_in_progress: '进行中',
   status_delivered: '交付',
