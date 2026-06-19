@@ -884,6 +884,26 @@ export function StaffPage() {
               <span>{pendingTransfers.length}</span>
             </button>
           )}
+          {/* Language Selector */}
+          <select
+            value={locale}
+            onChange={(e) => setLocale(e.target.value as any)}
+            style={{
+              padding: '4px 8px',
+              borderRadius: '4px',
+              border: '1px solid rgba(255,255,255,0.3)',
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              color: '#fff',
+              fontSize: '13px',
+              cursor: 'pointer',
+            }}
+          >
+            {supportedLocales.map((l) => (
+              <option key={l.code} value={l.code} style={{ color: '#000' }}>
+                {l.nativeName}
+              </option>
+            ))}
+          </select>
           {/* User menu */}
           <div style={{ position: 'relative' }}>
             <button
@@ -920,28 +940,6 @@ export function StaffPage() {
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div style={{ padding: '8px 12px', borderBottom: '1px solid #f0f0f0', marginBottom: '4px' }}>
-                  <div style={{ fontSize: '12px', color: '#999', marginBottom: '6px' }}>{t('choose_lang')}</div>
-                  <select
-                    value={locale}
-                    onChange={(e) => setLocale(e.target.value as any)}
-                    style={{
-                      width: '100%',
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      border: '1px solid #d9d9d9',
-                      backgroundColor: '#fff',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                    }}
-                  >
-                    {supportedLocales.map((l) => (
-                      <option key={l.code} value={l.code}>
-                        {l.nativeName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
                 <button
                   onClick={handleOpenProfile}
                   style={{
@@ -1572,7 +1570,7 @@ export function StaffPage() {
                     </div>
                   )}
                   <div style={{ fontSize: '11px', color: '#bbb', marginTop: '4px' }}>
-                    {new Date(request.created_at).toLocaleString('zh-CN')}
+                    {new Date(request.created_at).toLocaleString(navigator.language || 'en')}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -1685,7 +1683,7 @@ export function StaffPage() {
                     </div>
                   )}
                   <div style={{ fontSize: '11px', color: '#bbb', marginTop: '4px' }}>
-                    {new Date(request.created_at).toLocaleString('zh-CN')}
+                    {new Date(request.created_at).toLocaleString(navigator.language || 'en')}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>

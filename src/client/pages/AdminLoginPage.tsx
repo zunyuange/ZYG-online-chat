@@ -8,18 +8,13 @@ import { useI18n } from '../context/I18nContext';
 import { useSiteSettings } from '@client/hooks/useSiteSettings';
 
 export function AdminLoginPage() {
-  const { t, locale, setLocale } = useI18n();
+  const { t, locale, setLocale, supportedLocales } = useI18n();
   const { siteName } = useSiteSettings();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
-
-  const supportedLocales = [
-    { code: 'zh-CN', nativeName: '中文' },
-    { code: 'en-US', nativeName: 'English' },
-  ];
 
   useEffect(() => {
     checkAuthRequired();

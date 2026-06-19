@@ -67,7 +67,7 @@ interface RoleFormData {
 }
 
 export function AdminPage() {
-  const { t, locale, setLocale } = useI18n();
+  const { t, locale, setLocale, supportedLocales } = useI18n();
   const { siteName: globalSiteName } = useSiteSettings();
   
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -116,10 +116,6 @@ export function AdminPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
-  const supportedLocales = [
-    { code: 'zh-CN', nativeName: '中文' },
-    { code: 'en-US', nativeName: 'English' },
-  ];
 
   const allPermissions = [
     { key: 'admin_view', label: t('permission_admin_view') },
