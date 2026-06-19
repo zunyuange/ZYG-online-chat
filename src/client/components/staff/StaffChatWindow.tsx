@@ -602,8 +602,6 @@ function SourceUrlRow({ label, url, color, bgColor, borderColor }: {
  * 注意：fromUrl 和 referer 已在「来源」面板显示，此处隐藏
  */
 function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fieldDefs?: VisitorFieldDef[] }) {
-  const [expanded, setExpanded] = useState(false);
-
   // ═══════════════ 字段定义 ═══════════════
   interface FixedFieldDef { fieldKey: string; label: string; type: string; icon: string }
   const defaultFixedDefs: FixedFieldDef[] = [
@@ -672,27 +670,13 @@ function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fieldDefs?
 
   // ═══════════════ 样式 ═══════════════
   const panelStyle: React.CSSProperties = {
-    backgroundColor: '#fafafa',
-    borderBottom: '1px solid #e8e8e8',
-    padding: '8px 14px',
-    fontSize: '12px',
-  };
-
-  const headerRowStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    cursor: 'pointer',
-    color: '#666',
-  };
-
-  const listStyle: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
     gap: '6px',
-    marginTop: '8px',
-    paddingTop: '8px',
-    borderTop: '1px solid #e8e8e8',
+    backgroundColor: '#fafafa',
+    borderBottom: '1px solid #e8e8e8',
+    padding: '10px 14px',
+    fontSize: '12px',
   };
 
   const fieldRowStyle: React.CSSProperties = {
@@ -749,38 +733,39 @@ function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fieldDefs?
 
   return (
     <div style={panelStyle}>
-      <div style={headerRowStyle} onClick={() => setExpanded(!expanded)}>
-        <span>📋 访客信息 <span style={{ color: '#999', fontSize: '10px' }}>({allFields.length}项)</span></span>
-        <span style={{ fontSize: '10px' }}>{expanded ? '▲' : '▼'}</span>
+      {/* 标题 */}
+      <div style={{
+        color: '#999',
+        fontSize: '11px',
+        marginBottom: '10px',
+        fontWeight: 500,
+      }}>
+        📋 访客信息 ({allFields.length}项)
       </div>
 
-      {expanded && (
-        <div style={listStyle}>
-          {/* ═══ 系统固定字段 ═══ */}
-          {fixedFields.length > 0 && (
-            <div style={sectionStyle}>📌 系统固定字段</div>
-          )}
-          {fixedFields.map((field) => (
-            <div key={field.fieldKey} style={fieldRowStyle}>
-              <span style={labelCellStyle}>{field.icon} {field.label}</span>
-              <span style={valueCellStyle}>{renderValue(field)}</span>
-            </div>
-          ))}
+      {/* ═══ 系统固定字段 ═══ */}
+      {fixedFields.length > 0 && (
+        <div style={sectionStyle}>📌 系统固定字段</div>
+      )}
+      {fixedFields.map((field) => (
+        <div key={field.fieldKey} style={fieldRowStyle}>
+          <span style={labelCellStyle}>{field.icon} {field.label}</span>
+          <span style={valueCellStyle}>{renderValue(field)}</span>
+        </div>
+      ))}
 
-          {/* ═══ 自定义字段 ═══ */}
-          {customFields.length > 0 && (
-            <div style={{ ...sectionStyle, ...(hasBothSections ? {} : { borderTop: 'none', paddingTop: 0 }) }}>
-              🔧 自定义字段
-            </div>
-          )}
-          {customFields.map((field) => (
-            <div key={field.fieldKey} style={fieldRowStyle}>
-              <span style={labelCellStyle}>🔧 {field.label}</span>
-              <span style={valueCellStyle}>{renderValue(field)}</span>
-            </div>
-          ))}
+      {/* ═══ 自定义字段 ═══ */}
+      {customFields.length > 0 && (
+        <div style={{ ...sectionStyle, ...(hasBothSections ? {} : { borderTop: 'none', paddingTop: 0 }) }}>
+          🔧 自定义字段
         </div>
       )}
+      {customFields.map((field) => (
+        <div key={field.fieldKey} style={fieldRowStyle}>
+          <span style={labelCellStyle}>🔧 {field.label}</span>
+          <span style={valueCellStyle}>{renderValue(field)}</span>
+        </div>
+      ))}
     </div>
   );
 }
