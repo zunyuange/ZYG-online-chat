@@ -77,10 +77,10 @@ function DocsContent() {
       <div style={{ backgroundColor: '#001529', color: '#fff', padding: '24px 32px' }}>
         <div style={{ maxWidth: '960px', margin: '0 auto' }}>
           <h1 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: 600 }}>
-            📋 对接文档
+            📋 {t('docs_title')}
           </h1>
           <p style={{ margin: 0, fontSize: '14px', color: 'rgba(255,255,255,0.7)' }}>
-            将在线客服系统接入到您的网站，支持多种接入方式
+            {t('docs_subtitle')}
           </p>
         </div>
       </div>
@@ -88,11 +88,11 @@ function DocsContent() {
       <div style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
         {/* Quick Start */}
         <div style={{ backgroundColor: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: '8px', padding: '20px', marginBottom: '32px' }}>
-          <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', color: '#0050b3' }}>🚀 快速开始</h3>
+          <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', color: '#0050b3' }}>🚀 {t('docs_quick_start')}</h3>
           <ol style={{ margin: 0, paddingLeft: '20px', fontSize: '14px', color: '#333', lineHeight: '2' }}>
-            <li>登录客服工作台，进入 <strong>代码</strong> 页面获取您的专属接入代码</li>
-            <li>将代码粘贴到您网站的 HTML 页面中</li>
-            <li>部署后，访客即可在您的网站上使用在线客服功能</li>
+            <li>{t('docs_quick_start_1')}</li>
+            <li>{t('docs_quick_start_2')}</li>
+            <li>{t('docs_quick_start_3')}</li>
           </ol>
         </div>
 
@@ -102,9 +102,9 @@ function DocsContent() {
         {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '2px solid #e8e8e8', marginBottom: '24px' }}>
           {[
-            { key: 'script', label: '脚本嵌入', icon: <Code2 size={16} /> },
-            { key: 'iframe', label: 'iframe 嵌入', icon: <Monitor size={16} /> },
-            { key: 'url', label: '直接链接', icon: <Link2 size={16} /> },
+            { key: 'script', label: t('docs_tab_script'), icon: <Code2 size={16} /> },
+            { key: 'iframe', label: t('docs_tab_iframe'), icon: <Monitor size={16} /> },
+            { key: 'url', label: t('docs_tab_url'), icon: <Link2 size={16} /> },
           ].map((tab) => (
             <div
               key={tab.key}
@@ -171,7 +171,7 @@ function DocsContent() {
                   }}
                 >
                   {copied === 'script' ? <Check size={14} /> : <Copy size={14} />}
-                  {copied === 'script' ? '已复制' : '复制'}
+                  {copied === 'script' ? t('copied') : t('copy')}
                 </button>
               </div>
             </div>
@@ -297,10 +297,9 @@ function DocsContent() {
         {activeTab === 'url' && (
           <div>
             <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '24px', marginBottom: '24px' }}>
-              <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 500 }}>方法三：直接链接</h3>
+              <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 500 }}>{t('docs_method_url')}</h3>
               <p style={{ fontSize: '14px', color: '#666', marginBottom: '16px', lineHeight: '1.8' }}>
-                直接使用 URL 链接打开客服页面，适合在按钮、菜单等位置添加客服入口。
-                通过 <strong>URL 查询参数</strong> 传递访客信息，客服端即可识别访客身份。
+                {t('docs_method_url_desc')}
               </p>
 
               {/* 基础链接 */}

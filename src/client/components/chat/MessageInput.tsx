@@ -278,7 +278,7 @@ export function MessageInput({
       </div>
 
       {/* Unified file upload (image, video, file) */}
-      <label style={iconButtonStyle} title="发送文件/图片/视频">
+      <label style={iconButtonStyle} title={t('send_files')}>
         <input
           ref={fileInputRef}
           type="file"

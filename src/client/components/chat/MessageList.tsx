@@ -151,7 +151,7 @@ export function MessageList({
     <div ref={containerRef} style={containerStyle} onScroll={handleScroll}>
       {hasMore && (
         <div style={loadingStyle}>
-          {loading ? '加载中...' : '↑ 上拉加载更多'}
+          {loading ? t('loading') : t('pull_up_load_more')}
         </div>
       )}
       {messages.map((message) => (
@@ -162,7 +162,7 @@ export function MessageList({
         />
       ))}
       {loading && messages.length === 0 && (
-        <div style={loadingStyle}>加载中...</div>
+        <div style={loadingStyle}>{t('loading')}</div>
       )}
     </div>
   );

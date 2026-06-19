@@ -124,7 +124,7 @@ export function TopicHeader({
             onChange={(e) => setEditTopic(e.target.value)}
             onBlur={handleTopicSubmit}
             onKeyDown={handleKeyDown}
-            placeholder="输入通知..."
+            placeholder={t('enter_notice_placeholder')}
             style={inputStyle}
             autoFocus
           />
@@ -133,7 +133,7 @@ export function TopicHeader({
             style={{ ...topicTextStyle, color: '#999', fontStyle: 'italic' }}
             onClick={handleClick}
           >
-            点击添加通知
+            {t('click_add_notice')}
           </span>
         ) : (
           <span
@@ -154,7 +154,7 @@ export function TopicHeader({
 
         {showQueueInfo && (
           <span style={queueBadgeStyle}>
-            #{queuePosition} | 约{estimatedWaitMinutes}分钟
+            #{queuePosition} | {t('about')} {estimatedWaitMinutes} {t('minutes_unit')}
           </span>
         )}
       </div>

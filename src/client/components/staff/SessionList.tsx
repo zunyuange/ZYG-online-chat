@@ -19,6 +19,7 @@ interface SessionListProps {
   onSelect: (sessionId: string) => void;
   loading?: boolean;
   staffList?: { id: number; name: string; username: string }[];
+  t?: (key: string) => string;
 }
 
 export function SessionList({
@@ -27,6 +28,7 @@ export function SessionList({
   onSelect,
   loading,
   staffList = [],
+  t = (s: string) => s,
 }: SessionListProps) {
   const formatTime = (date: Date) => {
     const now = new Date();
@@ -35,22 +37,22 @@ export function SessionList({
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
 
-    if (minutes < 1) return '刚刚';
-    if (minutes < 60) return `${minutes}分钟前`;
-    if (hours < 24) return `${hours}小时前`;
-    if (days < 7) return `${days}天前`;
+    if (minutes < 1) return t('just_now');
+    if (minutes < 60) return `${minutes}${t('minutes_ago_suffix')}`;
+    if (hours < 24) return `${hours}${t('hours_ago_suffix')}`;
+    if (days < 7) return `${days}${t('days_ago_suffix')}`;
     return new Date(date).toLocaleDateString('zh-CN');
   };
 
   const getLastMessagePreview = (session: SessionWithPreview) => {
-    if (!session.lastMessage) return '暂无消息';
+    if (!session.lastMessage) return t('no_messages');
 
     const { content, contentType } = session.lastMessage;
     switch (contentType) {
       case 'image':
-        return '[图片]';
+        return t('image_placeholder');
       case 'video':
-        return '[视频]';
+        return t('video_placeholder');
       default:
         return content.length > 30 ? `${content.slice(0, 30)}...` : content;
     }
@@ -136,18 +138,18 @@ export function SessionList({
   if (loading) {
     return (
       <div style={containerStyle}>
-        <div style={headerStyle}>会话列表</div>
-        <div style={loadingStyle}>加载中...</div>
+        <div style={headerStyle}>{t('sessions')}</div>
+        <div style={loadingStyle}>{t('loading')}</div>
       </div>
     );
   }
 
   return (
     <div style={containerStyle}>
-      <div style={headerStyle}>会话列表 ({sessions.length})</div>
+      <div style={headerStyle}>{t('sessions')} ({sessions.length})</div>
       <div style={listStyle}>
         {sessions.length === 0 ? (
-          <div style={emptyStyle}>暂无会话</div>
+          <div style={emptyStyle}>{t('no_sessions')}</div>
         ) : (
           sessions.map((session) => {
             const assignedStaffName = getAssignedStaffName(session.assignedStaffId || null);
@@ -176,7 +178,7 @@ export function SessionList({
                 </div>
                 {assignedStaffName && (
                   <div style={{ fontSize: '11px', color: '#1890ff', marginTop: '4px' }}>
-                    客服: {assignedStaffName}
+                    {t('staff')}: {assignedStaffName}
                   </div>
                 )}
                 {session.unreadByStaff > 0 && (

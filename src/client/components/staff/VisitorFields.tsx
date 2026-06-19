@@ -13,7 +13,11 @@ interface FieldDef {
   createdAt?: number;
 }
 
-export function VisitorFields() {
+interface VisitorFieldsProps {
+  t?: (key: string) => string;
+}
+
+export function VisitorFields({ t = (s: string) => s }: VisitorFieldsProps) {
   const [fixedFields, setFixedFields] = useState<FieldDef[]>([]);
   const [customFields, setCustomFields] = useState<FieldDef[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,10 +50,10 @@ export function VisitorFields() {
         setFixedFields(result.data.fixedFields || []);
         setCustomFields(result.data.customFields || []);
       } else {
-        setError(result.error || '获取字段列表失败');
+        setError(result.error || t('fetch_fields_failed'));
       }
     } catch (err) {
-      setError('获取字段列表失败');
+      setError(t('fetch_fields_failed'));
     } finally {
       setLoading(false);
     }
@@ -77,11 +81,11 @@ export function VisitorFields() {
 
   const handleSave = async () => {
     if (!formFieldKey.trim() || !formLabel.trim()) {
-      setFormError('字段标识和显示名称不能为空');
+      setFormError(t('field_id_name_required'));
       return;
     }
     if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(formFieldKey)) {
-      setFormError('字段标识只能包含英文字母、数字和下划线，且不能以数字开头');
+      setFormError(t('field_id_format_error'));
       return;
     }
 
@@ -114,17 +118,17 @@ export function VisitorFields() {
         resetForm();
         fetchFields();
       } else {
-        setFormError(result.error || '保存失败');
+        setFormError(result.error || t('save_failed'));
       }
     } catch (err) {
-      setFormError('保存失败，请重试');
+      setFormError(t('save_failed_retry'));
     } finally {
       setFormSaving(false);
     }
   };
 
   const handleDelete = async (fieldId: number | string) => {
-    if (!confirm('确定要删除这个自定义字段吗？')) return;
+    if (!confirm(t('confirm_delete_field'))) return;
 
     try {
       const response = await fetch(`/api/staff/visitor-fields/${fieldId}`, {
@@ -137,15 +141,15 @@ export function VisitorFields() {
       if (result.success) {
         fetchFields();
       } else {
-        alert(result.error || '删除失败');
+        alert(result.error || t('delete_failed'));
       }
     } catch (err) {
-      alert('删除失败，请重试');
+      alert(t('delete_failed_retry'));
     }
   };
 
   const getTypeLabel = (type: string) => {
-    const map: Record<string, string> = { text: '文本', url: '链接', json: 'JSON' };
+    const map: Record<string, string> = { text: t('field_type_text'), url: t('field_type_link'), json: 'JSON' };
     return map[type] || type;
   };
 
@@ -156,7 +160,7 @@ export function VisitorFields() {
           width: '40px', height: '40px', border: '3px solid #e5e7eb',
           borderTopColor: '#3b82f6', borderRadius: '50%', margin: '0 auto 16px',
         }}></div>
-        <p style={{ color: '#6b7280' }}>加载中...</p>
+        <p style={{ color: '#6b7280' }}>{t('loading')}</p>
       </div>
     );
   }
@@ -166,9 +170,9 @@ export function VisitorFields() {
       {/* Header */}
       <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 style={{ fontSize: '20px', fontWeight: 500, margin: 0 }}>访客自定义字段</h2>
+          <h2 style={{ fontSize: '20px', fontWeight: 500, margin: 0 }}>{t('visitor_custom_fields_title')}</h2>
           <p style={{ color: '#999', fontSize: '14px', marginTop: '8px' }}>
-            管理系统固定字段和自定义访客字段，自定义字段会显示在访客信息面板中
+            {t('visitor_custom_fields_desc')}
           </p>
         </div>
         <button
@@ -188,7 +192,7 @@ export function VisitorFields() {
           }}
         >
           <Plus size={16} />
-          添加自定义字段
+          {t('add_custom_field')}
         </button>
       </div>
 
@@ -216,7 +220,7 @@ export function VisitorFields() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: 500 }}>
-              {editingField ? '编辑自定义字段' : '添加自定义字段'}
+              {editingField ? t('edit_custom_field') : t('add_custom_field')}
             </h3>
 
             {formError && (
@@ -227,13 +231,13 @@ export function VisitorFields() {
 
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: '#666', fontWeight: 500 }}>
-                字段标识 <span style={{ color: '#ff4d4f' }}>*</span>
+                {t('field_id')} <span style={{ color: '#ff4d4f' }}>*</span>
               </label>
               <input
                 type="text"
                 value={formFieldKey}
                 onChange={(e) => setFormFieldKey(e.target.value)}
-                placeholder="例如: customField1"
+                placeholder={t('field_id_example')}
                 disabled={!!editingField}
                 style={{
                   width: '100%', padding: '8px 12px', border: '1px solid #d9d9d9',
@@ -242,13 +246,13 @@ export function VisitorFields() {
                 }}
               />
               <p style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>
-                用于URL传参，如 ?customField1=xxx，仅支持英文/数字/下划线
+                {t('field_id_desc')}
               </p>
             </div>
 
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: '#666', fontWeight: 500 }}>
-                显示名称 <span style={{ color: '#ff4d4f' }}>*</span>
+                {t('display_name')} <span style={{ color: '#ff4d4f' }}>*</span>
               </label>
               <input
                 type="text"

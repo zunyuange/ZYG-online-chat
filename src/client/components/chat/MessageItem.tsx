@@ -9,9 +9,10 @@ import type { Message } from '@shared/types';
 interface MessageItemProps {
   message: Message;
   isOwn: boolean;
+  t?: (key: string) => string;
 }
 
-export function MessageItem({ message, isOwn }: MessageItemProps) {
+export function MessageItem({ message, isOwn, t = (key: string) => key }: MessageItemProps) {
   const [expandedMedia, setExpandedMedia] = useState<Record<string, boolean>>({});
 
   const formattedTime = new Date(message.createdAt).toLocaleTimeString('zh-CN', {
@@ -98,7 +99,7 @@ export function MessageItem({ message, isOwn }: MessageItemProps) {
       }}
     >
       <Image size={32} style={{ opacity: 0.7 }} />
-      <span style={placeholderTextStyle}>点击查看图片</span>
+      <span style={placeholderTextStyle}>{t('click_view_image')}</span>
     </div>
   );
 
@@ -115,7 +116,7 @@ export function MessageItem({ message, isOwn }: MessageItemProps) {
       }}
     >
       <Video size={32} style={{ opacity: 0.7 }} />
-      <span style={placeholderTextStyle}>点击查看视频</span>
+      <span style={placeholderTextStyle}>{t('click_view_video')}</span>
     </div>
   );
 
@@ -148,7 +149,7 @@ export function MessageItem({ message, isOwn }: MessageItemProps) {
             fontSize: '14px',
           }}
         >
-          {msg.fileName || '文件'}
+          {msg.fileName || t('file_type')}
         </div>
         <div style={{ fontSize: '12px', opacity: 0.7, marginTop: '2px' }}>
           {formatFileSize(msg.fileSize)}
@@ -172,7 +173,7 @@ export function MessageItem({ message, isOwn }: MessageItemProps) {
         }}
       >
         <Download size={14} />
-        下载
+        {t('download')}
       </a>
     </div>
   );
@@ -226,7 +227,7 @@ export function MessageItem({ message, isOwn }: MessageItemProps) {
         <span>{formattedTime}</span>
         {isOwn && (
           <span style={{ color: message.isRead ? '#52c41a' : '#999' }}>
-            {message.isRead ? '已读' : '未读'}
+            {message.isRead ? t('read') : t('unread')}
           </span>
         )}
       </div>

@@ -101,7 +101,7 @@ export function StaffChatWindow({
 
   const handleTransfer = async () => {
     if (!selectedStaffId || !transferReason.trim()) {
-      setTransferMessage('请选择客服并填写转接原因');
+      setTransferMessage(t('transfer_select_staff_hint'));
       return;
     }
     try {
@@ -119,7 +119,7 @@ export function StaffChatWindow({
       });
       const result = await response.json();
       if (result.success) {
-        setTransferMessage('转接请求已发送');
+        setTransferMessage(t('transfer_sent'));
         setTimeout(() => {
           setShowTransferModal(false);
           setTransferMessage('');
@@ -127,10 +127,10 @@ export function StaffChatWindow({
           setTransferReason('');
         }, 1500);
       } else {
-        setTransferMessage(result.error || '转接失败');
+        setTransferMessage(result.error || t('transfer_failed'));
       }
     } catch {
-      setTransferMessage('转接失败');
+      setTransferMessage(t('transfer_failed'));
     }
   };
 
@@ -236,10 +236,10 @@ export function StaffChatWindow({
                   color: '#1890ff',
                   fontSize: '12px',
                 }}
-                title="会话转接"
+                title={t('session_transfer')}
               >
                 <ArrowRightLeft size={12} />
-                转接
+                {t('transfer')}
               </button>
             )}
             {onEndSession && session?.status === 'active' && (
@@ -338,7 +338,7 @@ export function StaffChatWindow({
                 marginBottom: '20px',
               }}
             >
-              <h3 style={{ margin: 0, fontSize: '16px' }}>会话转接</h3>
+              <h3 style={{ margin: 0, fontSize: '16px' }}>{t('session_transfer')}</h3>
               <button
                 onClick={() => {
                   setShowTransferModal(false);
@@ -357,7 +357,7 @@ export function StaffChatWindow({
 
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
-                选择目标客服
+                {t('select_target_staff')}
               </label>
               <select
                 value={selectedStaffId || ''}
@@ -370,7 +370,7 @@ export function StaffChatWindow({
                   fontSize: '14px',
                 }}
               >
-                <option value="">请选择客服</option>
+                <option value="">{t('select_staff')}</option>
                 {staffList
                   .filter((staff) => staff.id !== currentStaffId)
                   .map((staff) => (
@@ -383,12 +383,12 @@ export function StaffChatWindow({
 
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
-                转接原因 <span style={{ color: '#ff4d4f' }}>*</span>
+                {t('transfer_reason_label')} <span style={{ color: '#ff4d4f' }}>*</span>
               </label>
               <textarea
                 value={transferReason}
                 onChange={(e) => setTransferReason(e.target.value)}
-                placeholder="请输入转接原因，以便对方了解情况"
+                placeholder={t('transfer_reason_placeholder')}
                 style={{
                   width: '100%',
                   padding: '8px',
@@ -406,7 +406,7 @@ export function StaffChatWindow({
             {recentRejections.length > 0 && (
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ fontSize: '13px', fontWeight: 500, color: '#faad14', marginBottom: '8px' }}>
-                  ️ 最近的拒绝记录
+                  {t('recent_reject_records')}
                 </div>
                 {recentRejections.slice(0, 2).map((rejection, index) => (
                   <div
@@ -421,7 +421,7 @@ export function StaffChatWindow({
                     }}
                   >
                     <div style={{ marginBottom: '4px', color: '#666' }}>
-                      被客服 <strong>{rejection.to_staff_name || rejection.to_staff_id}</strong> 拒绝
+                      {t('rejected_by_staff')}<strong>{rejection.to_staff_name || rejection.to_staff_id}</strong>{t('rejected')}
                     </div>
                     <div style={{ color: '#999' }}>
                       拒绝原因: {rejection.reject_reason}

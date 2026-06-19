@@ -9,7 +9,11 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-export function PWAInstallPrompt() {
+interface PWAInstallPromptProps {
+  t?: (key: string) => string;
+}
+
+export function PWAInstallPrompt({ t = (key: string) => key }: PWAInstallPromptProps) {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
@@ -116,12 +120,10 @@ export function PWAInstallPrompt() {
       <div style={textStyle}>
         {isIOS ? (
           <>
-            📱 点击
-            <span style={{ fontWeight: 500 }}>分享</span>
-            → 添加到主屏幕
+            {t('pwa_install_prompt')}
           </>
         ) : (
-          <>📱 添加到桌面，随时咨询</>
+          <>{t('pwa_install_prompt')}</>
         )}
       </div>
       {!isIOS && deferredPrompt && (
@@ -130,7 +132,7 @@ export function PWAInstallPrompt() {
         </button>
       )}
       <button style={secondaryButtonStyle} onClick={handleDismiss}>
-        暂不
+        {t('pwa_not_now')}
       </button>
     </div>
   );

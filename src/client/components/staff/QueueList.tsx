@@ -11,9 +11,10 @@ interface QueueListProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectSession?: (sessionId: string) => void;
+  t?: (key: string) => string;
 }
 
-export function QueueList({ isOpen, onClose, onSelectSession }: QueueListProps) {
+export function QueueList({ isOpen, onClose, onSelectSession, t = (s: string) => s }: QueueListProps) {
   const [queueItems, setQueueItems] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -213,7 +214,7 @@ export function QueueList({ isOpen, onClose, onSelectSession }: QueueListProps) 
         <div style={headerStyle}>
           <div style={titleStyle}>
             <Clock size={20} />
-            任务队列
+            {t('task_queue')}
             {waitingCount > 0 && (
               <span
                 style={{
@@ -225,7 +226,7 @@ export function QueueList({ isOpen, onClose, onSelectSession }: QueueListProps) 
                   fontWeight: 500,
                 }}
               >
-                {waitingCount} 个等待
+                {waitingCount} {t('queue_waiting_suffix')}
               </span>
             )}
           </div>
@@ -234,10 +235,10 @@ export function QueueList({ isOpen, onClose, onSelectSession }: QueueListProps) 
               style={refreshBtnStyle}
               onClick={loadQueue}
               disabled={loading}
-              title="刷新"
+              title={t('refresh')}
             >
               <RefreshCw size={14} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
-              刷新
+              {t('refresh')}
             </button>
             <button style={closeBtnStyle} onClick={onClose}>
               <X size={20} />
@@ -248,11 +249,11 @@ export function QueueList({ isOpen, onClose, onSelectSession }: QueueListProps) 
         {/* Content */}
         <div style={contentStyle}>
           {loading && queueItems.length === 0 ? (
-            <div style={emptyStyle}>加载中...</div>
+            <div style={emptyStyle}>{t('loading')}</div>
           ) : error ? (
             <div style={{ ...emptyStyle, color: '#ff4d4f' }}>{error}</div>
           ) : queueItems.length === 0 ? (
-            <div style={emptyStyle}>暂无排队中的任务</div>
+            <div style={emptyStyle}>{t('no_queue_items')}</div>
           ) : (
             <>
               {/* Sessions Section */}
@@ -265,7 +266,7 @@ export function QueueList({ isOpen, onClose, onSelectSession }: QueueListProps) 
                     marginBottom: '8px',
                   }}
                 >
-                  我的会话 ({queueItems.length})
+                  {t('my_sessions')} ({queueItems.length})
                 </div>
                   {queueItems.map((item) => (
               <div
@@ -310,7 +311,7 @@ export function QueueList({ isOpen, onClose, onSelectSession }: QueueListProps) 
                 {item.taskStatus !== 'in_progress' && item.waitMinutes > 0 && (
                   <div style={timeStyle}>
                     <Clock size={12} />
-                    {item.waitMinutes}分钟
+                    {item.waitMinutes}{t('minutes_unit')}
                   </div>
                 )}
               </div>

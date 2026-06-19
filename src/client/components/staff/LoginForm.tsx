@@ -11,9 +11,10 @@ interface LoginFormProps {
   error: string | null;
   remainingAttempts: number | null;
   isLoading: boolean;
+  t?: (key: string) => string;
 }
 
-export function LoginForm({ onLogin, error, remainingAttempts, isLoading }: LoginFormProps) {
+export function LoginForm({ onLogin, error, remainingAttempts, isLoading, t = (s: string) => s }: LoginFormProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
@@ -115,8 +116,8 @@ export function LoginForm({ onLogin, error, remainingAttempts, isLoading }: Logi
   return (
     <div style={containerStyle}>
       <div style={cardStyle}>
-        <h1 style={titleStyle}>🔐 客服后台</h1>
-        <p style={subtitleStyle}>请输入账号密码登录客服工作台</p>
+        <h1 style={titleStyle}>{t('staff_login_title_page')}</h1>
+        <p style={subtitleStyle}>{t('login_desc')}</p>
 
         <form onSubmit={handleSubmit}>
           {error && (
@@ -124,7 +125,7 @@ export function LoginForm({ onLogin, error, remainingAttempts, isLoading }: Logi
               <div>{error}</div>
               {remainingAttempts !== null && remainingAttempts > 0 && (
                 <div style={remainingStyle}>
-                  剩余尝试次数: {remainingAttempts}
+                  {t('remaining_attempts')}: {remainingAttempts}
                 </div>
               )}
             </div>
@@ -132,14 +133,14 @@ export function LoginForm({ onLogin, error, remainingAttempts, isLoading }: Logi
 
           {remainingAttempts === 0 && (
             <div style={warningStyle}>
-              尝试次数过多，请 10 分钟后重试
+              {t('too_many_attempts')}
             </div>
           )}
 
           <div style={inputContainerStyle}>
             <input
               type="text"
-              placeholder="用户名"
+              placeholder={t('please_enter_username')}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               disabled={isLoading}
@@ -151,7 +152,7 @@ export function LoginForm({ onLogin, error, remainingAttempts, isLoading }: Logi
           <div style={inputContainerStyle}>
             <input
               type="password"
-              placeholder="密码"
+              placeholder={t('please_enter_password')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={isLoading}
@@ -182,10 +183,10 @@ export function LoginForm({ onLogin, error, remainingAttempts, isLoading }: Logi
                     strokeDashoffset="0"
                   />
                 </svg>
-                登录中...
+                {t('logging_in')}
               </span>
             ) : (
-              '登录'
+              t('login')
             )}
           </button>
         </form>
