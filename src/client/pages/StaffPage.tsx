@@ -9,6 +9,7 @@ import { MessageCircle, Users, User, LogOut, Code2, Settings, ArrowRightLeft, XC
 import { useStaffStore } from '@client/stores/staffStore';
 import { SessionList } from '@client/components/staff/SessionList';
 import { StaffChatWindow } from '@client/components/staff/StaffChatWindow';
+import type { VisitorFieldDef } from '@client/components/staff/StaffChatWindow';
 import { QueueList } from '@client/components/staff/QueueList';
 import { StaffManagement } from '@client/components/staff/StaffManagement';
 import { StaffCode } from '@client/components/staff/StaffCode';
@@ -98,6 +99,7 @@ export function StaffPage() {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [currentPage, setCurrentPage] = useState<'home' | 'staff' | 'code' | 'settings' | 'visitorFields'>('home');
   const [staffList, setStaffList] = useState<{ id: number; name: string; username: string }[]>([]);
+  const [visitorFieldDefs, setVisitorFieldDefs] = useState<VisitorFieldDef[]>([]);
   const [profileForm, setProfileForm] = useState({
     name: '',
     password: '',
@@ -170,6 +172,9 @@ export function StaffPage() {
     loadSessions();
     connectSSE();
     initFromUrl();
+    
+    // Fetch visitor field definitions for custom param display labels
+    fetchVisitorFieldDefs();
     
     // Start polling for pending transfer requests
     fetchPendingTransfers();
@@ -246,6 +251,29 @@ export function StaffPage() {
       }
     } catch (error) {
       console.error('Failed to fetch staff list:', error);
+    }
+  };
+
+  const fetchVisitorFieldDefs = async () => {
+    try {
+      const response = await fetch('/api/staff/visitor-fields', {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+        },
+      });
+      const result = await response.json();
+      if (result.success) {
+        // 只需要自定义字段定义（固定字段已在VisitorInfoPanel中硬编码显示）
+        const defs: VisitorFieldDef[] = (result.data.customFields || []).map((f: any) => ({
+          fieldKey: f.fieldKey,
+          label: f.label,
+          type: f.type,
+          isFixed: false,
+        }));
+        setVisitorFieldDefs(defs);
+      }
+    } catch (error) {
+      console.error('Failed to fetch visitor field definitions:', error);
     }
   };
 
@@ -1217,6 +1245,7 @@ export function StaffPage() {
                 currentStaffId={userInfo?.userId}
                 staffList={staffList}
                 t={t}
+                visitorFieldDefs={visitorFieldDefs}
               />
             </div>
           </>

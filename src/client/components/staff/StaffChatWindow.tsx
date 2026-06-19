@@ -9,6 +9,13 @@ import { TopicHeader } from '@client/components/chat/TopicHeader';
 import { Trash2, LogOut, ArrowRightLeft, X } from 'lucide-react';
 import { useState } from 'react';
 
+export interface VisitorFieldDef {
+  fieldKey: string;
+  label: string;
+  type: string;
+  isFixed?: boolean;
+}
+
 interface StaffChatWindowProps {
   session: Session | null;
   messages: Message[];
@@ -28,6 +35,7 @@ interface StaffChatWindowProps {
   currentStaffId?: number;
   staffList?: { id: number; name: string; username: string }[];
   t?: (key: string) => string;
+  visitorFieldDefs?: VisitorFieldDef[];
 }
 
 export function StaffChatWindow({
@@ -49,6 +57,7 @@ export function StaffChatWindow({
   currentStaffId,
   staffList = [],
   t = (key: string) => key,
+  visitorFieldDefs,
 }: StaffChatWindowProps) {
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
@@ -262,7 +271,7 @@ export function StaffChatWindow({
         </div>
 
         {/* 访客信息面板 */}
-        {session && <VisitorInfoPanel session={session} />}
+        {session && <VisitorInfoPanel session={session} fieldDefs={visitorFieldDefs} />}
 
         {session && (
           <TopicHeader
@@ -489,8 +498,16 @@ export function StaffChatWindow({
  * Visitor Info Panel - 访客详细信息面板
  * 显示访客的：用户名、邮箱、手机、来源地址、进入链接、设备、IP等
  */
-function VisitorInfoPanel({ session }: { session: Session }) {
+function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fieldDefs?: VisitorFieldDef[] }) {
   const [expanded, setExpanded] = useState(false);
+
+  // 构建字段定义映射表（fieldKey → label, type）
+  const fieldDefMap = new Map<string, { label: string; type: string }>();
+  if (fieldDefs) {
+    for (const def of fieldDefs) {
+      fieldDefMap.set(def.fieldKey, { label: def.label, type: def.type });
+    }
+  }
   
   const hasVisitorInfo = session.visitorName || session.email || session.phone || session.pid || session.fromUrl || session.referer || session.ip || session.userAgent || session.device || session.lang || session.avatar || (session.params && Object.keys(session.params).length > 0);
   
@@ -620,11 +637,39 @@ function VisitorInfoPanel({ session }: { session: Session }) {
             <div style={{ ...itemStyle, gridColumn: '1 / -1' }}>
               <div style={labelStyle}>📝 自定义参数</div>
               <div style={{ ...valueStyle, fontSize: '11px' }}>
-                {Object.entries(session.params).map(([key, value]) => (
-                  <div key={key} style={{ marginBottom: '2px' }}>
-                    <strong>{key}</strong>: {value}
-                  </div>
-                ))}
+                {Object.entries(session.params).map(([key, value]) => {
+                  const def = fieldDefMap.get(key);
+                  const displayLabel = def ? def.label : key; // 有定义用label，无定义用原始key
+                  const displayType = def ? def.type : 'text';
+                  
+                  if (displayType === 'url' && value) {
+                    return (
+                      <div key={key} style={{ marginBottom: '2px' }}>
+                        <strong>{displayLabel}</strong>: {' '}
+                        <a href={value} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff' }}>
+                          {value.length > 50 ? value.substring(0, 50) + '...' : value}
+                        </a>
+                      </div>
+                    );
+                  }
+                  if (displayType === 'json' && value) {
+                    let parsed = value;
+                    try { parsed = JSON.stringify(JSON.parse(value), null, 2); } catch {}
+                    return (
+                      <div key={key} style={{ marginBottom: '4px' }}>
+                        <strong>{displayLabel}</strong>:
+                        <pre style={{ margin: '2px 0 0 0', padding: '4px 6px', backgroundColor: '#f0f0f0', borderRadius: '3px', fontSize: '10px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                          {typeof parsed === 'string' ? parsed : value}
+                        </pre>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div key={key} style={{ marginBottom: '2px' }}>
+                      <strong>{displayLabel}</strong>: {value}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
