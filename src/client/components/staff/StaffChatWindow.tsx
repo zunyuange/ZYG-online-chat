@@ -87,34 +87,6 @@ export function StaffChatWindow({
     gap: '8px',
   };
 
-  // ===================== 来源信息提取 =====================
-  const extractDomain = (url?: string): string => {
-    if (!url) return '';
-    try {
-      const u = new URL(url);
-      // 去掉 www. 前缀
-      return u.hostname.replace(/^www\./, '');
-    } catch {
-      // 如果解析失败，尝试截取域名部分
-      const m = url.match(/^(?:https?:\/\/)?([^/\s?#]+)/);
-      return m ? m[1].replace(/^www\./, '') : url.substring(0, 40);
-    }
-  };
-  const extractPath = (url?: string): string => {
-    if (!url) return '';
-    try {
-      const u = new URL(url);
-      return u.pathname + u.search + u.hash;
-    } catch {
-      return '';
-    }
-  };
-
-  const targetDomain = extractDomain(session?.fromUrl || '');
-  const targetPath = extractPath(session?.fromUrl || '');
-  const refererDomain = extractDomain(session?.referer || '');
-  const hasSourceInfo = targetDomain || refererDomain;
-
   const statusDotStyle = (status: string): React.CSSProperties => ({
     width: '8px',
     height: '8px',
@@ -202,110 +174,106 @@ export function StaffChatWindow({
   return (
     <>
       <div style={containerStyle}>
-        <div style={{
-          ...headerStyle,
-          flexDirection: 'column',
-          padding: '10px 14px',
-          gap: hasSourceInfo ? '6px' : '0',
-        }}>
-          {/* 第一行：访客名称 + 时间 */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-            <div style={infoStyle}>
-              <span style={statusDotStyle(session.status)}></span>
-              <span style={{ fontWeight: 500, fontSize: '15px' }}>{session.visitorName}</span>
-              <span style={{ color: '#999', fontSize: '12px' }}>
-                {new Date(session.createdAt).toLocaleString('zh-CN', {
-                  month: 'numeric',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              {session.unreadByStaff > 0 && (
-                <span style={{ backgroundColor: '#ff4d4f', color: '#fff', padding: '2px 8px', borderRadius: '10px', fontSize: '12px' }}>
-                  {session.unreadByStaff} {t('unread')}
-                </span>
-              )}
-              {onClearMessages && messages.length > 0 && (
-                <button onClick={onClearMessages}
-                  style={{ padding: '4px 8px', backgroundColor: 'transparent', border: '1px solid #ff4d4f', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: '#ff4d4f', fontSize: '12px' }}
-                  title={t('clear_messages')}
-                >
-                  <Trash2 size={12} />{t('clear')}
-                </button>
-              )}
-              {currentStaffId && session?.assignedStaffId === currentStaffId && session?.status === 'active' && staffList.length > 0 && (
-                <button onClick={() => { setShowTransferModal(true); loadRecentRejections(); }}
-                  style={{ padding: '4px 8px', backgroundColor: 'transparent', border: '1px solid #1890ff', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: '#1890ff', fontSize: '12px' }}
-                  title="会话转接"
-                >
-                  <ArrowRightLeft size={12} />转接
-                </button>
-              )}
-              {onEndSession && session?.status === 'active' && (
-                <button onClick={onEndSession}
-                  style={{ padding: '4px 8px', backgroundColor: '#ff4d4f', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: '#fff', fontSize: '12px' }}
-                  title={t('end_session')}
-                >
-                  <LogOut size={12} />{t('end')}
-                </button>
-              )}
-            </div>
+        <div style={headerStyle}>
+          <div style={infoStyle}>
+            <span style={statusDotStyle(session.status)}></span>
+            <span style={{ fontWeight: 500, fontSize: '15px' }}>{session.visitorName}</span>
+            <span style={{ color: '#999', fontSize: '12px' }}>
+              {new Date(session.createdAt).toLocaleString('zh-CN', {
+                month: 'numeric',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </span>
           </div>
-
-          {/* 第二行：来源信息（目标域名 ← 来源域名） */}
-          {hasSourceInfo && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '12px',
-              color: '#888',
-              width: '100%',
-            }}>
-              <span style={{ flexShrink: 0, color: '#bbb', fontSize: '11px' }}>📍 来源</span>
-              {targetDomain && (
-                <span style={{
-                  backgroundColor: '#e6f7ff',
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {session.unreadByStaff > 0 && (
+              <span
+                style={{
+                  backgroundColor: '#ff4d4f',
+                  color: '#fff',
+                  padding: '2px 8px',
+                  borderRadius: '10px',
+                  fontSize: '12px',
+                }}
+              >
+                {session.unreadByStaff} {t('unread')}
+              </span>
+            )}
+            {onClearMessages && messages.length > 0 && (
+              <button
+                onClick={onClearMessages}
+                style={{
+                  padding: '4px 8px',
+                  backgroundColor: 'transparent',
+                  border: '1px solid #ff4d4f',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  color: '#ff4d4f',
+                  fontSize: '12px',
+                }}
+                title={t('clear_messages')}
+              >
+                <Trash2 size={12} />
+                {t('clear')}
+              </button>
+            )}
+            {currentStaffId && session?.assignedStaffId === currentStaffId && session?.status === 'active' && staffList.length > 0 && (
+              <button
+                onClick={() => {
+                  setShowTransferModal(true);
+                  loadRecentRejections();
+                }}
+                style={{
+                  padding: '4px 8px',
+                  backgroundColor: 'transparent',
+                  border: '1px solid #1890ff',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
                   color: '#1890ff',
-                  padding: '2px 8px',
+                  fontSize: '12px',
+                }}
+                title="会话转接"
+              >
+                <ArrowRightLeft size={12} />
+                转接
+              </button>
+            )}
+            {onEndSession && session?.status === 'active' && (
+              <button
+                onClick={onEndSession}
+                style={{
+                  padding: '4px 8px',
+                  backgroundColor: '#ff4d4f',
+                  border: 'none',
                   borderRadius: '4px',
-                  fontSize: '11px',
-                  maxWidth: '200px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  cursor: 'default',
-                }} title={session?.fromUrl || ''}>
-                  🔗 {targetDomain}{targetPath && targetPath.length > 1 ? targetPath.substring(0, 30) + (targetPath.length > 30 ? '…' : '') : ''}
-                </span>
-              )}
-              {targetDomain && refererDomain && (
-                <span style={{ color: '#ccc', fontSize: '10px' }}>←</span>
-              )}
-              {refererDomain && (
-                <span style={{
-                  backgroundColor: '#fff7e6',
-                  color: '#d46b08',
-                  padding: '2px 8px',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  maxWidth: '180px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  cursor: 'default',
-                }} title={session?.referer || ''}>
-                  📎 {refererDomain}
-                </span>
-              )}
-            </div>
-          )}
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  color: '#fff',
+                  fontSize: '12px',
+                }}
+                title={t('end_session')}
+              >
+                <LogOut size={12} />
+                {t('end')}
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* 访客信息面板 */}
+        {/* 来源面板 — 仅显示进入链接 + 来源地址 */}
+        {session && <SourcePanel session={session} />}
+
+        {/* 访客信息面板 — 竖屏单列，隐藏进入链接/来源地址，分区显示 */}
         {session && <VisitorInfoPanel session={session} fieldDefs={visitorFieldDefs} />}
 
         {session && (
@@ -529,118 +497,31 @@ export function StaffChatWindow({
   );
 }
 
+// ===================== 域名提取工具函数 =====================
+function extractUrlParts(url?: string): { domain: string; path: string } {
+  if (!url) return { domain: '', path: '' };
+  try {
+    const u = new URL(url);
+    return { domain: u.hostname.replace(/^www\\./, ''), path: u.pathname + u.search + u.hash };
+  } catch {
+    return { domain: url, path: '' };
+  }
+}
+
 /**
- * Visitor Info Panel - 访客详细信息面板
- * 显示访客的：用户名、邮箱、手机、来源地址、进入链接、设备、IP等
+ * 来源面板 — 仅显示「进入链接」+「来源地址」，紧凑模式
  */
-function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fieldDefs?: VisitorFieldDef[] }) {
+function SourcePanel({ session }: { session: Session }) {
   const [expanded, setExpanded] = useState(false);
+  const fromUrl = session.fromUrl || '';
+  const referer = session.referer || '';
 
-  // ===================== 动态字段渲染 =====================
-  // 1. 构建默认固定字段定义（API未返回时的兜底，带专属图标）
-  interface FixedFieldDef { fieldKey: string; label: string; type: string; icon: string; spanFull: boolean }
-  const defaultFixedDefs: FixedFieldDef[] = [
-    { fieldKey: 'userName', label: '姓名',    type: 'text', icon: '👤', spanFull: false },
-    { fieldKey: 'email',    label: '邮箱',    type: 'text', icon: '📧', spanFull: false },
-    { fieldKey: 'phone',    label: '手机',    type: 'text', icon: '📱', spanFull: false },
-    { fieldKey: 'pid',      label: '用户ID',  type: 'text', icon: '🆔', spanFull: false },
-    { fieldKey: 'ip',       label: 'IP地址',  type: 'text', icon: '🌐', spanFull: false },
-    { fieldKey: 'fromUrl',  label: '进入链接', type: 'url', icon: '🔗', spanFull: true  },
-    { fieldKey: 'referer',  label: '来源地址', type: 'url', icon: '📎', spanFull: true  },
-    { fieldKey: 'userAgent',label: '浏览器',  type: 'text', icon: '💻', spanFull: true  },
-    { fieldKey: 'device',   label: '设备',    type: 'text', icon: '📱', spanFull: false },
-    { fieldKey: 'lang',     label: '语言',    type: 'text', icon: '🌍', spanFull: false },
-    { fieldKey: 'avatar',   label: '头像',    type: 'url', icon: '🖼️', spanFull: false },
-  ];
-
-  // 如果有API数据就用API的，否则用默认定义（API会覆盖同key的默认值）
-  const fieldDefMap = new Map<string, { label: string; type: string; isFixed: boolean }>();
-  // 先塞入默认值
-  for (const d of defaultFixedDefs) {
-    fieldDefMap.set(d.fieldKey, { label: d.label, type: d.type, isFixed: true });
-  }
-  // API数据覆盖（包括自定义字段）
-  if (fieldDefs) {
-    for (const def of fieldDefs) {
-      fieldDefMap.set(def.fieldKey, { label: def.label, type: def.type, isFixed: def.isFixed ?? false });
-    }
-  }
-
-  // 2. 构建 session 固定字段值映射
-  const sessionFixedValues: Record<string, string | undefined> = {
-    userName: session.visitorName,
-    email: session.email,
-    phone: session.phone,
-    pid: session.pid,
-    ip: session.ip,
-    fromUrl: session.fromUrl,
-    referer: session.referer,
-    userAgent: session.userAgent,
-    device: session.device,
-    lang: session.lang,
-    avatar: session.avatar,
-  };
-
-  // 3. 收集所有有值的字段（固定字段 + 自定义参数）
-  interface FieldItem {
-    fieldKey: string;
-    label: string;
-    type: string;
-    value: string;
-    isFixed: boolean;
-    icon?: string;
-    spanFull?: boolean;
-  }
-  const fixedFields: FieldItem[] = [];
-  const customFields: FieldItem[] = [];
-
-  // 先处理固定字段（按定义顺序，带专属图标）
-  for (const df of defaultFixedDefs) {
-    const value = sessionFixedValues[df.fieldKey];
-    if (value) {
-      const def = fieldDefMap.get(df.fieldKey)!;
-      fixedFields.push({
-        fieldKey: df.fieldKey,
-        label: def.label,
-        type: def.type,
-        value,
-        isFixed: true,
-        icon: df.icon,
-        spanFull: df.spanFull,
-      });
-    }
-  }
-
-  // 再处理自定义字段（从 session.params 中）
-  if (session.params) {
-    for (const [key, value] of Object.entries(session.params)) {
-      const def = fieldDefMap.get(key);
-      const label = def ? def.label : key;
-      const type = def ? def.type : 'text';
-      customFields.push({
-        fieldKey: key,
-        label,
-        type,
-        value,
-        isFixed: false,
-        spanFull: type === 'json' || type === 'url',
-      });
-    }
-  }
-
-  const allFields = [...fixedFields, ...customFields];
-
-  // 4. 头像字段用专门的图标渲染
-  const avatarField = fixedFields.find(f => f.fieldKey === 'avatar');
-  const nonAvatarFixedFields = fixedFields.filter(f => f.fieldKey !== 'avatar');
-  const hasBothSections = nonAvatarFixedFields.length > 0 && customFields.length > 0;
-
-  if (allFields.length === 0) return null;
+  if (!fromUrl && !referer) return null;
 
   const panelStyle: React.CSSProperties = {
-    backgroundColor: '#f5f5f5',
-    borderBottom: '1px solid #e8e8e8',
-    padding: '8px 12px',
+    backgroundColor: '#f0f5ff',
+    borderBottom: '1px solid #d6e4ff',
+    padding: '6px 12px',
     fontSize: '12px',
   };
 
@@ -652,106 +533,219 @@ function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fieldDefs?
     color: '#666',
   };
 
-  const gridStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '6px 12px',
+  return (
+    <div style={panelStyle}>
+      <div style={headerRowStyle} onClick={() => setExpanded(!expanded)}>
+        <span>📍 来源</span>
+        <span style={{ fontSize: '10px' }}>{expanded ? '▲' : '▼'}</span>
+      </div>
+
+      {expanded && (
+        <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px solid #d6e4ff' }}>
+          {fromUrl && (
+            <SourceUrlRow
+              label="🔗 进入链接"
+              url={fromUrl}
+              color="#1890ff"
+              bgColor="#e6f7ff"
+              borderColor="#91d5ff"
+            />
+          )}
+          {referer && (
+            <SourceUrlRow
+              label="📎 来源地址"
+              url={referer}
+              color="#d46b08"
+              bgColor="#fff7e6"
+              borderColor="#ffd591"
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 来源面板中单条 URL 行组件 */
+function SourceUrlRow({ label, url, color, bgColor, borderColor }: {
+  label: string; url: string; color: string; bgColor: string; borderColor: string;
+}) {
+  const { domain, path } = extractUrlParts(url);
+  return (
+    <div style={{
+      marginBottom: '4px',
+      padding: '6px 8px',
+      backgroundColor: bgColor,
+      borderRadius: '4px',
+      border: `1px solid ${borderColor}`,
+    }}>
+      <div style={{ fontSize: '11px', color: '#999', marginBottom: '2px' }}>{label}</div>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ color, fontWeight: 600, fontSize: '13px', display: 'block', marginBottom: '2px' }}
+      >
+        {domain || url}
+      </a>
+      {path && path.length > 1 && (
+        <div style={{ color: '#aaa', fontSize: '10px', wordBreak: 'break-all' }}>
+          {path.length > 60 ? path.substring(0, 60) + '…' : path}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 访客信息面板 — 竖屏单列布局，分区显示（系统固定字段 / 自定义字段）
+ * 注意：fromUrl 和 referer 已在「来源」面板显示，此处隐藏
+ */
+function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fieldDefs?: VisitorFieldDef[] }) {
+  const [expanded, setExpanded] = useState(false);
+
+  // ═══════════════ 字段定义 ═══════════════
+  interface FixedFieldDef { fieldKey: string; label: string; type: string; icon: string }
+  const defaultFixedDefs: FixedFieldDef[] = [
+    { fieldKey: 'userName', label: '姓名',    type: 'text', icon: '👤' },
+    { fieldKey: 'email',    label: '邮箱',    type: 'text', icon: '📧' },
+    { fieldKey: 'phone',    label: '手机',    type: 'text', icon: '📱' },
+    { fieldKey: 'pid',      label: '用户ID',  type: 'text', icon: '🆔' },
+    { fieldKey: 'ip',       label: 'IP地址',  type: 'text', icon: '🌐' },
+    // fromUrl / referer 不在此显示（已在来源面板）
+    { fieldKey: 'userAgent',label: '浏览器',  type: 'text', icon: '💻' },
+    { fieldKey: 'device',   label: '设备',    type: 'text', icon: '📱' },
+    { fieldKey: 'lang',     label: '语言',    type: 'text', icon: '🌍' },
+    { fieldKey: 'avatar',   label: '头像',    type: 'url', icon: '🖼️' },
+  ];
+
+  const fieldDefMap = new Map<string, { label: string; type: string; isFixed: boolean }>();
+  for (const d of defaultFixedDefs) {
+    fieldDefMap.set(d.fieldKey, { label: d.label, type: d.type, isFixed: true });
+  }
+  if (fieldDefs) {
+    for (const def of fieldDefs) {
+      fieldDefMap.set(def.fieldKey, { label: def.label, type: def.type, isFixed: def.isFixed ?? false });
+    }
+  }
+
+  // ═══════════════ session 固定字段值 ═══════════════
+  const sessionFixedValues: Record<string, string | undefined> = {
+    userName: session.visitorName,
+    email: session.email,
+    phone: session.phone,
+    pid: session.pid,
+    ip: session.ip,
+    userAgent: session.userAgent,
+    device: session.device,
+    lang: session.lang,
+    avatar: session.avatar,
+  };
+
+  // ═══════════════ 收集字段 ═══════════════
+  interface FieldItem { fieldKey: string; label: string; type: string; value: string; icon?: string }
+  const fixedFields: FieldItem[] = [];
+  const customFields: FieldItem[] = [];
+
+  for (const df of defaultFixedDefs) {
+    const value = sessionFixedValues[df.fieldKey];
+    if (value) {
+      const def = fieldDefMap.get(df.fieldKey)!;
+      fixedFields.push({ fieldKey: df.fieldKey, label: def.label, type: def.type, value, icon: df.icon });
+    }
+  }
+
+  if (session.params) {
+    for (const [key, value] of Object.entries(session.params)) {
+      const def = fieldDefMap.get(key);
+      customFields.push({
+        fieldKey: key,
+        label: def ? def.label : key,
+        type: def ? def.type : 'text',
+        value,
+      });
+    }
+  }
+
+  const allFields = [...fixedFields, ...customFields];
+  if (allFields.length === 0) return null;
+
+  // ═══════════════ 样式 ═══════════════
+  const panelStyle: React.CSSProperties = {
+    backgroundColor: '#fafafa',
+    borderBottom: '1px solid #e8e8e8',
+    padding: '8px 14px',
+    fontSize: '12px',
+  };
+
+  const headerRowStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    cursor: 'pointer',
+    color: '#666',
+  };
+
+  const listStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
     marginTop: '8px',
     paddingTop: '8px',
     borderTop: '1px solid #e8e8e8',
   };
 
-  const itemStyle: React.CSSProperties = {
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
+  const fieldRowStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '12px',
+    padding: '6px 8px',
+    backgroundColor: '#fff',
+    borderRadius: '4px',
+    border: '1px solid #f0f0f0',
   };
 
-  const labelStyle: React.CSSProperties = {
+  const labelCellStyle: React.CSSProperties = {
+    flexShrink: 0,
+    width: '80px',
     color: '#999',
-    fontSize: '11px',
-  };
-
-  const valueStyle: React.CSSProperties = {
-    color: '#333',
     fontSize: '12px',
+    lineHeight: '20px',
+  };
+
+  const valueCellStyle: React.CSSProperties = {
+    flex: 1,
+    minWidth: 0,
+    color: '#333',
+    fontSize: '13px',
     wordBreak: 'break-all',
+    lineHeight: '20px',
   };
 
-  const sectionLabelStyle: React.CSSProperties = {
-    gridColumn: '1 / -1',
+  const sectionStyle: React.CSSProperties = {
     color: '#bbb',
-    fontSize: '10px',
-    paddingTop: '6px',
+    fontSize: '11px',
+    padding: '8px 0 2px 0',
     borderTop: '1px dashed #e0e0e0',
-    marginBottom: '2px',
   };
 
-  // 5. 提取域名辅助函数
-  const extractDomain = (url: string): { domain: string; path: string } => {
-    try {
-      const u = new URL(url);
-      return { domain: u.hostname.replace(/^www\./, ''), path: u.pathname + u.search + u.hash };
-    } catch {
-      return { domain: url, path: '' };
-    }
-  };
-
-  const renderFieldValue = (field: FieldItem) => {
+  // ═══════════════ 渲染 ═══════════════
+  const renderValue = (field: FieldItem) => {
     if (field.fieldKey === 'avatar') {
-      return (
-        <a href={field.value} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff', fontSize: '11px' }}>
-          查看头像
-        </a>
-      );
-    }
-    // 进入链接 / 来源地址 — 域名突出 + 路径缩写显示
-    if (field.fieldKey === 'fromUrl' || field.fieldKey === 'referer') {
-      const { domain, path } = extractDomain(field.value);
-      const isTarget = field.fieldKey === 'fromUrl';
-      return (
-        <div style={{ fontSize: '12px' }}>
-          <a href={field.value} target="_blank" rel="noopener noreferrer"
-            style={{
-              color: isTarget ? '#1890ff' : '#d46b08',
-              fontWeight: 500,
-              display: 'block',
-              marginBottom: '2px',
-            }}>
-            {isTarget ? '🔗 ' : '📎 '}{domain}
-          </a>
-          {path && path.length > 1 && (
-            <span style={{ color: '#aaa', fontSize: '10px', wordBreak: 'break-all' }}>
-              {path.length > 45 ? path.substring(0, 45) + '…' : path}
-            </span>
-          )}
-          <div style={{ marginTop: '2px' }}>
-            <a href={field.value} target="_blank" rel="noopener noreferrer"
-              style={{ color: '#bbb', fontSize: '10px' }}>
-              完整链接 →
-            </a>
-          </div>
-        </div>
-      );
+      return <a href={field.value} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff' }}>查看头像</a>;
     }
     if (field.type === 'url') {
-      return (
-        <a href={field.value} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff', wordBreak: 'break-all' }}>
-          {field.value.length > 50 ? field.value.substring(0, 50) + '...' : field.value}
-        </a>
-      );
+      return <a href={field.value} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff', wordBreak: 'break-all' }}>{field.value.length > 60 ? field.value.substring(0, 60) + '…' : field.value}</a>;
     }
     if (field.type === 'json') {
       let parsed = field.value;
-      try { parsed = JSON.stringify(JSON.parse(field.value), null, 2); } catch { /* 非 JSON 字符串则原样显示 */ }
-      return (
-        <pre style={{ margin: '2px 0 0 0', padding: '4px 6px', backgroundColor: '#f0f0f0', borderRadius: '3px', fontSize: '10px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-          {typeof parsed === 'string' ? parsed : field.value}
-        </pre>
-      );
+      try { parsed = JSON.stringify(JSON.parse(field.value), null, 2); } catch { /* 非 JSON 则原样 */ }
+      return <pre style={{ margin: 0, fontSize: '11px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{typeof parsed === 'string' ? parsed : field.value}</pre>;
     }
     return field.value;
   };
+
+  const hasBothSections = fixedFields.length > 0 && customFields.length > 0;
 
   return (
     <div style={panelStyle}>
@@ -759,46 +753,32 @@ function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fieldDefs?
         <span>📋 访客信息 <span style={{ color: '#999', fontSize: '10px' }}>({allFields.length}项)</span></span>
         <span style={{ fontSize: '10px' }}>{expanded ? '▲' : '▼'}</span>
       </div>
-      
+
       {expanded && (
-        <div style={gridStyle}>
-          {/* 固定字段 — 专用图标 */}
-          {nonAvatarFixedFields.map((field) => (
-            <div key={field.fieldKey} style={{ ...itemStyle, ...(field.spanFull ? { gridColumn: '1 / -1' } : {}) }}>
-              <div style={labelStyle}>{field.icon} {field.label}</div>
-              <div style={{ ...valueStyle, fontSize: field.spanFull ? '11px' : '12px' }}>
-                {renderFieldValue(field)}
-              </div>
+        <div style={listStyle}>
+          {/* ═══ 系统固定字段 ═══ */}
+          {fixedFields.length > 0 && (
+            <div style={sectionStyle}>📌 系统固定字段</div>
+          )}
+          {fixedFields.map((field) => (
+            <div key={field.fieldKey} style={fieldRowStyle}>
+              <span style={labelCellStyle}>{field.icon} {field.label}</span>
+              <span style={valueCellStyle}>{renderValue(field)}</span>
             </div>
           ))}
 
-          {/* 分隔线 + 自定义字段标题 */}
-          {hasBothSections && (
-            <div style={sectionLabelStyle}>🔧 自定义字段</div>
-          )}
-
-          {/* 自定义字段 — 🔧 图标 */}
-          {customFields.length > 0 && !hasBothSections && (
-            <div style={sectionLabelStyle}>🔧 自定义字段</div>
+          {/* ═══ 自定义字段 ═══ */}
+          {customFields.length > 0 && (
+            <div style={{ ...sectionStyle, ...(hasBothSections ? {} : { borderTop: 'none', paddingTop: 0 }) }}>
+              🔧 自定义字段
+            </div>
           )}
           {customFields.map((field) => (
-            <div key={field.fieldKey} style={{ ...itemStyle, ...(field.spanFull ? { gridColumn: '1 / -1' } : {}) }}>
-              <div style={labelStyle}>🔧 {field.label}</div>
-              <div style={{ ...valueStyle, fontSize: field.spanFull ? '11px' : '12px' }}>
-                {renderFieldValue(field)}
-              </div>
+            <div key={field.fieldKey} style={fieldRowStyle}>
+              <span style={labelCellStyle}>🔧 {field.label}</span>
+              <span style={valueCellStyle}>{renderValue(field)}</span>
             </div>
           ))}
-
-          {/* 头像固定字段 — 专属图标 */}
-          {avatarField && (
-            <div style={itemStyle}>
-              <div style={labelStyle}>{avatarField.icon} {avatarField.label}</div>
-              <div style={valueStyle}>
-                {renderFieldValue(avatarField)}
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>
