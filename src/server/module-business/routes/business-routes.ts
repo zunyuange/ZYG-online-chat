@@ -129,8 +129,9 @@ businessRoutes.get('/settings', async (c) => {
       );
     } else {
       // 从认证上下文中获取 businessId
+      // businessId 可能是 0（商家主账号），需要用 !== undefined 判断
       const businessId = c.get('businessId');
-      if (businessId) {
+      if (businessId !== undefined) {
         settings = await db.get(
           'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang FROM staff_users WHERE id = ?',
           [businessId]
@@ -169,32 +170,30 @@ businessRoutes.post('/info', requireAuth, async (c) => {
     const db = getDb();
     const businessId = c.get('businessId');
     
-    let query = 'UPDATE staff_users SET business_name = ?, updated_at = ? WHERE ';
-    let params: unknown[] = [business_name, Date.now()];
+    // businessId 可能是 0（超级管理员/商家主账号），需要用 !== undefined 判断
+    if (businessId !== undefined) {
+      await db.run(
+        'UPDATE staff_users SET business_name = ?, updated_at = ? WHERE id = ?',
+        [business_name, Date.now(), businessId]
+      );
+      return c.json({ success: true });
+    }
     
-    if (businessId) {
-      query += 'id = ?';
-      params.push(businessId);
-    } else {
-      // 从 token 中获取 businessId
-      const authHeader = c.req.header('Authorization');
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7);
-        const result = await verifyToken(token);
-        if (result.valid && result.businessId) {
-          query += 'id = ?';
-          params.push(result.businessId);
-        } else {
-          query += 'business_slug = "default"';
-        }
-      } else {
-        query += 'business_slug = "default"';
+    // 回退：从 token 中获取 businessId
+    const authHeader = c.req.header('Authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const result = await verifyToken(token);
+      if (result.valid && result.businessId !== undefined) {
+        await db.run(
+          'UPDATE staff_users SET business_name = ?, updated_at = ? WHERE id = ?',
+          [business_name, Date.now(), result.businessId]
+        );
+        return c.json({ success: true });
       }
     }
 
-    await db.run(query, params);
-
-    return c.json({ success: true });
+    return c.json({ success: false, error: '无法确定商家身份' }, 400);
   } catch (error) {
     console.error('Update business info error:', error);
     return c.json({ success: false, error: 'Failed to update business info' }, 500);
@@ -211,7 +210,7 @@ businessRoutes.post('/settings', requireAuth, async (c) => {
     let query = 'UPDATE staff_users SET enable_auto_trans = ?, bd_trans_appid = ?, bd_trans_secret = ?, default_lang = ?, updated_at = ? WHERE ';
     let params: unknown[] = [enable_auto_trans ? 1 : 0, bd_trans_appid, bd_trans_secret, default_lang, Date.now()];
     
-    if (business_id) {
+    if (business_id !== undefined) {
       query += 'id = ?';
       params.push(business_id);
     } else if (business_slug) {
@@ -219,7 +218,8 @@ businessRoutes.post('/settings', requireAuth, async (c) => {
       params.push(business_slug);
     } else {
       const businessId = c.get('businessId');
-      if (businessId) {
+      // businessId 可能是 0，需要用 !== undefined 判断
+      if (businessId !== undefined) {
         query += 'id = ?';
         params.push(businessId);
       } else {
@@ -228,7 +228,7 @@ businessRoutes.post('/settings', requireAuth, async (c) => {
         if (authHeader && authHeader.startsWith('Bearer ')) {
           const token = authHeader.substring(7);
           const result = await verifyToken(token);
-          if (result.valid && result.businessId) {
+          if (result.valid && result.businessId !== undefined) {
             query += 'id = ?';
             params.push(result.businessId);
           } else {
