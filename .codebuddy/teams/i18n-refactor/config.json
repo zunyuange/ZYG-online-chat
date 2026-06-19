@@ -1,0 +1,33 @@
+{
+  "name": "i18n-refactor",
+  "leadAgentId": "1cd2c8a13e394907b1f53a5b7e50fc09",
+  "workspacePath": "g:/二开研究项目/CFWorker项目/ZYG-online-chat",
+  "createdAt": "2026-06-19T19:39:14.888Z",
+  "options": {
+    "workspacePath": "g:/二开研究项目/CFWorker项目/ZYG-online-chat",
+    "isAutoTeam": false
+  },
+  "members": [
+    {
+      "memberId": "team-lead@i18n-refactor",
+      "name": "team-lead",
+      "role": "Team Lead - coordinates the team and interacts with the user"
+    },
+    {
+      "memberId": "lang-pack-fixer@i18n-refactor",
+      "name": "lang-pack-fixer",
+      "role": "更新所有外语语言包"
+    },
+    {
+      "memberId": "staff-page-fixer@i18n-refactor",
+      "name": "staff-page-fixer",
+      "role": "修复StaffPage硬编码文本"
+    },
+    {
+      "memberId": "admin-page-fixer@i18n-refactor",
+      "name": "admin-page-fixer",
+      "role": "修复AdminPage硬编码文本"
+    }
+  ],
+  "isAutoTeam": false
+}
