@@ -502,19 +502,20 @@ function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fieldDefs?
   const [expanded, setExpanded] = useState(false);
 
   // ===================== 动态字段渲染 =====================
-  // 1. 构建默认固定字段定义（API未返回时的兜底）
-  const defaultFixedDefs: VisitorFieldDef[] = [
-    { fieldKey: 'userName', label: '姓名', type: 'text', isFixed: true },
-    { fieldKey: 'email', label: '邮箱', type: 'text', isFixed: true },
-    { fieldKey: 'phone', label: '手机', type: 'text', isFixed: true },
-    { fieldKey: 'pid', label: '用户ID', type: 'text', isFixed: true },
-    { fieldKey: 'ip', label: 'IP地址', type: 'text', isFixed: true },
-    { fieldKey: 'fromUrl', label: '进入链接', type: 'url', isFixed: true },
-    { fieldKey: 'referer', label: '来源地址', type: 'url', isFixed: true },
-    { fieldKey: 'userAgent', label: '浏览器', type: 'text', isFixed: true },
-    { fieldKey: 'device', label: '设备', type: 'text', isFixed: true },
-    { fieldKey: 'lang', label: '语言', type: 'text', isFixed: true },
-    { fieldKey: 'avatar', label: '头像', type: 'url', isFixed: true },
+  // 1. 构建默认固定字段定义（API未返回时的兜底，带专属图标）
+  interface FixedFieldDef { fieldKey: string; label: string; type: string; icon: string; spanFull: boolean }
+  const defaultFixedDefs: FixedFieldDef[] = [
+    { fieldKey: 'userName', label: '姓名',    type: 'text', icon: '👤', spanFull: false },
+    { fieldKey: 'email',    label: '邮箱',    type: 'text', icon: '📧', spanFull: false },
+    { fieldKey: 'phone',    label: '手机',    type: 'text', icon: '📱', spanFull: false },
+    { fieldKey: 'pid',      label: '用户ID',  type: 'text', icon: '🆔', spanFull: false },
+    { fieldKey: 'ip',       label: 'IP地址',  type: 'text', icon: '🌐', spanFull: false },
+    { fieldKey: 'fromUrl',  label: '进入链接', type: 'url', icon: '🔗', spanFull: true  },
+    { fieldKey: 'referer',  label: '来源地址', type: 'url', icon: '📎', spanFull: true  },
+    { fieldKey: 'userAgent',label: '浏览器',  type: 'text', icon: '💻', spanFull: true  },
+    { fieldKey: 'device',   label: '设备',    type: 'text', icon: '📱', spanFull: false },
+    { fieldKey: 'lang',     label: '语言',    type: 'text', icon: '🌍', spanFull: false },
+    { fieldKey: 'avatar',   label: '头像',    type: 'url', icon: '🖼️', spanFull: false },
   ];
 
   // 如果有API数据就用API的，否则用默认定义（API会覆盖同key的默认值）
@@ -552,18 +553,26 @@ function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fieldDefs?
     type: string;
     value: string;
     isFixed: boolean;
+    icon?: string;
     spanFull?: boolean;
   }
-  const allFields: FieldItem[] = [];
+  const fixedFields: FieldItem[] = [];
+  const customFields: FieldItem[] = [];
 
-  // 先处理固定字段（按 fieldDefs 顺序或默认顺序）
+  // 先处理固定字段（按定义顺序，带专属图标）
   for (const df of defaultFixedDefs) {
     const value = sessionFixedValues[df.fieldKey];
     if (value) {
       const def = fieldDefMap.get(df.fieldKey)!;
-      // 某些字段内容较长，占整行
-      const spanFull = ['fromUrl', 'referer', 'userAgent'].includes(df.fieldKey);
-      allFields.push({ fieldKey: df.fieldKey, label: def.label, type: def.type, value, isFixed: true, spanFull });
+      fixedFields.push({
+        fieldKey: df.fieldKey,
+        label: def.label,
+        type: def.type,
+        value,
+        isFixed: true,
+        icon: df.icon,
+        spanFull: df.spanFull,
+      });
     }
   }
 
@@ -573,13 +582,23 @@ function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fieldDefs?
       const def = fieldDefMap.get(key);
       const label = def ? def.label : key;
       const type = def ? def.type : 'text';
-      allFields.push({ fieldKey: key, label, type, value, isFixed: false, spanFull: type === 'json' || type === 'url' });
+      customFields.push({
+        fieldKey: key,
+        label,
+        type,
+        value,
+        isFixed: false,
+        spanFull: type === 'json' || type === 'url',
+      });
     }
   }
 
-  // 4. 特殊类型：头像字段
-  const avatarField = allFields.find(f => f.fieldKey === 'avatar');
-  const nonAvatarFields = allFields.filter(f => f.fieldKey !== 'avatar');
+  const allFields = [...fixedFields, ...customFields];
+
+  // 4. 头像字段用专门的图标渲染
+  const avatarField = fixedFields.find(f => f.fieldKey === 'avatar');
+  const nonAvatarFixedFields = fixedFields.filter(f => f.fieldKey !== 'avatar');
+  const hasBothSections = nonAvatarFixedFields.length > 0 && customFields.length > 0;
 
   if (allFields.length === 0) return null;
 
@@ -624,6 +643,15 @@ function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fieldDefs?
     wordBreak: 'break-all',
   };
 
+  const sectionLabelStyle: React.CSSProperties = {
+    gridColumn: '1 / -1',
+    color: '#bbb',
+    fontSize: '10px',
+    paddingTop: '6px',
+    borderTop: '1px dashed #e0e0e0',
+    marginBottom: '2px',
+  };
+
   const renderFieldValue = (field: FieldItem) => {
     if (field.fieldKey === 'avatar') {
       return (
@@ -641,7 +669,7 @@ function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fieldDefs?
     }
     if (field.type === 'json') {
       let parsed = field.value;
-      try { parsed = JSON.stringify(JSON.parse(field.value), null, 2); } catch {}
+      try { parsed = JSON.stringify(JSON.parse(field.value), null, 2); } catch { /* 非 JSON 字符串则原样显示 */ }
       return (
         <pre style={{ margin: '2px 0 0 0', padding: '4px 6px', backgroundColor: '#f0f0f0', borderRadius: '3px', fontSize: '10px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
           {typeof parsed === 'string' ? parsed : field.value}
@@ -654,23 +682,44 @@ function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fieldDefs?
   return (
     <div style={panelStyle}>
       <div style={headerRowStyle} onClick={() => setExpanded(!expanded)}>
-        <span>📋 访客信息 {allFields.length > 0 && <span style={{ color: '#999', fontSize: '10px' }}>({allFields.length}项)</span>}</span>
+        <span>📋 访客信息 <span style={{ color: '#999', fontSize: '10px' }}>({allFields.length}项)</span></span>
         <span style={{ fontSize: '10px' }}>{expanded ? '▲' : '▼'}</span>
       </div>
       
       {expanded && (
         <div style={gridStyle}>
-          {nonAvatarFields.map((field) => (
+          {/* 固定字段 — 专用图标 */}
+          {nonAvatarFixedFields.map((field) => (
             <div key={field.fieldKey} style={{ ...itemStyle, ...(field.spanFull ? { gridColumn: '1 / -1' } : {}) }}>
-              <div style={labelStyle}>{field.isFixed ? '📌 ' : '🔧 '}{field.label}</div>
+              <div style={labelStyle}>{field.icon} {field.label}</div>
               <div style={{ ...valueStyle, fontSize: field.spanFull ? '11px' : '12px' }}>
                 {renderFieldValue(field)}
               </div>
             </div>
           ))}
+
+          {/* 分隔线 + 自定义字段标题 */}
+          {hasBothSections && (
+            <div style={sectionLabelStyle}>🔧 自定义字段</div>
+          )}
+
+          {/* 自定义字段 — 🔧 图标 */}
+          {customFields.length > 0 && !hasBothSections && (
+            <div style={sectionLabelStyle}>🔧 自定义字段</div>
+          )}
+          {customFields.map((field) => (
+            <div key={field.fieldKey} style={{ ...itemStyle, ...(field.spanFull ? { gridColumn: '1 / -1' } : {}) }}>
+              <div style={labelStyle}>🔧 {field.label}</div>
+              <div style={{ ...valueStyle, fontSize: field.spanFull ? '11px' : '12px' }}>
+                {renderFieldValue(field)}
+              </div>
+            </div>
+          ))}
+
+          {/* 头像固定字段 — 专属图标 */}
           {avatarField && (
             <div style={itemStyle}>
-              <div style={labelStyle}>🖼️ {avatarField.label}</div>
+              <div style={labelStyle}>{avatarField.icon} {avatarField.label}</div>
               <div style={valueStyle}>
                 {renderFieldValue(avatarField)}
               </div>
