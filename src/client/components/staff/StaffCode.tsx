@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Copy, Check, Link, Code2 } from 'lucide-react';
+import { Copy, Check, Link, Code2, BookOpen } from 'lucide-react';
 
 interface BusinessInfo {
   id: number;
@@ -91,11 +91,35 @@ export function StaffCode() {
   return (
     <div style={{ padding: '24px', height: '100%', overflowY: 'auto' }}>
       {/* Header */}
-      <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 500, margin: 0 }}>客服代码</h2>
-        <p style={{ color: '#999', fontSize: '14px', marginTop: '8px' }}>
-          以下是您的客服访问链接和嵌入代码
-        </p>
+      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h2 style={{ fontSize: '20px', fontWeight: 500, margin: 0 }}>客服代码</h2>
+          <p style={{ color: '#999', fontSize: '14px', marginTop: '8px' }}>
+            以下是您的客服访问链接和嵌入代码
+          </p>
+        </div>
+        <a
+          href="/docs"
+          target="_blank"
+          style={{
+            padding: '10px 20px',
+            backgroundColor: '#1890ff',
+            border: 'none',
+            borderRadius: '6px',
+            color: '#fff',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '14px',
+            fontWeight: 500,
+            textDecoration: 'none',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <BookOpen size={16} />
+          对接文档
+        </a>
       </div>
 
       {/* Business Info Card */}

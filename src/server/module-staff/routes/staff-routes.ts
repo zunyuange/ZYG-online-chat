@@ -17,8 +17,12 @@ import * as uploadService from '@server/module-chat/services/upload-service'
 import * as sseService from '@server/module-chat/services/sse-service'
 import * as queueService from '@server/module-chat/services/queue-service'
 import { verifyToken } from '@server/module-auth/services/auth-service'
+import { visitorFieldRoutes } from './visitor-field-routes'
 
 export const staffRoutes = new Hono()
+
+// 注册访客自定义字段子路由
+staffRoutes.route('/visitor-fields', visitorFieldRoutes)
 
 async function requireAuth(c: any, next: any) {
   const authHeader = c.req.header('Authorization')

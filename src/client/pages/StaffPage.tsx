@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { MessageCircle, Users, User, LogOut, Code2, Settings, ArrowRightLeft, XCircle } from 'lucide-react';
+import { MessageCircle, Users, User, LogOut, Code2, Settings, ArrowRightLeft, XCircle, ListChecks } from 'lucide-react';
 import { useStaffStore } from '@client/stores/staffStore';
 import { SessionList } from '@client/components/staff/SessionList';
 import { StaffChatWindow } from '@client/components/staff/StaffChatWindow';
@@ -13,6 +13,7 @@ import { QueueList } from '@client/components/staff/QueueList';
 import { StaffManagement } from '@client/components/staff/StaffManagement';
 import { StaffCode } from '@client/components/staff/StaffCode';
 import { StaffSettings } from '@client/components/staff/StaffSettings';
+import { VisitorFields } from '@client/components/staff/VisitorFields';
 import { useAuth } from '@client/hooks/useAuth';
 import { useSiteSettings } from '@client/hooks/useSiteSettings';
 import { useI18n } from '@client/context/I18nContext';
@@ -95,7 +96,7 @@ export function StaffPage() {
   const [showEndSessionConfirm, setShowEndSessionConfirm] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
-  const [currentPage, setCurrentPage] = useState<'home' | 'staff' | 'code' | 'settings'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'staff' | 'code' | 'settings' | 'visitorFields'>('home');
   const [staffList, setStaffList] = useState<{ id: number; name: string; username: string }[]>([]);
   const [profileForm, setProfileForm] = useState({
     name: '',
@@ -968,6 +969,13 @@ export function StaffPage() {
           </div>
         )}
         <div
+          onClick={() => setCurrentPage('visitorFields')}
+          style={navTabItemStyle(currentPage === 'visitorFields')}
+        >
+          <ListChecks size={16} />
+          <span>访客字段</span>
+        </div>
+        <div
           onClick={() => setCurrentPage('code')}
           style={navTabItemStyle(currentPage === 'code')}
         >
@@ -1225,6 +1233,13 @@ export function StaffPage() {
         {currentPage === 'code' && (
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <StaffCode />
+          </div>
+        )}
+
+        {/* Visitor Fields page */}
+        {currentPage === 'visitorFields' && (
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <VisitorFields />
           </div>
         )}
 

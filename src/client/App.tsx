@@ -11,9 +11,10 @@ import { StaffPage } from './pages/StaffPage';
 import { StaffLoginPage } from './pages/StaffLoginPage';
 import { AdminLoginPage } from './pages/AdminLoginPage';
 import { AdminPage } from './pages/AdminPage';
+import { DocsPage } from './pages/DocsPage';
 import { I18nProvider } from './context/I18nContext';
 
-type Page = 'todo' | 'chat' | 'staff' | 'stafflogin' | 'admin' | 'adminlogin';
+type Page = 'todo' | 'chat' | 'staff' | 'stafflogin' | 'admin' | 'adminlogin' | 'docs';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>(() => {
@@ -24,6 +25,7 @@ function App() {
       if (path === '/stafflogin') return 'stafflogin';
       if (path === '/adminlogin') return 'adminlogin';
       if (path === '/admin') return 'admin';
+      if (path === '/docs') return 'docs';
       if (path === '/chat' || path === '/') return 'chat';
     }
     return 'chat';
@@ -53,6 +55,7 @@ function App() {
       else if (currentPage === 'stafflogin') path = '/stafflogin';
       else if (currentPage === 'admin') path = '/admin';
       else if (currentPage === 'adminlogin') path = '/adminlogin';
+      else if (currentPage === 'docs') path = '/docs';
       window.history.pushState({}, '', path);
     }
   }, [currentPage]);
@@ -65,6 +68,7 @@ function App() {
       else if (path === '/stafflogin') setCurrentPage('stafflogin');
       else if (path === '/adminlogin') setCurrentPage('adminlogin');
       else if (path === '/admin') setCurrentPage('admin');
+      else if (path === '/docs') setCurrentPage('docs');
       else if (path === '/todo') setCurrentPage('todo');
       else setCurrentPage('chat');
     };
@@ -149,6 +153,14 @@ function App() {
     return (
       <I18nProvider>
         <StaffPage />
+      </I18nProvider>
+    );
+  }
+
+  if (currentPage === 'docs') {
+    return (
+      <I18nProvider>
+        <DocsPage />
       </I18nProvider>
     );
   }

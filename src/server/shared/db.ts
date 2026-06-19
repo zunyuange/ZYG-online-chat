@@ -574,6 +574,23 @@ async function createAllTables(database: Database): Promise<void> {
 
   await database.exec('CREATE INDEX IF NOT EXISTS roles_name_idx ON roles(name)')
 
+  // Create visitor_custom_fields table for custom visitor field definitions
+  await database.exec(
+    'CREATE TABLE IF NOT EXISTS visitor_custom_fields (' +
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+      'business_id INTEGER NOT NULL DEFAULT 0, ' +
+      'field_key TEXT NOT NULL, ' +
+      'label TEXT NOT NULL, ' +
+      'type TEXT NOT NULL DEFAULT "text", ' +
+      'remark TEXT, ' +
+      'sort_order INTEGER NOT NULL DEFAULT 0, ' +
+      'is_active INTEGER NOT NULL DEFAULT 1, ' +
+      'created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), ' +
+      'updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))'
+  )
+  await database.exec('CREATE INDEX IF NOT EXISTS visitor_custom_fields_business_id_idx ON visitor_custom_fields(business_id)')
+  await database.exec('CREATE INDEX IF NOT EXISTS visitor_custom_fields_field_key_idx ON visitor_custom_fields(business_id, field_key)')
+
   // Initialize default admin user (username: admin, password: 123456)
   await initializeDefaultAdmin(database)
 

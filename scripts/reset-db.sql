@@ -19,6 +19,7 @@ DROP TABLE IF EXISTS admin_users;
 DROP TABLE IF EXISTS admin_config;
 DROP TABLE IF EXISTS roles;
 DROP TABLE IF EXISTS todos;
+DROP TABLE IF EXISTS visitor_custom_fields;
 
 -- Reset auto-increment counters
 DELETE FROM sqlite_sequence;
@@ -326,3 +327,19 @@ INSERT OR REPLACE INTO roles (name, description, permissions, is_system, status)
 INSERT OR REPLACE INTO admin_config (key, value, description) VALUES ('siteName', '在线客服系统', '网站名称');
 INSERT OR REPLACE INTO admin_config (key, value, description) VALUES ('defaultLanguage', 'zh-CN', '默认语言');
 INSERT OR REPLACE INTO admin_config (key, value, description) VALUES ('enableAuth', 'true', '启用认证');
+
+-- Create visitor_custom_fields table for custom visitor field definitions
+CREATE TABLE IF NOT EXISTS visitor_custom_fields (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  business_id INTEGER NOT NULL DEFAULT 0,
+  field_key TEXT NOT NULL,
+  label TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'text',
+  remark TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+);
+CREATE INDEX IF NOT EXISTS idx_vcf_business_id ON visitor_custom_fields(business_id);
+CREATE INDEX IF NOT EXISTS idx_vcf_field_key ON visitor_custom_fields(business_id, field_key);
