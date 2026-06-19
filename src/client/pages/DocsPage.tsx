@@ -127,9 +127,9 @@ function DocsContent() {
   var script = document.createElement('script');
   script.src = '${currentDomain}/embed/chat.js';
   script.async = true;
-  // ⚠️ 替换为你的商家标识
+  // ⚠️ ${t('docs_code_replace_business')}
   script.dataset.business = 'default';
-  // 可选：传入自定义参数
+  // ${t('docs_code_optional_params')}
   // script.dataset.userName = '用户名';
   // script.dataset.email = 'user@example.com';
   // script.dataset.phone = '13800138000';
@@ -143,7 +143,7 @@ function DocsContent() {
   height="560"
   frameborder="0"
   style="border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.1);"
-  title="在线客服">
+  title="${t('online_service')}">
 </iframe>`;
 
   const directUrl = `${currentDomain}/chat?business=default`;
@@ -171,50 +171,50 @@ function DocsContent() {
 
   // Script embed parameter table data
   const scriptParams = [
-    { param: 'data-business', type: 'string', required: t('docs_required_yes'), desc: '商家标识（slug），用于区分不同商家' },
-    { param: 'data-userName', type: 'string', required: t('docs_required_no'), desc: '访客姓名，不传则使用默认名称' },
-    { param: 'data-email', type: 'string', required: t('docs_required_no'), desc: '访客邮箱' },
-    { param: 'data-phone', type: 'string', required: t('docs_required_no'), desc: '访客手机号' },
-    { param: 'data-pid', type: 'string', required: t('docs_required_no'), desc: '跨系统用户唯一标识' },
-    { param: 'data-params', type: 'JSON', required: t('docs_required_no'), desc: '自定义参数（JSON字符串）' },
-    { param: 'data-lang', type: 'string', required: t('docs_required_no'), desc: '语言偏好（zh-CN / en-US）' },
+    { param: 'data-business', type: 'string', required: t('docs_required_yes'), desc: t('docs_script_param_business_desc') },
+    { param: 'data-userName', type: 'string', required: t('docs_required_no'), desc: t('docs_script_param_userName_desc') },
+    { param: 'data-email', type: 'string', required: t('docs_required_no'), desc: t('docs_script_param_email_desc') },
+    { param: 'data-phone', type: 'string', required: t('docs_required_no'), desc: t('docs_script_param_phone_desc') },
+    { param: 'data-pid', type: 'string', required: t('docs_required_no'), desc: t('docs_script_param_pid_desc') },
+    { param: 'data-params', type: 'JSON', required: t('docs_required_no'), desc: t('docs_script_param_params_desc') },
+    { param: 'data-lang', type: 'string', required: t('docs_required_no'), desc: t('docs_script_param_lang_desc') },
   ];
 
   // URL parameter table data
   const urlParamsIframe = [
-    { param: 'business', type: 'string', required: t('docs_required_yes'), desc: '商家标识（slug）' },
-    { param: 'userName', type: 'string', required: t('docs_required_no'), desc: '访客姓名' },
-    { param: 'email', type: 'string', required: t('docs_required_no'), desc: '访客邮箱' },
-    { param: 'phone', type: 'string', required: t('docs_required_no'), desc: '访客手机号' },
-    { param: 'pid', type: 'string', required: t('docs_required_no'), desc: '跨系统用户唯一标识' },
-    { param: 'params', type: 'JSON', required: t('docs_required_no'), desc: '自定义参数（JSON字符串）' },
-    { param: 'lang', type: 'string', required: t('docs_required_no'), desc: '语言偏好（zh-CN / en-US）' },
+    { param: 'business', type: 'string', required: t('docs_required_yes'), desc: t('docs_iframe_param_business_desc') },
+    { param: 'userName', type: 'string', required: t('docs_required_no'), desc: t('docs_iframe_param_userName_desc') },
+    { param: 'email', type: 'string', required: t('docs_required_no'), desc: t('docs_iframe_param_email_desc') },
+    { param: 'phone', type: 'string', required: t('docs_required_no'), desc: t('docs_iframe_param_phone_desc') },
+    { param: 'pid', type: 'string', required: t('docs_required_no'), desc: t('docs_iframe_param_pid_desc') },
+    { param: 'params', type: 'JSON', required: t('docs_required_no'), desc: t('docs_iframe_param_params_desc') },
+    { param: 'lang', type: 'string', required: t('docs_required_no'), desc: t('docs_iframe_param_lang_desc') },
   ];
 
   const urlParamsTable = [
-    { param: 'business', example: 'default', required: t('docs_required_yes'), desc: '商家标识（slug），每个商家唯一' },
-    { param: 'userName', example: '张三', required: t('docs_required_no'), desc: '访客姓名，客服端会显示在会话头部' },
-    { param: 'email', example: 'zhangsan@example.com', required: t('docs_required_no'), desc: '访客邮箱，用于后续联系' },
-    { param: 'phone', example: '13800138000', required: t('docs_required_no'), desc: '访客手机号' },
-    { param: 'pid', example: 'user123', required: t('docs_required_no'), desc: '跨系统用户唯一标识，用于关联自有系统用户' },
-    { param: 'params', example: '{"source":"website","level":"vip"}', required: t('docs_required_no'), desc: '自定义参数，JSON 字符串格式' },
-    { param: 'lang', example: 'zh-CN', required: t('docs_required_no'), desc: '语言偏好：zh-CN（中文）/ en-US（英文）' },
+    { param: 'business', example: 'default', required: t('docs_required_yes'), desc: t('docs_url_param_business_desc') },
+    { param: 'userName', example: '张三', required: t('docs_required_no'), desc: t('docs_url_param_userName_desc') },
+    { param: 'email', example: 'zhangsan@example.com', required: t('docs_required_no'), desc: t('docs_url_param_email_desc') },
+    { param: 'phone', example: '13800138000', required: t('docs_required_no'), desc: t('docs_url_param_phone_desc') },
+    { param: 'pid', example: 'user123', required: t('docs_required_no'), desc: t('docs_url_param_pid_desc') },
+    { param: 'params', example: '{"source":"website","level":"vip"}', required: t('docs_required_no'), desc: t('docs_url_param_params_desc') },
+    { param: 'lang', example: 'zh-CN', required: t('docs_required_no'), desc: t('docs_url_param_lang_desc') },
   ];
 
   // API reference table data
   const apiRefs = [
-    { path: '/api/chat/session', method: 'POST', desc: '创建/获取会话，传入访客信息' },
-    { path: '/api/chat/session/:id/messages', method: 'GET', desc: '获取会话消息列表' },
-    { path: '/api/chat/session/:id/messages', method: 'POST', desc: '发送消息' },
-    { path: '/api/chat/stats', method: 'GET', desc: '获取统计信息（需认证）' },
-    { path: '/api/site-settings', method: 'GET', desc: '获取站点配置（公开）' },
+    { path: '/api/chat/session', method: 'POST', desc: t('docs_api_session_desc') },
+    { path: '/api/chat/session/:id/messages', method: 'GET', desc: t('docs_api_messages_get_desc') },
+    { path: '/api/chat/session/:id/messages', method: 'POST', desc: t('docs_api_messages_post_desc') },
+    { path: '/api/chat/stats', method: 'GET', desc: t('docs_api_stats_desc') },
+    { path: '/api/site-settings', method: 'GET', desc: t('docs_api_site_settings_desc') },
   ];
 
-  const jsCodeText = `// 基础配置
+  const getJsCodeText = () => `// ${t('docs_code_base_config')}
 const BASE_URL = '${currentDomain}/chat';
-const BUSINESS = 'default'; // 替换为你的商家标识
+const BUSINESS = 'default'; // ${t('docs_code_replace_business')}
 
-// 用户信息（从你的系统获取）
+// ${t('docs_code_user_info')}
 const user = {
   userName: '张三',
   email: 'zhangsan@example.com',
@@ -222,14 +222,14 @@ const user = {
   pid: 'user123',
 };
 
-// 自定义参数
+// ${t('docs_code_custom_params')}
 const customParams = {
   source: 'website',
   level: 'vip',
   page: window.location.pathname,
 };
 
-// 拼接 URL
+// ${t('docs_code_build_url')}
 const params = new URLSearchParams();
 params.set('business', BUSINESS);
 if (user.userName) params.set('userName', user.userName);
@@ -241,10 +241,10 @@ params.set('lang', 'zh-CN');
 
 const chatUrl = \`\${BASE_URL}?\${params.toString()}\`;
 
-// 用法1：跳转链接
-// <a href={chatUrl}>联系客服</a>
+// ${t('docs_code_usage_jump_link')}
+// <a href={chatUrl}>${t('docs_code_contact_service')}</a>
 
-// 用法2：按钮点击
+// ${t('docs_code_usage_button_click')}
 document.getElementById('chatBtn').addEventListener('click', () => {
   window.open(chatUrl, '_blank', 'width=400,height=560');
 });`;
@@ -730,10 +730,10 @@ document.getElementById('chatBtn').addEventListener('click', () => {
                   margin: 0,
                   fontFamily: "'Fira Code', 'Consolas', monospace",
                 }}>
-                  {jsCodeText}
+                  {getJsCodeText()}
                 </pre>
                 <button
-                  onClick={() => copyToClipboard(`// 基础配置\nconst BASE_URL = '${currentDomain}/chat';\nconst BUSINESS = 'default';\n\n// 用户信息\nconst user = {\n  userName: '张三',\n  email: 'zhangsan@example.com',\n  phone: '13800138000',\n  pid: 'user123',\n};\n\n// 自定义参数\nconst customParams = {\n  source: 'website',\n  level: 'vip',\n  page: window.location.pathname,\n};\n\n// 拼接 URL\nconst params = new URLSearchParams();\nparams.set('business', BUSINESS);\nif (user.userName) params.set('userName', user.userName);\nif (user.email) params.set('email', user.email);\nif (user.phone) params.set('phone', user.phone);\nif (user.pid) params.set('pid', user.pid);\nparams.set('params', JSON.stringify(customParams));\nparams.set('lang', 'zh-CN');\n\nconst chatUrl = \`\${BASE_URL}?\${params.toString()}\`;\n\n// 用法1：跳转链接\n// <a href={chatUrl}>联系客服</a>\n\n// 用法2：按钮点击\ndocument.getElementById('chatBtn').addEventListener('click', () => {\n  window.open(chatUrl, '_blank', 'width=400,height=560');\n});`, 'jsCode')}
+                  onClick={() => copyToClipboard(getJsCodeText(), 'jsCode')}
                   style={{
                     position: 'absolute',
                     top: '12px',

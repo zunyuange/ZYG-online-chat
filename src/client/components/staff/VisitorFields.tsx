@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit3, X, Check, Save, FileText } from 'lucide-react';
+import { Plus, Trash2, Edit3, Save, FileText } from 'lucide-react';
+import { useI18n } from '@client/context/I18nContext';
 
 interface FieldDef {
   id: string | number;
@@ -258,7 +259,7 @@ export function VisitorFields({ t = (s: string) => s }: VisitorFieldsProps) {
                 type="text"
                 value={formLabel}
                 onChange={(e) => setFormLabel(e.target.value)}
-                placeholder="例如: 用户等级"
+                placeholder={t('visitor_fields_placeholder')}
                 style={{
                   width: '100%', padding: '8px 12px', border: '1px solid #d9d9d9',
                   borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box',
@@ -268,7 +269,7 @@ export function VisitorFields({ t = (s: string) => s }: VisitorFieldsProps) {
 
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: '#666', fontWeight: 500 }}>
-                字段类型
+                {t('visitor_fields_field_type')}
               </label>
               <select
                 value={formType}
@@ -278,8 +279,8 @@ export function VisitorFields({ t = (s: string) => s }: VisitorFieldsProps) {
                   borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box',
                 }}
               >
-                <option value="text">文本</option>
-                <option value="url">链接</option>
+                <option value="text">{t('visitor_fields_type_text')}</option>
+                <option value="url">{t('visitor_fields_type_link')}</option>
                 <option value="json">JSON</option>
               </select>
             </div>
@@ -309,7 +310,7 @@ export function VisitorFields({ t = (s: string) => s }: VisitorFieldsProps) {
                   backgroundColor: '#fff', cursor: 'pointer', fontSize: '14px', color: '#666',
                 }}
               >
-                取消
+                {t('visitor_fields_cancel')}
               </button>
               <button
                 onClick={handleSave}
@@ -322,7 +323,7 @@ export function VisitorFields({ t = (s: string) => s }: VisitorFieldsProps) {
                 }}
               >
                 <Save size={14} />
-                {formSaving ? '保存中...' : '保存'}
+                {formSaving ? t('visitor_fields_saving') : t('visitor_fields_save')}
               </button>
             </div>
           </div>
@@ -336,19 +337,19 @@ export function VisitorFields({ t = (s: string) => s }: VisitorFieldsProps) {
           display: 'flex', alignItems: 'center', gap: '8px',
         }}>
           <FileText size={18} style={{ color: '#1890ff' }} />
-          <h3 style={{ fontSize: '16px', fontWeight: 500, margin: 0 }}>系统固定字段</h3>
+          <h3 style={{ fontSize: '16px', fontWeight: 500, margin: 0 }}>{t('visitor_fields_system_fields')}</h3>
           <span style={{ fontSize: '12px', color: '#999', backgroundColor: '#f0f0f0', padding: '2px 8px', borderRadius: '10px' }}>
-            {fixedFields.length} 个
+            {fixedFields.length}{t('visitor_fields_items')}
           </span>
         </div>
         <div style={{ padding: '0' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ backgroundColor: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
-                <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '13px', color: '#666', fontWeight: 500, width: '160px' }}>字段标识</th>
-                <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '13px', color: '#666', fontWeight: 500, width: '120px' }}>显示名称</th>
-                <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '13px', color: '#666', fontWeight: 500, width: '80px' }}>类型</th>
-                <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '13px', color: '#666', fontWeight: 500 }}>备注说明</th>
+                <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '13px', color: '#666', fontWeight: 500, width: '160px' }}>{t('visitor_fields_field_key')}</th>
+                <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '13px', color: '#666', fontWeight: 500, width: '120px' }}>{t('visitor_fields_display_name')}</th>
+                <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '13px', color: '#666', fontWeight: 500, width: '80px' }}>{t('type_label')}</th>
+                <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '13px', color: '#666', fontWeight: 500 }}>{t('visitor_fields_remark')}</th>
               </tr>
             </thead>
             <tbody>
@@ -380,8 +381,8 @@ export function VisitorFields({ t = (s: string) => s }: VisitorFieldsProps) {
 
         {customFields.length === 0 ? (
           <div style={{ padding: '40px 20px', textAlign: 'center', color: '#999', fontSize: '14px' }}>
-            <p>暂无自定义字段</p>
-            <p style={{ fontSize: '12px', marginTop: '4px' }}>点击右上角"添加自定义字段"按钮来创建</p>
+            <p>{t('visitor_fields_no_custom')}</p>
+            <p style={{ fontSize: '12px', marginTop: '4px' }}>{t('visitor_fields_no_custom_hint')}</p>
           </div>
         ) : (
           <div style={{ padding: '0' }}>
@@ -392,7 +393,7 @@ export function VisitorFields({ t = (s: string) => s }: VisitorFieldsProps) {
                   <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '13px', color: '#666', fontWeight: 500, width: '120px' }}>显示名称</th>
                   <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '13px', color: '#666', fontWeight: 500, width: '80px' }}>类型</th>
                   <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '13px', color: '#666', fontWeight: 500 }}>备注说明</th>
-                  <th style={{ padding: '12px 20px', textAlign: 'center', fontSize: '13px', color: '#666', fontWeight: 500, width: '120px' }}>操作</th>
+                  <th style={{ padding: '12px 20px', textAlign: 'center', fontSize: '13px', color: '#666', fontWeight: 500, width: '120px' }}>{t('action_label')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -413,7 +414,7 @@ export function VisitorFields({ t = (s: string) => s }: VisitorFieldsProps) {
                           }}
                         >
                           <Edit3 size={12} />
-                          编辑
+                          {t('edit')}
                         </button>
                         <button
                           onClick={() => handleDelete(field.id)}
@@ -424,7 +425,7 @@ export function VisitorFields({ t = (s: string) => s }: VisitorFieldsProps) {
                           }}
                         >
                           <Trash2 size={12} />
-                          删除
+                          {t('delete')}
                         </button>
                       </div>
                     </td>
@@ -437,4 +438,3 @@ export function VisitorFields({ t = (s: string) => s }: VisitorFieldsProps) {
       </div>
     </div>
   );
-}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Copy, Check, Link, Code2, BookOpen } from 'lucide-react';
+import { useI18n } from '@client/context/I18nContext';
 
 interface BusinessInfo {
   id: number;
@@ -11,6 +12,7 @@ interface BusinessInfo {
 }
 
 export function StaffCode() {
+  const { t } = useI18n();
   const [business, setBusiness] = useState<BusinessInfo | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,9 +95,9 @@ export function StaffCode() {
       {/* Header */}
       <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h2 style={{ fontSize: '20px', fontWeight: 500, margin: 0 }}>客服代码</h2>
+          <h2 style={{ fontSize: '20px', fontWeight: 500, margin: 0 }}>{t('staff_code_title')}</h2>
           <p style={{ color: '#999', fontSize: '14px', marginTop: '8px' }}>
-            以下是您的客服访问链接和嵌入代码
+            {t('staff_code_desc')}
           </p>
         </div>
         <a
@@ -118,7 +120,7 @@ export function StaffCode() {
           }}
         >
           <BookOpen size={16} />
-          对接文档
+          {t('staff_code_docs_link')}
         </a>
       </div>
 
@@ -137,12 +139,12 @@ export function StaffCode() {
             fontSize: '24px',
             fontWeight: 500,
           }}>
-            {business?.business_name?.charAt(0) || '商'}
+            {business?.business_name?.charAt(0) || t('staff_code_default_business').charAt(0)}
           </div>
           <div>
-            <h3 style={{ fontSize: '18px', fontWeight: 500, margin: 0 }}>{business?.business_name || '默认商家'}</h3>
+            <h3 style={{ fontSize: '18px', fontWeight: 500, margin: 0 }}>{business?.business_name || t('staff_code_default_business')}</h3>
             <p style={{ color: '#999', fontSize: '14px', margin: '4px 0 0' }}>
-              商家标识: {business?.business_slug || 'default'}
+              {t('staff_code_business_slug_prefix')}{business?.business_slug || 'default'}
             </p>
           </div>
         </div>
@@ -152,7 +154,7 @@ export function StaffCode() {
       <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '24px' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Link size={18} style={{ color: '#1890ff' }} />
-          <h3 style={{ fontSize: '16px', fontWeight: 500, margin: 0 }}>直接访问链接</h3>
+          <h3 style={{ fontSize: '16px', fontWeight: 500, margin: 0 }}>{t('staff_code_direct_link')}</h3>
         </div>
         <div style={{ padding: '20px' }}>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
@@ -185,7 +187,7 @@ export function StaffCode() {
               }}
             >
               {copied === 'direct' ? <Check size={18} /> : <Copy size={18} />}
-              {copied === 'direct' ? '已复制' : '复制'}
+              {copied === 'direct' ? t('staff_code_copied') : t('staff_code_copy')}
             </button>
           </div>
           <p style={{ color: '#999', fontSize: '14px', marginTop: '12px' }}>
@@ -198,7 +200,7 @@ export function StaffCode() {
       <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '24px' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Code2 size={18} style={{ color: '#1890ff' }} />
-          <h3 style={{ fontSize: '16px', fontWeight: 500, margin: 0 }}>内嵌脚本代码</h3>
+          <h3 style={{ fontSize: '16px', fontWeight: 500, margin: 0 }}>{t('staff_code_embed_script')}</h3>
         </div>
         <div style={{ padding: '20px' }}>
           <pre style={{
@@ -241,7 +243,7 @@ export function StaffCode() {
       <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Code2 size={18} style={{ color: '#1890ff' }} />
-          <h3 style={{ fontSize: '16px', fontWeight: 500, margin: 0 }}>iframe 嵌入代码</h3>
+          <h3 style={{ fontSize: '16px', fontWeight: 500, margin: 0 }}>{t('staff_code_iframe_code')}</h3>
         </div>
         <div style={{ padding: '20px' }}>
           <pre style={{
@@ -272,10 +274,10 @@ export function StaffCode() {
             }}
           >
             {copied === 'iframe' ? <Check size={18} /> : <Copy size={18} />}
-            {copied === 'iframe' ? '已复制' : '复制代码'}
+            {copied === 'iframe' ? t('staff_code_copied') : t('staff_code_copy_code')}
           </button>
           <p style={{ color: '#999', fontSize: '14px', marginTop: '12px' }}>
-            使用 iframe 将客服聊天窗口嵌入到您的网站中，可自定义宽高
+            {t('staff_code_iframe_desc')}
           </p>
         </div>
       </div>

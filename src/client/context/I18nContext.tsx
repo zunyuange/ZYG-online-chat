@@ -15,13 +15,16 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const saved = localStorage.getItem('chat_locale');
-    if (saved && (saved === 'zh-CN' || saved === 'en-US')) {
-      setLocaleState(saved as LocaleCode);
+    const allLocaleCodes = supportedLocales.map(l => l.code);
+    const isValidLocale = (l: string): l is LocaleCode => allLocaleCodes.includes(l);
+    if (saved && isValidLocale(saved)) {
+      setLocaleState(saved);
     } else {
       const browserLang = navigator.language;
       if (browserLang.startsWith('en')) {
         setLocaleState('en-US');
       }
+      // other languages will just use the default 'zh-CN'
     }
   }, []);
 
