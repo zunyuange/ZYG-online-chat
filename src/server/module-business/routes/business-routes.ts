@@ -235,15 +235,17 @@ businessRoutes.post('/info', requireAuth, async (c) => {
       if (effectiveId === undefined || effectiveId === 0) {
         effectiveId = tokenPayload.userId;
       }
-      console.log('[POST /info] effectiveId:', effectiveId);
       
       if (effectiveId && effectiveId > 0) {
         await db.run(
           'UPDATE staff_users SET business_name = ?, updated_at = ? WHERE id = ?',
           [business_name, Date.now(), effectiveId]
         );
-        console.log('[POST /info] Updated staff_users id=' + effectiveId + ' to business_name=' + business_name);
-        return c.json({ success: true });
+        // 返回实际修改的用户 ID，方便调试
+        return c.json({ 
+          success: true, 
+          debug: { updatedUserId: effectiveId, businessName: business_name } 
+        });
       }
     }
 
