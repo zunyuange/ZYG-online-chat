@@ -2,23 +2,30 @@
  * Topic Header Component - Displays session topic, status and queue info
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { MessageSquare } from 'lucide-react';
 import { type Session } from '@shared/types';
 
 interface TopicHeaderProps {
   session: Session;
+  editable?: boolean;
   queuePosition?: number;
   estimatedWaitMinutes?: number;
+  onTopicChange?: (topic: string) => void;
   t?: (key: string) => string;
 }
 
 export function TopicHeader({
   session,
+  editable = false,
   queuePosition,
   estimatedWaitMinutes,
+  onTopicChange,
   t = (key: string) => key,
 }: TopicHeaderProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTopic, setEditTopic] = useState(session.topic || '');
+
   const showQueueInfo = queuePosition && queuePosition > 1;
 
   const containerStyle: React.CSSProperties = {
@@ -36,6 +43,7 @@ export function TopicHeader({
     gap: '8px',
     flex: 1,
     minWidth: 0,
+    cursor: editable ? 'pointer' : 'default',
   };
 
   const topicIconStyle: React.CSSProperties = {
@@ -52,6 +60,15 @@ export function TopicHeader({
     flex: 1,
   };
 
+  const inputStyle: React.CSSProperties = {
+    flex: 1,
+    padding: '4px 8px',
+    border: '1px solid #d9d9d9',
+    borderRadius: '4px',
+    fontSize: '14px',
+    outline: 'none',
+  };
+
   const queueBadgeStyle: React.CSSProperties = {
     padding: '2px 8px',
     borderRadius: '10px',
@@ -62,12 +79,50 @@ export function TopicHeader({
     marginLeft: '8px',
   };
 
+  const handleTopicSubmit = () => {
+    if (onTopicChange && editTopic !== session.topic) {
+      onTopicChange(editTopic);
+    }
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleTopicSubmit();
+    } else if (e.key === 'Escape') {
+      setEditTopic(session.topic || '');
+      setIsEditing(false);
+    }
+  };
+
+  const handleClick = () => {
+    if (editable && !isEditing) {
+      setEditTopic(session.topic || '');
+      setIsEditing(true);
+    }
+  };
+
   return (
     <div style={containerStyle}>
-      <div style={topicAreaStyle}>
-        <MessageSquare size={16} style={topicIconStyle} />
-        <span style={topicTextStyle}>{t('important_notice') || '重要通知'}</span>
-      </div>
+      {isEditing && editable ? (
+        <input
+          type="text"
+          value={editTopic}
+          onChange={(e) => setEditTopic(e.target.value)}
+          onBlur={handleTopicSubmit}
+          onKeyDown={handleKeyDown}
+          placeholder={t('important_notice') || '重要通知'}
+          style={inputStyle}
+          autoFocus
+        />
+      ) : (
+        <div style={topicAreaStyle} onClick={handleClick}>
+          <MessageSquare size={16} style={topicIconStyle} />
+          <span style={topicTextStyle}>
+            {session.topic || (t('important_notice') || '重要通知')}
+          </span>
+        </div>
+      )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         {showQueueInfo && (

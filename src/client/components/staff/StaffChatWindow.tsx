@@ -28,6 +28,7 @@ interface StaffChatWindowProps {
   onSend: (content: string, type: ContentType) => void;
   onUpload: (file: File) => void;
   onModeChange?: (mode: InputMode) => void;
+  onTopicChange?: (topic: string) => void;
   onClearMessages?: () => void;
   onEndSession?: () => void;
   currentStaffId?: number;
@@ -47,6 +48,7 @@ export function StaffChatWindow({
   onSend,
   onUpload,
   onModeChange,
+  onTopicChange,
   onClearMessages,
   onEndSession,
   currentStaffId,
@@ -270,8 +272,10 @@ export function StaffChatWindow({
         {session && (
           <TopicHeader
             session={session}
+            editable={true}
             queuePosition={session.queuePosition}
             estimatedWaitMinutes={session.estimatedWaitMinutes}
+            onTopicChange={onTopicChange}
             t={t}
           />
         )}

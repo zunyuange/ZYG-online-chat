@@ -624,6 +624,12 @@ export function StaffPage() {
     uploadFile(file);
   };
 
+  const handleTopicChange = (topic: string) => {
+    if (currentSessionId) {
+      updateTopic(currentSessionId, topic);
+    }
+  };
+
   const toggleSessionList = () => {
     setShowSessionList((prev) => !prev);
   };
@@ -1240,6 +1246,7 @@ export function StaffPage() {
                 onSend={handleSend}
                 onUpload={handleUpload}
                 onModeChange={setInputMode}
+                onTopicChange={handleTopicChange}
                 onClearMessages={() => setShowClearConfirm(true)}
                 onEndSession={() => setShowEndSessionConfirm(true)}
                 onTransfer={() => {}}
