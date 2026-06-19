@@ -600,16 +600,16 @@ export function VisitorInfoPanel({ session, fieldDefs, t: externalT }: { session
   // ═══════════════ 字段定义 ═══════════════
   interface FixedFieldDef { fieldKey: string; label: string; type: string; icon: string }
   const defaultFixedDefs: FixedFieldDef[] = [
-    { fieldKey: 'userName', label: '姓名',    type: 'text', icon: '👤' },
-    { fieldKey: 'email',    label: '邮箱',    type: 'text', icon: '📧' },
-    { fieldKey: 'phone',    label: '手机',    type: 'text', icon: '📱' },
-    { fieldKey: 'pid',      label: '用户ID',  type: 'text', icon: '🆔' },
-    { fieldKey: 'ip',       label: 'IP地址',  type: 'text', icon: '🌐' },
+    { fieldKey: 'userName', label: t('fixed_field_userName'), type: 'text', icon: '👤' },
+    { fieldKey: 'email',    label: t('fixed_field_email'),    type: 'text', icon: '📧' },
+    { fieldKey: 'phone',    label: t('fixed_field_phone'),    type: 'text', icon: '📱' },
+    { fieldKey: 'pid',      label: t('fixed_field_pid'),      type: 'text', icon: '🆔' },
+    { fieldKey: 'ip',       label: t('fixed_field_ip'),       type: 'text', icon: '🌐' },
     // fromUrl / referer 不在此显示（已在来源面板）
-    { fieldKey: 'userAgent',label: '浏览器',  type: 'text', icon: '💻' },
-    { fieldKey: 'device',   label: '设备',    type: 'text', icon: '📱' },
-    { fieldKey: 'lang',     label: '语言',    type: 'text', icon: '🌍' },
-    { fieldKey: 'avatar',   label: '头像',    type: 'url', icon: '🖼️' },
+    { fieldKey: 'userAgent',label: t('fixed_field_userAgent'), type: 'text', icon: '💻' },
+    { fieldKey: 'device',   label: t('fixed_field_device'),   type: 'text', icon: '📱' },
+    { fieldKey: 'lang',     label: t('fixed_field_lang'),     type: 'text', icon: '🌍' },
+    { fieldKey: 'avatar',   label: t('fixed_field_avatar'),   type: 'url', icon: '🖼️' },
   ];
 
   const fieldDefMap = new Map<string, { label: string; type: string; isFixed: boolean }>();

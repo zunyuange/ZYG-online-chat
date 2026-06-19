@@ -159,6 +159,7 @@ export function MessageList({
           key={message.id}
           message={message}
           isOwn={isOwn(message)}
+          t={t}
         />
       ))}
       {loading && messages.length === 0 && (

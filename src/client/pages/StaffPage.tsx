@@ -1229,6 +1229,7 @@ export function StaffPage() {
                 onSelect={handleSelectSession}
                 loading={loading}
                 staffList={staffList}
+                t={t}
               />
             </div>
 
@@ -1499,6 +1500,7 @@ export function StaffPage() {
         isOpen={showQueueList}
         onClose={() => setShowQueueList(false)}
         onSelectSession={handleSelectSession}
+        t={t}
       />
 
       {/* Transfer Request Notification Panel */}

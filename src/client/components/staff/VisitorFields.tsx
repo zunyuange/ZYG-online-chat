@@ -14,11 +14,8 @@ interface FieldDef {
   createdAt?: number;
 }
 
-interface VisitorFieldsProps {
-  t?: (key: string) => string;
-}
-
-export function VisitorFields({ t = (s: string) => s }: VisitorFieldsProps) {
+export function VisitorFields() {
+  const { t } = useI18n();
   const [fixedFields, setFixedFields] = useState<FieldDef[]>([]);
   const [customFields, setCustomFields] = useState<FieldDef[]>([]);
   const [loading, setLoading] = useState(true);
@@ -152,6 +149,13 @@ export function VisitorFields({ t = (s: string) => s }: VisitorFieldsProps) {
   const getTypeLabel = (type: string) => {
     const map: Record<string, string> = { text: t('field_type_text'), url: t('field_type_link'), json: 'JSON' };
     return map[type] || type;
+  };
+
+  const getFieldLabel = (field: FieldDef) => {
+    if (field.isFixed) {
+      return t(`fixed_field_${field.fieldKey}`);
+    }
+    return field.label;
   };
 
   if (loading) {
@@ -356,7 +360,7 @@ export function VisitorFields({ t = (s: string) => s }: VisitorFieldsProps) {
               {fixedFields.map((field, index) => (
                 <tr key={field.id} style={{ borderBottom: index < fixedFields.length - 1 ? '1px solid #f5f5f5' : 'none' }}>
                   <td style={{ padding: '10px 20px', fontSize: '13px', color: '#333', fontFamily: 'monospace' }}>{field.fieldKey}</td>
-                  <td style={{ padding: '10px 20px', fontSize: '13px', color: '#333' }}>{field.label}</td>
+                  <td style={{ padding: '10px 20px', fontSize: '13px', color: '#333' }}>{getFieldLabel(field)}</td>
                   <td style={{ padding: '10px 20px', fontSize: '13px', color: '#999' }}>{getTypeLabel(field.type)}</td>
                   <td style={{ padding: '10px 20px', fontSize: '13px', color: '#666' }}>{field.remark || '-'}</td>
                 </tr>
