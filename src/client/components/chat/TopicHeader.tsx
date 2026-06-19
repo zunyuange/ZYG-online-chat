@@ -27,6 +27,7 @@ export function TopicHeader({
   const [editTopic, setEditTopic] = useState(session.topic || '');
 
   const showQueueInfo = queuePosition && queuePosition > 1;
+  const noticeLabel = t('important_notice') || '重要通知';
 
   const containerStyle: React.CSSProperties = {
     backgroundColor: '#fafafa',
@@ -69,6 +70,15 @@ export function TopicHeader({
     outline: 'none',
   };
 
+  const statusBadgeStyle: React.CSSProperties = {
+    padding: '2px 8px',
+    borderRadius: '10px',
+    fontSize: '12px',
+    backgroundColor: '#ff4d4f',
+    color: '#fff',
+    flexShrink: 0,
+  };
+
   const queueBadgeStyle: React.CSSProperties = {
     padding: '2px 8px',
     borderRadius: '10px',
@@ -104,27 +114,44 @@ export function TopicHeader({
 
   return (
     <div style={containerStyle}>
-      {isEditing && editable ? (
-        <input
-          type="text"
-          value={editTopic}
-          onChange={(e) => setEditTopic(e.target.value)}
-          onBlur={handleTopicSubmit}
-          onKeyDown={handleKeyDown}
-          placeholder={t('important_notice') || '重要通知'}
-          style={inputStyle}
-          autoFocus
-        />
-      ) : (
-        <div style={topicAreaStyle} onClick={handleClick}>
-          <MessageSquare size={16} style={topicIconStyle} />
-          <span style={topicTextStyle}>
-            {session.topic || (t('important_notice') || '重要通知')}
+      <div style={topicAreaStyle}>
+        <MessageSquare size={16} style={topicIconStyle} />
+
+        {isEditing && editable ? (
+          <input
+            type="text"
+            value={editTopic}
+            onChange={(e) => setEditTopic(e.target.value)}
+            onBlur={handleTopicSubmit}
+            onKeyDown={handleKeyDown}
+            placeholder="输入主题..."
+            style={inputStyle}
+            autoFocus
+          />
+        ) : editable && !session.topic ? (
+          <span
+            style={{ ...topicTextStyle, color: '#999', fontStyle: 'italic' }}
+            onClick={handleClick}
+          >
+            点击添加主题...
           </span>
-        </div>
-      )}
+        ) : (
+          <span
+            style={{ ...topicTextStyle, cursor: editable ? 'pointer' : 'default' }}
+            onClick={handleClick}
+            title={session.topic || undefined}
+          >
+            {session.topic || noticeLabel}
+          </span>
+        )}
+      </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* 非编辑模式（访客端）显示红色重要通知徽章 */}
+        {!editable && (
+          <span style={statusBadgeStyle}>{noticeLabel}</span>
+        )}
+
         {showQueueInfo && (
           <span style={queueBadgeStyle}>
             #{queuePosition} | 约{estimatedWaitMinutes}分钟
