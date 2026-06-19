@@ -67,10 +67,26 @@ function getCtxString(c: any, key: string): string | null {
 chatRoutes.post('/session', async c => {
   try {
     const body = await c.req.json().catch(() => ({}))
+    // 从请求头获取访客信息
+    const forwardedIp = c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP')
+    const userAgent = c.req.header('User-Agent')
+    const referer = c.req.header('Referer')
+    
     const input = {
       visitorName: body.visitorName,
       sessionId: body.sessionId,
       business: body.business, // 商家标识(slug)
+      // 访客自定义字段
+      email: body.email,
+      phone: body.phone,
+      pid: body.pid,
+      params: body.params,
+      fromUrl: body.fromUrl,
+      referer: referer || body.referer,
+      ip: forwardedIp || body.ip,
+      userAgent: userAgent || body.userAgent,
+      device: body.device,
+      lang: body.lang,
     }
 
     const session = await chatService.createOrGetSession(input)

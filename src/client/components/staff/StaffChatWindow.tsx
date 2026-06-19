@@ -261,6 +261,9 @@ export function StaffChatWindow({
           </div>
         </div>
 
+        {/* 访客信息面板 */}
+        {session && <VisitorInfoPanel session={session} />}
+
         {session && (
           <TopicHeader
             session={session}
@@ -479,5 +482,126 @@ export function StaffChatWindow({
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * Visitor Info Panel - 访客详细信息面板
+ * 显示访客的：用户名、邮箱、手机、来源地址、进入链接、设备、IP等
+ */
+function VisitorInfoPanel({ session }: { session: Session }) {
+  const [expanded, setExpanded] = useState(false);
+  
+  const hasVisitorInfo = session.email || session.phone || session.pid || session.fromUrl || session.referer || session.ip || session.userAgent || (session.params && Object.keys(session.params).length > 0);
+  
+  if (!hasVisitorInfo) return null;
+
+  const panelStyle: React.CSSProperties = {
+    backgroundColor: '#f5f5f5',
+    borderBottom: '1px solid #e8e8e8',
+    padding: '8px 12px',
+    fontSize: '12px',
+  };
+
+  const headerRowStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    cursor: 'pointer',
+    color: '#666',
+  };
+
+  const gridStyle: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '6px 12px',
+    marginTop: '8px',
+    paddingTop: '8px',
+    borderTop: '1px solid #e8e8e8',
+  };
+
+  const itemStyle: React.CSSProperties = {
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    color: '#999',
+    fontSize: '11px',
+  };
+
+  const valueStyle: React.CSSProperties = {
+    color: '#333',
+    fontSize: '12px',
+    wordBreak: 'break-all',
+  };
+
+  return (
+    <div style={panelStyle}>
+      <div style={headerRowStyle} onClick={() => setExpanded(!expanded)}>
+        <span>📋 访客信息</span>
+        <span style={{ fontSize: '10px' }}>{expanded ? '▲' : '▼'}</span>
+      </div>
+      
+      {expanded && (
+        <div style={gridStyle}>
+          {session.email && (
+            <div style={itemStyle}>
+              <div style={labelStyle}>📧 邮箱</div>
+              <div style={valueStyle}>{session.email}</div>
+            </div>
+          )}
+          {session.phone && (
+            <div style={itemStyle}>
+              <div style={labelStyle}>📱 手机</div>
+              <div style={valueStyle}>{session.phone}</div>
+            </div>
+          )}
+          {session.pid && (
+            <div style={itemStyle}>
+              <div style={labelStyle}>🆔 用户ID</div>
+              <div style={valueStyle}>{session.pid}</div>
+            </div>
+          )}
+          {session.ip && (
+            <div style={itemStyle}>
+              <div style={labelStyle}>🌐 IP地址</div>
+              <div style={valueStyle}>{session.ip}</div>
+            </div>
+          )}
+          {session.fromUrl && (
+            <div style={{ ...itemStyle, gridColumn: '1 / -1' }}>
+              <div style={labelStyle}>🔗 进入链接</div>
+              <div style={{ ...valueStyle, fontSize: '11px' }}>{session.fromUrl}</div>
+            </div>
+          )}
+          {session.referer && (
+            <div style={{ ...itemStyle, gridColumn: '1 / -1' }}>
+              <div style={labelStyle}>📎 来源地址</div>
+              <div style={{ ...valueStyle, fontSize: '11px' }}>{session.referer}</div>
+            </div>
+          )}
+          {session.userAgent && (
+            <div style={{ ...itemStyle, gridColumn: '1 / -1' }}>
+              <div style={labelStyle}>💻 浏览器</div>
+              <div style={{ ...valueStyle, fontSize: '11px' }}>{session.userAgent}</div>
+            </div>
+          )}
+          {session.params && Object.keys(session.params).length > 0 && (
+            <div style={{ ...itemStyle, gridColumn: '1 / -1' }}>
+              <div style={labelStyle}>📝 自定义参数</div>
+              <div style={{ ...valueStyle, fontSize: '11px' }}>
+                {Object.entries(session.params).map(([key, value]) => (
+                  <div key={key} style={{ marginBottom: '2px' }}>
+                    <strong>{key}</strong>: {value}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

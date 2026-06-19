@@ -57,6 +57,12 @@ interface SessionRow {
   lang: string | null
   transfer_history: string | null
   response_time: number | null
+  email: string | null
+  phone: string | null
+  pid: string | null
+  params: string | null
+  referer: string | null
+  user_agent: string | null
   created_at: number
   updated_at: number
 }
@@ -102,6 +108,18 @@ function mapRowToSession(row: SessionRow, business?: BusinessRow): Session {
     estimatedWaitMinutes: row.estimated_wait_minutes || undefined,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
+    // 访客自定义字段
+    email: row.email || undefined,
+    phone: row.phone || undefined,
+    pid: row.pid || undefined,
+    params: row.params ? JSON.parse(row.params) : undefined,
+    ip: row.ip || undefined,
+    fromUrl: row.from_url || undefined,
+    referer: row.referer || undefined,
+    userAgent: row.user_agent || undefined,
+    device: row.device || undefined,
+    lang: row.lang || undefined,
+    avatar: row.avatar || undefined,
   }
 }
 
@@ -233,11 +251,25 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
   const visitorName = input.visitorName || generateVisitorName()
   const now = Date.now()
 
-  await db.run(
-    `INSERT INTO sessions (id, visiter_id, visitor_name, business_id, status, task_status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 'active', 'requirement_discussion', ?, ?)`,
-    [sessionId, visitorId, visitorName, businessId, now, now]
-  )
+  // Build dynamic INSERT with all available fields
+  const fields = ['id', 'visiter_id', 'visitor_name', 'business_id', 'status', 'task_status', 'created_at', 'updated_at']
+  const values: (string | number)[] = [sessionId, visitorId, visitorName, businessId, now, now]
+  const placeholders = ['?', '?', '?', '?', "'active'", "'requirement_discussion'", '?', '?']
+
+  // 访客自定义字段：如果传入了就写入
+  if (input.email) { fields.push('email'); values.push(input.email); placeholders.push('?') }
+  if (input.phone) { fields.push('phone'); values.push(input.phone); placeholders.push('?') }
+  if (input.pid) { fields.push('pid'); values.push(input.pid); placeholders.push('?') }
+  if (input.params) { fields.push('params'); values.push(JSON.stringify(input.params)); placeholders.push('?') }
+  if (input.fromUrl) { fields.push('from_url'); values.push(input.fromUrl); placeholders.push('?') }
+  if (input.referer) { fields.push('referer'); values.push(input.referer); placeholders.push('?') }
+  if (input.ip) { fields.push('ip'); values.push(input.ip); placeholders.push('?') }
+  if (input.userAgent) { fields.push('user_agent'); values.push(input.userAgent); placeholders.push('?') }
+  if (input.device) { fields.push('device'); values.push(input.device); placeholders.push('?') }
+  if (input.lang) { fields.push('lang'); values.push(input.lang); placeholders.push('?') }
+
+  const sql = `INSERT INTO sessions (${fields.join(', ')}) VALUES (${placeholders.join(', ')})`
+  await db.run(sql, values)
 
   const row = await db.get<SessionRow>('SELECT * FROM sessions WHERE id = ?', [sessionId])
   if (row) {

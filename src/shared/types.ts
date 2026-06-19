@@ -77,6 +77,18 @@ export interface Session {
   estimatedWaitMinutes?: number;
   createdAt: Date;
   updatedAt: Date;
+  // 访客自定义字段
+  email?: string;
+  phone?: string;
+  pid?: string; // 跨系统唯一标识
+  params?: Record<string, string>; // 自定义参数JSON
+  ip?: string;
+  fromUrl?: string; // 进入链接
+  referer?: string; // 来源地址
+  userAgent?: string;
+  device?: string;
+  lang?: string;
+  avatar?: string;
 }
 
 export interface Message {
@@ -96,6 +108,17 @@ export interface CreateSessionInput {
   visitorName?: string;
   sessionId?: string;
   business?: string; // 商家标识(slug)
+  // 访客自定义字段
+  email?: string;
+  phone?: string;
+  pid?: string; // 跨系统唯一标识
+  params?: Record<string, string>; // 自定义参数JSON
+  fromUrl?: string; // 进入链接
+  referer?: string; // 来源地址
+  ip?: string;
+  userAgent?: string;
+  device?: string;
+  lang?: string;
 }
 
 export interface SendMessageInput {

@@ -20,6 +20,21 @@ const getUrlBusiness = (): string | null => {
   return params.get('business');
 };
 
+// 从 URL 参数读取访客自定义信息
+const getVisitorInfoFromUrl = () => {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    userName: params.get('userName') || undefined,
+    email: params.get('email') || undefined,
+    phone: params.get('phone') || undefined,
+    pid: params.get('pid') || undefined,
+    groupId: params.get('groupId') || undefined,
+    adminId: params.get('adminId') || undefined,
+    paramsStr: params.get('params') || undefined,
+    lang: params.get('lang') || undefined,
+  };
+};
+
 const updateUrlSessionId = (sessionId: string): void => {
   const url = new URL(window.location.href);
   url.searchParams.set('s', sessionId);
@@ -92,11 +107,39 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const sessionId = urlSessionId || localStorage.getItem(SESSION_ID_KEY);
       const visitorName = localStorage.getItem(VISITOR_NAME_KEY) || undefined;
       const business = getUrlBusiness();
+      
+      // 从 URL 获取访客自定义信息
+      const visitorInfo = getVisitorInfoFromUrl();
+      // 如果 URL 传了 userName，优先使用
+      const finalVisitorName = visitorInfo.userName || visitorName;
+      
+      // 解析 params JSON 字符串
+      let paramsObj: Record<string, string> | undefined;
+      if (visitorInfo.paramsStr) {
+        try {
+          paramsObj = JSON.parse(visitorInfo.paramsStr);
+        } catch {
+          console.warn('[ChatStore] Failed to parse params JSON:', visitorInfo.paramsStr);
+        }
+      }
+      
+      // 获取当前页面 URL 作为 fromUrl
+      const currentUrl = window.location.href;
 
       const response = await fetch('/api/chat/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: sessionId || undefined, visitorName, business }),
+        body: JSON.stringify({
+          sessionId: sessionId || undefined,
+          visitorName: finalVisitorName,
+          business,
+          email: visitorInfo.email,
+          phone: visitorInfo.phone,
+          pid: visitorInfo.pid,
+          params: paramsObj,
+          fromUrl: currentUrl,
+          lang: visitorInfo.lang || navigator.language,
+        }),
       });
 
       const result = await response.json();

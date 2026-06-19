@@ -58,6 +58,13 @@ device TEXT,
 lang TEXT DEFAULT 'cn', 
 transfer_history TEXT, 
 response_time INTEGER, 
+-- 访客自定义字段
+email TEXT, 
+phone TEXT, 
+pid TEXT, 
+params TEXT, 
+referer TEXT, 
+user_agent TEXT, 
 created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), 
 updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000));
 
