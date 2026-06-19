@@ -167,15 +167,6 @@ export function StaffLoginPage() {
     cursor: 'pointer',
   };
 
-  const linkStyle: React.CSSProperties = {
-    display: 'block',
-    textAlign: 'center',
-    marginTop: '16px',
-    color: '#11998e',
-    fontSize: '14px',
-    textDecoration: 'none',
-  };
-
   return (
     <div style={containerStyle}>
       <select
@@ -265,10 +256,6 @@ export function StaffLoginPage() {
             )}
           </button>
         </form>
-
-        <a href="/admin" style={linkStyle}>
-          {t('go_to_admin')}
-        </a>
 
         <style>{`
           @keyframes spin {
