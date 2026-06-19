@@ -263,14 +263,20 @@ export function StaffPage() {
       });
       const result = await response.json();
       if (result.success) {
-        // 只需要自定义字段定义（固定字段已在VisitorInfoPanel中硬编码显示）
-        const defs: VisitorFieldDef[] = (result.data.customFields || []).map((f: any) => ({
+        // 合并固定字段和自定义字段定义，全部参与动态渲染
+        const fixedDefs: VisitorFieldDef[] = (result.data.fixedFields || []).map((f: any) => ({
+          fieldKey: f.fieldKey,
+          label: f.label,
+          type: f.type,
+          isFixed: true,
+        }));
+        const customDefs: VisitorFieldDef[] = (result.data.customFields || []).map((f: any) => ({
           fieldKey: f.fieldKey,
           label: f.label,
           type: f.type,
           isFixed: false,
         }));
-        setVisitorFieldDefs(defs);
+        setVisitorFieldDefs([...fixedDefs, ...customDefs]);
       }
     } catch (error) {
       console.error('Failed to fetch visitor field definitions:', error);

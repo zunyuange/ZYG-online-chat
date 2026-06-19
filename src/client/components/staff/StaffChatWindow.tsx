@@ -501,17 +501,87 @@ export function StaffChatWindow({
 function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fieldDefs?: VisitorFieldDef[] }) {
   const [expanded, setExpanded] = useState(false);
 
-  // 构建字段定义映射表（fieldKey → label, type）
-  const fieldDefMap = new Map<string, { label: string; type: string }>();
+  // ===================== 动态字段渲染 =====================
+  // 1. 构建默认固定字段定义（API未返回时的兜底）
+  const defaultFixedDefs: VisitorFieldDef[] = [
+    { fieldKey: 'userName', label: '姓名', type: 'text', isFixed: true },
+    { fieldKey: 'email', label: '邮箱', type: 'text', isFixed: true },
+    { fieldKey: 'phone', label: '手机', type: 'text', isFixed: true },
+    { fieldKey: 'pid', label: '用户ID', type: 'text', isFixed: true },
+    { fieldKey: 'ip', label: 'IP地址', type: 'text', isFixed: true },
+    { fieldKey: 'fromUrl', label: '进入链接', type: 'url', isFixed: true },
+    { fieldKey: 'referer', label: '来源地址', type: 'url', isFixed: true },
+    { fieldKey: 'userAgent', label: '浏览器', type: 'text', isFixed: true },
+    { fieldKey: 'device', label: '设备', type: 'text', isFixed: true },
+    { fieldKey: 'lang', label: '语言', type: 'text', isFixed: true },
+    { fieldKey: 'avatar', label: '头像', type: 'url', isFixed: true },
+  ];
+
+  // 如果有API数据就用API的，否则用默认定义（API会覆盖同key的默认值）
+  const fieldDefMap = new Map<string, { label: string; type: string; isFixed: boolean }>();
+  // 先塞入默认值
+  for (const d of defaultFixedDefs) {
+    fieldDefMap.set(d.fieldKey, { label: d.label, type: d.type, isFixed: true });
+  }
+  // API数据覆盖（包括自定义字段）
   if (fieldDefs) {
     for (const def of fieldDefs) {
-      fieldDefMap.set(def.fieldKey, { label: def.label, type: def.type });
+      fieldDefMap.set(def.fieldKey, { label: def.label, type: def.type, isFixed: def.isFixed ?? false });
     }
   }
-  
-  const hasVisitorInfo = session.visitorName || session.email || session.phone || session.pid || session.fromUrl || session.referer || session.ip || session.userAgent || session.device || session.lang || session.avatar || (session.params && Object.keys(session.params).length > 0);
-  
-  if (!hasVisitorInfo) return null;
+
+  // 2. 构建 session 固定字段值映射
+  const sessionFixedValues: Record<string, string | undefined> = {
+    userName: session.visitorName,
+    email: session.email,
+    phone: session.phone,
+    pid: session.pid,
+    ip: session.ip,
+    fromUrl: session.fromUrl,
+    referer: session.referer,
+    userAgent: session.userAgent,
+    device: session.device,
+    lang: session.lang,
+    avatar: session.avatar,
+  };
+
+  // 3. 收集所有有值的字段（固定字段 + 自定义参数）
+  interface FieldItem {
+    fieldKey: string;
+    label: string;
+    type: string;
+    value: string;
+    isFixed: boolean;
+    spanFull?: boolean;
+  }
+  const allFields: FieldItem[] = [];
+
+  // 先处理固定字段（按 fieldDefs 顺序或默认顺序）
+  for (const df of defaultFixedDefs) {
+    const value = sessionFixedValues[df.fieldKey];
+    if (value) {
+      const def = fieldDefMap.get(df.fieldKey)!;
+      // 某些字段内容较长，占整行
+      const spanFull = ['fromUrl', 'referer', 'userAgent'].includes(df.fieldKey);
+      allFields.push({ fieldKey: df.fieldKey, label: def.label, type: def.type, value, isFixed: true, spanFull });
+    }
+  }
+
+  // 再处理自定义字段（从 session.params 中）
+  if (session.params) {
+    for (const [key, value] of Object.entries(session.params)) {
+      const def = fieldDefMap.get(key);
+      const label = def ? def.label : key;
+      const type = def ? def.type : 'text';
+      allFields.push({ fieldKey: key, label, type, value, isFixed: false, spanFull: type === 'json' || type === 'url' });
+    }
+  }
+
+  // 4. 特殊类型：头像字段
+  const avatarField = allFields.find(f => f.fieldKey === 'avatar');
+  const nonAvatarFields = allFields.filter(f => f.fieldKey !== 'avatar');
+
+  if (allFields.length === 0) return null;
 
   const panelStyle: React.CSSProperties = {
     backgroundColor: '#f5f5f5',
@@ -554,122 +624,55 @@ function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fieldDefs?
     wordBreak: 'break-all',
   };
 
+  const renderFieldValue = (field: FieldItem) => {
+    if (field.fieldKey === 'avatar') {
+      return (
+        <a href={field.value} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff', fontSize: '11px' }}>
+          查看头像
+        </a>
+      );
+    }
+    if (field.type === 'url') {
+      return (
+        <a href={field.value} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff', wordBreak: 'break-all' }}>
+          {field.value.length > 50 ? field.value.substring(0, 50) + '...' : field.value}
+        </a>
+      );
+    }
+    if (field.type === 'json') {
+      let parsed = field.value;
+      try { parsed = JSON.stringify(JSON.parse(field.value), null, 2); } catch {}
+      return (
+        <pre style={{ margin: '2px 0 0 0', padding: '4px 6px', backgroundColor: '#f0f0f0', borderRadius: '3px', fontSize: '10px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+          {typeof parsed === 'string' ? parsed : field.value}
+        </pre>
+      );
+    }
+    return field.value;
+  };
+
   return (
     <div style={panelStyle}>
       <div style={headerRowStyle} onClick={() => setExpanded(!expanded)}>
-        <span>📋 访客信息</span>
+        <span>📋 访客信息 {allFields.length > 0 && <span style={{ color: '#999', fontSize: '10px' }}>({allFields.length}项)</span>}</span>
         <span style={{ fontSize: '10px' }}>{expanded ? '▲' : '▼'}</span>
       </div>
       
       {expanded && (
         <div style={gridStyle}>
-          {session.visitorName && (
-            <div style={itemStyle}>
-              <div style={labelStyle}>👤 姓名</div>
-              <div style={valueStyle}>{session.visitorName}</div>
-            </div>
-          )}
-          {session.email && (
-            <div style={itemStyle}>
-              <div style={labelStyle}>📧 邮箱</div>
-              <div style={valueStyle}>{session.email}</div>
-            </div>
-          )}
-          {session.phone && (
-            <div style={itemStyle}>
-              <div style={labelStyle}>📱 手机</div>
-              <div style={valueStyle}>{session.phone}</div>
-            </div>
-          )}
-          {session.pid && (
-            <div style={itemStyle}>
-              <div style={labelStyle}>🆔 用户ID</div>
-              <div style={valueStyle}>{session.pid}</div>
-            </div>
-          )}
-          {session.ip && (
-            <div style={itemStyle}>
-              <div style={labelStyle}>🌐 IP地址</div>
-              <div style={valueStyle}>{session.ip}</div>
-            </div>
-          )}
-          {session.fromUrl && (
-            <div style={{ ...itemStyle, gridColumn: '1 / -1' }}>
-              <div style={labelStyle}>🔗 进入链接</div>
-              <div style={{ ...valueStyle, fontSize: '11px' }}>{session.fromUrl}</div>
-            </div>
-          )}
-          {session.referer && (
-            <div style={{ ...itemStyle, gridColumn: '1 / -1' }}>
-              <div style={labelStyle}>📎 来源地址</div>
-              <div style={{ ...valueStyle, fontSize: '11px' }}>{session.referer}</div>
-            </div>
-          )}
-          {session.userAgent && (
-            <div style={{ ...itemStyle, gridColumn: '1 / -1' }}>
-              <div style={labelStyle}>💻 浏览器</div>
-              <div style={{ ...valueStyle, fontSize: '11px' }}>{session.userAgent}</div>
-            </div>
-          )}
-          {session.device && (
-            <div style={itemStyle}>
-              <div style={labelStyle}>📱 设备</div>
-              <div style={valueStyle}>{session.device}</div>
-            </div>
-          )}
-          {session.lang && (
-            <div style={itemStyle}>
-              <div style={labelStyle}>🌍 语言</div>
-              <div style={valueStyle}>{session.lang}</div>
-            </div>
-          )}
-          {session.avatar && (
-            <div style={itemStyle}>
-              <div style={labelStyle}>🖼️ 头像</div>
-              <div style={valueStyle}>
-                <a href={session.avatar} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff', fontSize: '11px' }}>
-                  查看头像
-                </a>
+          {nonAvatarFields.map((field) => (
+            <div key={field.fieldKey} style={{ ...itemStyle, ...(field.spanFull ? { gridColumn: '1 / -1' } : {}) }}>
+              <div style={labelStyle}>{field.isFixed ? '📌 ' : '🔧 '}{field.label}</div>
+              <div style={{ ...valueStyle, fontSize: field.spanFull ? '11px' : '12px' }}>
+                {renderFieldValue(field)}
               </div>
             </div>
-          )}
-          {session.params && Object.keys(session.params).length > 0 && (
-            <div style={{ ...itemStyle, gridColumn: '1 / -1' }}>
-              <div style={labelStyle}>📝 自定义参数</div>
-              <div style={{ ...valueStyle, fontSize: '11px' }}>
-                {Object.entries(session.params).map(([key, value]) => {
-                  const def = fieldDefMap.get(key);
-                  const displayLabel = def ? def.label : key; // 有定义用label，无定义用原始key
-                  const displayType = def ? def.type : 'text';
-                  
-                  if (displayType === 'url' && value) {
-                    return (
-                      <div key={key} style={{ marginBottom: '2px' }}>
-                        <strong>{displayLabel}</strong>: {' '}
-                        <a href={value} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff' }}>
-                          {value.length > 50 ? value.substring(0, 50) + '...' : value}
-                        </a>
-                      </div>
-                    );
-                  }
-                  if (displayType === 'json' && value) {
-                    let parsed = value;
-                    try { parsed = JSON.stringify(JSON.parse(value), null, 2); } catch {}
-                    return (
-                      <div key={key} style={{ marginBottom: '4px' }}>
-                        <strong>{displayLabel}</strong>:
-                        <pre style={{ margin: '2px 0 0 0', padding: '4px 6px', backgroundColor: '#f0f0f0', borderRadius: '3px', fontSize: '10px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                          {typeof parsed === 'string' ? parsed : value}
-                        </pre>
-                      </div>
-                    );
-                  }
-                  return (
-                    <div key={key} style={{ marginBottom: '2px' }}>
-                      <strong>{displayLabel}</strong>: {value}
-                    </div>
-                  );
-                })}
+          ))}
+          {avatarField && (
+            <div style={itemStyle}>
+              <div style={labelStyle}>🖼️ {avatarField.label}</div>
+              <div style={valueStyle}>
+                {renderFieldValue(avatarField)}
               </div>
             </div>
           )}
