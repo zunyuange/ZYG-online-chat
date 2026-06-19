@@ -44,17 +44,18 @@ visitorFieldRoutes.get('/', async (c) => {
 
     // 先获取系统固定字段
     const fixedFields = [
-      { id: 'fixed_0', fieldKey: 'email', label: '邮箱', type: 'text', isFixed: true, remark: '访客邮箱地址' },
-      { id: 'fixed_1', fieldKey: 'phone', label: '手机', type: 'text', isFixed: true, remark: '访客手机号码' },
-      { id: 'fixed_2', fieldKey: 'pid', label: '用户ID', type: 'text', isFixed: true, remark: '跨系统唯一标识' },
-      { id: 'fixed_3', fieldKey: 'params', label: '自定义参数', type: 'json', isFixed: true, remark: 'URL传入的JSON自定义参数' },
-      { id: 'fixed_4', fieldKey: 'ip', label: 'IP地址', type: 'text', isFixed: true, remark: '访客IP地址（自动获取）' },
-      { id: 'fixed_5', fieldKey: 'fromUrl', label: '进入链接', type: 'url', isFixed: true, remark: '访客进入时的完整URL' },
-      { id: 'fixed_6', fieldKey: 'referer', label: '来源地址', type: 'url', isFixed: true, remark: '访客来源页面（HTTP Referer）' },
-      { id: 'fixed_7', fieldKey: 'userAgent', label: '浏览器', type: 'text', isFixed: true, remark: '访客浏览器User-Agent信息' },
-      { id: 'fixed_8', fieldKey: 'device', label: '设备', type: 'text', isFixed: true, remark: '访客设备类型（自动识别）' },
-      { id: 'fixed_9', fieldKey: 'lang', label: '语言', type: 'text', isFixed: true, remark: '访客语言偏好' },
-      { id: 'fixed_10', fieldKey: 'avatar', label: '头像', type: 'url', isFixed: true, remark: '访客头像URL' },
+      { id: 'fixed_0', fieldKey: 'userName', label: '姓名', type: 'text', isFixed: true, remark: '访客姓名/用户名（URL参数userName传入，自动备注）' },
+      { id: 'fixed_1', fieldKey: 'email', label: '邮箱', type: 'text', isFixed: true, remark: '访客邮箱地址' },
+      { id: 'fixed_2', fieldKey: 'phone', label: '手机', type: 'text', isFixed: true, remark: '访客手机号码' },
+      { id: 'fixed_3', fieldKey: 'pid', label: '用户ID', type: 'text', isFixed: true, remark: '跨系统唯一标识' },
+      { id: 'fixed_4', fieldKey: 'params', label: '自定义参数', type: 'json', isFixed: true, remark: 'URL传入的JSON自定义参数' },
+      { id: 'fixed_5', fieldKey: 'ip', label: 'IP地址', type: 'text', isFixed: true, remark: '访客IP地址（自动获取）' },
+      { id: 'fixed_6', fieldKey: 'fromUrl', label: '进入链接', type: 'url', isFixed: true, remark: '访客进入时的完整URL' },
+      { id: 'fixed_7', fieldKey: 'referer', label: '来源地址', type: 'url', isFixed: true, remark: '访客来源页面（HTTP Referer）' },
+      { id: 'fixed_8', fieldKey: 'userAgent', label: '浏览器', type: 'text', isFixed: true, remark: '访客浏览器User-Agent信息' },
+      { id: 'fixed_9', fieldKey: 'device', label: '设备', type: 'text', isFixed: true, remark: '访客设备类型（自动识别）' },
+      { id: 'fixed_10', fieldKey: 'lang', label: '语言', type: 'text', isFixed: true, remark: '访客语言偏好' },
+      { id: 'fixed_11', fieldKey: 'avatar', label: '头像', type: 'url', isFixed: true, remark: '访客头像URL' },
     ];
 
     // 获取自定义字段
@@ -96,7 +97,7 @@ visitorFieldRoutes.post('/', async (c) => {
     }
 
     // 检查是否与固定字段冲突
-    const fixedKeys = ['email', 'phone', 'pid', 'params', 'ip', 'fromUrl', 'referer', 'userAgent', 'device', 'lang', 'avatar'];
+    const fixedKeys = ['userName', 'email', 'phone', 'pid', 'params', 'ip', 'fromUrl', 'referer', 'userAgent', 'device', 'lang', 'avatar'];
     if (fixedKeys.includes(fieldKey)) {
       return c.json({ success: false, error: `字段标识 "${fieldKey}" 已被系统固定字段使用` }, 400);
     }

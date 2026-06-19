@@ -2,7 +2,7 @@
  * 对接文档页面 - 独立公开页面，所有人可访问
  * 展示如何将在线客服系统接入到自己的网站中
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { I18nProvider } from '@client/context/I18nContext';
 import { useI18n } from '@client/context/I18nContext';
 import { Copy, Check, Code2, Link2, Monitor, Smartphone } from 'lucide-react';
@@ -49,6 +49,27 @@ function DocsContent() {
 </iframe>`;
 
   const directUrl = `${currentDomain}/chat?business=default`;
+
+  // Override global overflow:hidden to allow scrolling on docs page
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const root = document.getElementById('root');
+
+    const prevHtml = html.style.overflow;
+    const prevBody = body.style.overflow;
+    const prevRoot = root?.style.overflow;
+
+    html.style.overflow = 'auto';
+    body.style.overflow = 'auto';
+    if (root) root.style.overflow = 'auto';
+
+    return () => {
+      html.style.overflow = prevHtml;
+      body.style.overflow = prevBody;
+      if (root) root.style.overflow = prevRoot || '';
+    };
+  }, []);
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f5f7fa' }}>
