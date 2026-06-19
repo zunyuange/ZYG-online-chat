@@ -26,8 +26,8 @@ export async function createTransferRequest(
   const db = getDb()
 
   try {
-    const session = await db.get<{ id: string; business_id: number; service_id: number }>(
-      'SELECT id, business_id, service_id FROM sessions WHERE id = ?',
+    const session = await db.get<{ id: string; business_id: number; service_id: number; assigned_staff_id: number }>(
+      'SELECT id, business_id, service_id, assigned_staff_id FROM sessions WHERE id = ?',
       [params.sessionId]
     )
 
@@ -39,8 +39,12 @@ export async function createTransferRequest(
       return { success: false, error: '无权访问该会话' }
     }
 
-    // 检查是否是该会话的当前客服（service_id 由 accept/transfer 路由同步更新）
-    const currentStaffId = session.service_id || 0;
+    // 检查是否是该会话的当前客服
+    // 优先检查 assigned_staff_id（客服接收会话后设置），回退检查 service_id（兼容旧数据）
+    const currentStaffId = session.assigned_staff_id || session.service_id || 0;
+    if (currentStaffId === 0) {
+      return { success: false, error: '该会话尚未被客服接收，无法转接' }
+    }
     if (currentStaffId !== params.fromStaffId) {
       return { success: false, error: '您不是该会话的当前客服' }
     }
