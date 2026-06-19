@@ -475,7 +475,7 @@ function DocsContent() {
                   步骤 3：追加自定义参数 <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px', fontSize: '13px' }}>params</code>（可选）
                 </div>
                 <p style={{ fontSize: '13px', color: '#666', margin: '0 0 8px 0', lineHeight: '1.8' }}>
-                  <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>params</code> 的值是 <strong>JSON 字符串</strong>。由于 URL 不能直接包含 <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>{{</code> <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>}}</code> 等特殊字符，需要用 <strong>URL 编码</strong> 处理。
+                  <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>params</code> 的值是 <strong>JSON 字符串</strong>。由于 URL 不能直接包含 <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>{'{'}</code> <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>{'}'}</code> 等特殊字符，需要用 <strong>URL 编码</strong> 处理。
                   <span style={{ display: 'block', marginTop: '6px' }}>
                     示例：<code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>{'{"source":"website","level":"vip"}'}</code>
                     → 编码后 → <code style={{ backgroundColor: '#f0f0f0', padding: '1px 6px', borderRadius: '3px' }}>%7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D</code>
