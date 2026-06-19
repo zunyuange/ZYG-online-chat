@@ -8,7 +8,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { MessageCircle, Users, User, LogOut, Code2, Settings, ArrowRightLeft, XCircle, ListChecks } from 'lucide-react';
 import { useStaffStore } from '@client/stores/staffStore';
 import { SessionList } from '@client/components/staff/SessionList';
-import { StaffChatWindow } from '@client/components/staff/StaffChatWindow';
+import { StaffChatWindow, VisitorInfoPanel } from '@client/components/staff/StaffChatWindow';
 import type { VisitorFieldDef } from '@client/components/staff/StaffChatWindow';
 import { QueueList } from '@client/components/staff/QueueList';
 import { StaffManagement } from '@client/components/staff/StaffManagement';
@@ -716,6 +716,16 @@ export function StaffPage() {
     overflow: 'hidden',
   };
 
+  const visitorPanelStyle: React.CSSProperties = {
+    width: '280px',
+    flexShrink: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    backgroundColor: '#fff',
+    borderLeft: '1px solid #e8e8e8',
+    overflow: 'hidden',
+  };
+
   const statusStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
@@ -1251,9 +1261,48 @@ export function StaffPage() {
                 currentStaffId={userInfo?.userId}
                 staffList={staffList}
                 t={t}
-                visitorFieldDefs={visitorFieldDefs}
               />
             </div>
+
+            {/* 右侧访客信息侧边栏 */}
+            {currentSession && !isMobile && (
+              <div style={visitorPanelStyle}>
+                <div style={{
+                  padding: '14px',
+                  backgroundColor: '#fafafa',
+                  borderBottom: '1px solid #e8e8e8',
+                }}>
+                  <div style={{
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: '#333',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}>
+                    <span style={{
+                      display: 'inline-block',
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: currentSession.status === 'active' ? '#52c41a' : '#999',
+                    }}></span>
+                    {currentSession.visitorName}
+                  </div>
+                  {currentSession.ip && (
+                    <div style={{ fontSize: '11px', color: '#999', marginTop: '4px', paddingLeft: '16px' }}>
+                      🌐 {currentSession.ip}
+                    </div>
+                  )}
+                </div>
+                <div style={{ flex: 1, overflow: 'auto' }}>
+                  <VisitorInfoPanel
+                    session={currentSession}
+                    fieldDefs={visitorFieldDefs}
+                  />
+                </div>
+              </div>
+            )}
           </>
         )}
 

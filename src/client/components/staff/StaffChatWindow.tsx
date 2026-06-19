@@ -35,7 +35,6 @@ interface StaffChatWindowProps {
   currentStaffId?: number;
   staffList?: { id: number; name: string; username: string }[];
   t?: (key: string) => string;
-  visitorFieldDefs?: VisitorFieldDef[];
 }
 
 export function StaffChatWindow({
@@ -57,7 +56,6 @@ export function StaffChatWindow({
   currentStaffId,
   staffList = [],
   t = (key: string) => key,
-  visitorFieldDefs,
 }: StaffChatWindowProps) {
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
@@ -272,9 +270,6 @@ export function StaffChatWindow({
 
         {/* 来源面板 — 仅显示进入链接 + 来源地址 */}
         {session && <SourcePanel session={session} />}
-
-        {/* 访客信息面板 — 竖屏单列，隐藏进入链接/来源地址，分区显示 */}
-        {session && <VisitorInfoPanel session={session} fieldDefs={visitorFieldDefs} />}
 
         {session && (
           <TopicHeader
@@ -601,7 +596,7 @@ function SourceUrlRow({ label, url, color, bgColor, borderColor }: {
  * 访客信息面板 — 竖屏单列布局，分区显示（系统固定字段 / 自定义字段）
  * 注意：fromUrl 和 referer 已在「来源」面板显示，此处隐藏
  */
-function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fieldDefs?: VisitorFieldDef[] }) {
+export function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fieldDefs?: VisitorFieldDef[] }) {
   // ═══════════════ 字段定义 ═══════════════
   interface FixedFieldDef { fieldKey: string; label: string; type: string; icon: string }
   const defaultFixedDefs: FixedFieldDef[] = [
