@@ -778,6 +778,15 @@ export function AdminPage() {
     color,
   });
 
+  // 角色中文映射
+  const getRoleLabel = (role: string): string => {
+    const roleMap: Record<string, string> = {
+      admin: '管理员',
+      staff: '客服',
+    };
+    return roleMap[role] || role;
+  };
+
   const navItems = [
     { key: 'dashboard' as const, label: t('dashboard'), icon: Home },
     { key: 'staff' as const, label: t('staff_management'), icon: Users },
@@ -922,7 +931,7 @@ export function AdminPage() {
               <tr key={user.id}>
                 <td style={tdStyle}>{user.username}</td>
                 <td style={tdStyle}>{user.name || '-'}</td>
-                <td style={tdStyle}><span style={roleBadgeStyle}>{user.role}</span></td>
+                <td style={tdStyle}><span style={roleBadgeStyle}>{getRoleLabel(user.role)}</span></td>
                 <td style={tdStyle}><span style={badgeStyle(user.status)}>{user.status === 'active' ? t('active') : t('inactive')}</span></td>
               </tr>
             ))}
@@ -985,7 +994,7 @@ export function AdminPage() {
                   <td style={tdStyle}>{user.name || '-'}</td>
                   <td style={tdStyle}>{user.email || '-'}</td>
                   <td style={tdStyle}>{businessName}</td>
-                  <td style={tdStyle}><span style={roleBadgeStyle}>{user.role}</span></td>
+                  <td style={tdStyle}><span style={roleBadgeStyle}>{getRoleLabel(user.role)}</span></td>
                   <td style={tdStyle}><span style={badgeStyle(user.status)}>{user.status === 'active' ? t('active') : t('inactive')}</span></td>
                   <td style={tdStyle}>{new Date(user.created_at).toLocaleDateString()}</td>
                   <td style={tdStyle}>
@@ -1569,8 +1578,8 @@ export function AdminPage() {
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                     style={inputStyle}
                   >
-                    <option value="admin">{t('admin')}</option>
-                    <option value="staff">{t('staff')}</option>
+                    <option value="admin">管理员</option>
+                    <option value="staff">客服</option>
                   </select>
                 </>
               ) : (
@@ -1582,8 +1591,8 @@ export function AdminPage() {
                       onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                       style={inputStyle}
                     >
-                      <option value="staff">{t('staff')}</option>
-                      <option value="admin">{t('admin')}</option>
+                      <option value="staff">客服</option>
+                      <option value="admin">管理员</option>
                     </select>
                   </>
                 )
