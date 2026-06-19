@@ -31,6 +31,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const setLocale = (newLocale: LocaleCode) => {
     setLocaleState(newLocale);
     localStorage.setItem('chat_locale', newLocale);
+    window.location.reload();
   };
 
   const t = (key: LocaleKey): string => {
