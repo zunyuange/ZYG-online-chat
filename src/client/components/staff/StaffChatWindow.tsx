@@ -2,7 +2,7 @@
  * Staff Chat Window Component - Chat window for staff with session info
  */
 
-import type { Message, Session, InputMode, TaskStatus, ContentType } from '@shared/types';
+import type { Message, Session, InputMode, ContentType } from '@shared/types';
 import { MessageList } from '@client/components/chat/MessageList';
 import { MessageInput } from '@client/components/chat/MessageInput';
 import { TopicHeader } from '@client/components/chat/TopicHeader';
@@ -28,8 +28,6 @@ interface StaffChatWindowProps {
   onSend: (content: string, type: ContentType) => void;
   onUpload: (file: File) => void;
   onModeChange?: (mode: InputMode) => void;
-  onTopicChange?: (topic: string) => void;
-  onStatusChange?: (status: TaskStatus) => void;
   onClearMessages?: () => void;
   onEndSession?: () => void;
   currentStaffId?: number;
@@ -49,8 +47,6 @@ export function StaffChatWindow({
   onSend,
   onUpload,
   onModeChange,
-  onTopicChange,
-  onStatusChange,
   onClearMessages,
   onEndSession,
   currentStaffId,
@@ -274,12 +270,8 @@ export function StaffChatWindow({
         {session && (
           <TopicHeader
             session={session}
-            editable={true}
             queuePosition={session.queuePosition}
             estimatedWaitMinutes={session.estimatedWaitMinutes}
-            onTopicChange={onTopicChange}
-            onStatusChange={onStatusChange}
-            compact={false}
             t={t}
           />
         )}

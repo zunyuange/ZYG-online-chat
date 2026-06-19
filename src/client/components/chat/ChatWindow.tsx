@@ -229,14 +229,12 @@ export function ChatWindow({
         </div>
       )}
 
-      {/* Topic Header (user view - read only) - 始终显示让用户看到状态 */}
+      {/* 重要通知 */}
       {session && (
         <TopicHeader
           session={session}
-          editable={false}
           queuePosition={session.queuePosition}
           estimatedWaitMinutes={session.estimatedWaitMinutes}
-          compact={true}
           t={t}
         />
       )}

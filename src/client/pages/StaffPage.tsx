@@ -84,7 +84,6 @@ export function StaffPage() {
     setInputMode,
     setUser,
     updateTopic,
-    updateTaskStatus,
     clearMessages,
   } = useStaffStore();
 
@@ -623,18 +622,6 @@ export function StaffPage() {
 
   const handleUpload = (file: File) => {
     uploadFile(file);
-  };
-
-  const handleTopicChange = (topic: string) => {
-    if (currentSessionId) {
-      updateTopic(currentSessionId, topic);
-    }
-  };
-
-  const handleStatusChange = (status: 'requirement_discussion' | 'requirement_confirmed' | 'in_progress' | 'delivered' | 'reviewed') => {
-    if (currentSessionId) {
-      updateTaskStatus(currentSessionId, status);
-    }
   };
 
   const toggleSessionList = () => {
@@ -1253,8 +1240,6 @@ export function StaffPage() {
                 onSend={handleSend}
                 onUpload={handleUpload}
                 onModeChange={setInputMode}
-                onTopicChange={handleTopicChange}
-                onStatusChange={handleStatusChange}
                 onClearMessages={() => setShowClearConfirm(true)}
                 onEndSession={() => setShowEndSessionConfirm(true)}
                 onTransfer={() => {}}
