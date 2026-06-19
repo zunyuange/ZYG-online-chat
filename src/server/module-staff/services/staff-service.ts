@@ -925,18 +925,24 @@ export async function listStaffUsers(
 ): Promise<StaffUser[]> {
   const db = getDb()
 
+  console.log('[StaffService] listStaffUsers called with businessId:', businessId, 'currentUserId:', currentUserId)
+
   // 如果当前用户是主体商家（business_id=0），返回该商家自己和其下级客服
+  // 注意：商家主账号登录后 token 中的 businessId 已被设置为 userId，不会进入此分支
   if (businessId === 0 && currentUserId) {
+    console.log('[StaffService] listStaffUsers: super admin mode, returning self + subordinates')
     return await db.all<StaffUser>(
       'SELECT id, business_id, username, email, name, role, status, created_at, updated_at FROM staff_users WHERE id = ? OR business_id = ? ORDER BY created_at DESC',
       [currentUserId, currentUserId]
     )
   }
 
-  // 否则返回指定business_id的账号
+  // 商家主账号登录后 businessId = userId（如 4），通过 business_id 字段过滤
+  // 同时也要查出商家主账号自己（business_id=0 但 id=businessId 的那条记录）
+  console.log('[StaffService] listStaffUsers: filtering by business_id =', businessId, 'or id =', businessId, '(owner)')
   return await db.all<StaffUser>(
-    'SELECT id, business_id, username, email, name, role, status, created_at, updated_at FROM staff_users WHERE business_id = ? ORDER BY created_at DESC',
-    [businessId]
+    'SELECT id, business_id, username, email, name, role, status, created_at, updated_at FROM staff_users WHERE business_id = ? OR (id = ? AND business_id = 0) ORDER BY created_at DESC',
+    [businessId, businessId]
   )
 }
 
