@@ -108,16 +108,16 @@ export function StaffManagement() {
       });
       const result = await response.json();
       if (result.success) {
-        setMessage(modal.editing ? '更新成功' : '创建成功');
+        setMessage(modal.editing ? t('staff_mgmt_update_success') : t('staff_mgmt_create_success'));
         fetchUsers();
         setTimeout(() => {
           handleCloseModal();
         }, 1000);
       } else {
-        setMessage(result.error || '操作失败');
+        setMessage(result.error || t('operation_failed'));
       }
     } catch (error) {
-      setMessage('操作失败');
+      setMessage(t('operation_failed'));
       console.error('Failed to submit:', error);
     }
   };
@@ -145,7 +145,7 @@ export function StaffManagement() {
   };
 
   const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleString('zh-CN');
+    return new Date(timestamp).toLocaleString(navigator.language || 'en');
   };
 
   if (loading) {
@@ -194,20 +194,20 @@ export function StaffManagement() {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ backgroundColor: '#fafafa' }}>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '14px', fontWeight: 500, color: '#666', borderBottom: '1px solid #e8e8e8' }}>用户名</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '14px', fontWeight: 500, color: '#666', borderBottom: '1px solid #e8e8e8' }}>姓名</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '14px', fontWeight: 500, color: '#666', borderBottom: '1px solid #e8e8e8' }}>邮箱</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '14px', fontWeight: 500, color: '#666', borderBottom: '1px solid #e8e8e8' }}>角色</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '14px', fontWeight: 500, color: '#666', borderBottom: '1px solid #e8e8e8' }}>状态</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '14px', fontWeight: 500, color: '#666', borderBottom: '1px solid #e8e8e8' }}>创建时间</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '14px', fontWeight: 500, color: '#666', borderBottom: '1px solid #e8e8e8' }}>操作</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '14px', fontWeight: 500, color: '#666', borderBottom: '1px solid #e8e8e8' }}>{t('staff_mgmt_username')}</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '14px', fontWeight: 500, color: '#666', borderBottom: '1px solid #e8e8e8' }}>{t('staff_mgmt_name')}</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '14px', fontWeight: 500, color: '#666', borderBottom: '1px solid #e8e8e8' }}>{t('email')}</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '14px', fontWeight: 500, color: '#666', borderBottom: '1px solid #e8e8e8' }}>{t('staff_mgmt_role')}</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '14px', fontWeight: 500, color: '#666', borderBottom: '1px solid #e8e8e8' }}>{t('staff_mgmt_status')}</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '14px', fontWeight: 500, color: '#666', borderBottom: '1px solid #e8e8e8' }}>{t('created_at')}</th>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '14px', fontWeight: 500, color: '#666', borderBottom: '1px solid #e8e8e8' }}>{t('staff_mgmt_actions')}</th>
             </tr>
           </thead>
           <tbody>
             {users.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#999' }}>
-                  暂无账号
+                  {t('staff_mgmt_no_accounts')}
                 </td>
               </tr>
             ) : (
@@ -224,7 +224,7 @@ export function StaffManagement() {
                       backgroundColor: user.role === 'admin' ? '#fff7e6' : '#f6ffed',
                       color: user.role === 'admin' ? '#d46b08' : '#52c41a',
                     }}>
-                      {user.role === 'admin' ? '管理员' : '客服'}
+                      {user.role === 'admin' ? t('staff_mgmt_role_admin') : t('staff_mgmt_role_staff')}
                     </span>
                   </td>
                   <td style={{ padding: '12px 16px', fontSize: '14px' }}>
@@ -235,7 +235,7 @@ export function StaffManagement() {
                       backgroundColor: user.status === 'active' ? '#f6ffed' : '#fff2f0',
                       color: user.status === 'active' ? '#52c41a' : '#ff4d4f',
                     }}>
-                      {user.status === 'active' ? '启用' : '禁用'}
+                      {user.status === 'active' ? t('staff_mgmt_enabled') : t('staff_mgmt_disabled')}
                     </span>
                   </td>
                   <td style={{ padding: '12px 16px', fontSize: '14px', color: '#999' }}>
@@ -333,7 +333,7 @@ export function StaffManagement() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>用户名 *</label>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>{t('staff_mgmt_username_label')}</label>
                 <input
                   type="text"
                   value={formData.username}
@@ -348,13 +348,13 @@ export function StaffManagement() {
                     boxSizing: 'border-box',
                     backgroundColor: modal.editing ? '#f5f5f5' : '#fff',
                   }}
-                  placeholder="请输入用户名"
+                  placeholder={t('staff_mgmt_username_placeholder')}
                 />
               </div>
 
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
-                  密码 {modal.editing ? '(留空则不修改)' : '*'}
+                  {t('staff_mgmt_password_label')}
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
@@ -409,7 +409,7 @@ export function StaffManagement() {
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>邮箱</label>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>{t('email')}</label>
                 <input
                   type="email"
                   value={formData.email}
@@ -422,12 +422,12 @@ export function StaffManagement() {
                     fontSize: '14px',
                     boxSizing: 'border-box',
                   }}
-                  placeholder="请输入邮箱"
+                  placeholder={t('staff_mgmt_email_placeholder')}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>角色</label>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>{t('staff_mgmt_role')}</label>
                 <select
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}

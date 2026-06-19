@@ -650,6 +650,7 @@ export const enUS = {
   staff_transfer_confirm_reject: 'Confirm Reject',
   staff_transfer_resend_title: 'Resend Transfer Request',
   staff_transfer_resend_desc: 'You are sending a transfer request to ',
+  staff_transfer_resend_desc_apply: 'reapply the transfer request',
   staff_transfer_reason_placeholder: 'Enter transfer reason (required)',
   staff_transfer_send: 'Send Request',
   staff_chat_source_title: '📍 Source',

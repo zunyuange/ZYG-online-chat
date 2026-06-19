@@ -208,7 +208,7 @@ export function StaffPage() {
         if (result.success && result.valid) {
           setUserInfo({
             userId: result.userId,
-            username: result.username || '管理员',
+            username: result.username || t('administrator'),
             businessId: result.businessId,
             businessSlug: result.businessSlug,
             businessName: result.businessName,
@@ -216,7 +216,7 @@ export function StaffPage() {
           });
           setUser({
             userId: result.userId,
-            username: result.username || '管理员',
+            username: result.username || t('administrator'),
             businessId: result.businessId,
             role: result.role,
           });
@@ -1445,13 +1445,13 @@ export function StaffPage() {
             </div>
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: '#666' }}>
-                确认密码
+                {t('confirm_password')}
               </label>
               <input
                 type="password"
                 value={profileForm.confirmPassword}
                 onChange={(e) => setProfileForm({ ...profileForm, confirmPassword: e.target.value })}
-                placeholder="再次输入新密码"
+                placeholder={t('confirm_password_hint')}
                 style={{
                   width: '100%',
                   padding: '8px 12px',
@@ -1844,13 +1844,13 @@ export function StaffPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 'bold' }}>
-              重新发起转接请求
+              {t('staff_transfer_resend_title')}
             </h3>
             <div style={{ marginBottom: '16px', fontSize: '14px', color: '#666' }}>
-              您正在向客服 <strong>{selectedReapplyRequest.to_staff_name || selectedReapplyRequest.to_staff_id}</strong> 重新发起转接申请
+              {t('staff_transfer_resend_desc')} <strong>{selectedReapplyRequest.to_staff_name || selectedReapplyRequest.to_staff_id}</strong> {t('staff_transfer_resend_desc_apply')}
             </div>
             <div style={{ marginBottom: '16px', fontSize: '12px', color: '#999' }}>
-              会话: {selectedReapplyRequest.session_visitor_name || selectedReapplyRequest.session_id}
+              {t('staff_transfer_session')} {selectedReapplyRequest.session_visitor_name || selectedReapplyRequest.session_id}
             </div>
             <textarea
               value={reapplyReason}

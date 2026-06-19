@@ -643,5 +643,12 @@ export default {
   admin_role_admin: 'Admin',
   admin_role_staff: 'Staff',
   admin_table_business: 'Business',
-  signature_online: 'Online Support System',
+  signature_online: 'Online Support System',
+  important_notice: 'Important Notice',
+  no_notice: 'No Notice',
+  offline: 'Offline',
+  all: 'All',
+  lang_zh_CN: '中文',
+  lang_en_US: 'English',
+  staff_transfer_resend_desc_apply: 'reapply the transfer request',
 };

@@ -632,8 +632,9 @@ export default {
   staff_transfer_reject_placeholder: 'Enter rejection reason (required)',
   staff_transfer_confirm_reject: 'Confirm Reject',
   staff_transfer_resend_title: 'Resend Transfer Request',
-  staff_transfer_resend_desc: 'You are sending a transfer request to ',
-  staff_transfer_reason_placeholder: 'Enter transfer reason (required)',
+  staff_transfer_resend_desc: '您正在向客服',
+  staff_transfer_resend_desc_apply: '重新發起轉接申請',
+  staff_transfer_reason_placeholder: '請輸入轉接原因（必填）',
   staff_transfer_send: 'Send Request',
   staff_chat_source_title: '📍 Source',
   staff_chat_entry_link: '🔗 Entry Link',
@@ -661,4 +662,8 @@ export default {
   admin_role_staff: 'Staff',
   admin_table_business: 'Business',
   signature_online: 'Online Support System',
+
+  other_offline: 'The other party is offline',
+  lang_zh_CN: '中文',
+  lang_en_US: 'English',
 };

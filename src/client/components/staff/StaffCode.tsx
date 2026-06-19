@@ -85,7 +85,7 @@ export function StaffCode() {
           borderRadius: '50%',
           margin: '0 auto 16px',
         }}></div>
-        <p style={{ color: '#6b7280' }}>加载中...</p>
+        <p style={{ color: '#6b7280' }}>{t('loading_text')}</p>
       </div>
     );
   }
@@ -191,7 +191,7 @@ export function StaffCode() {
             </button>
           </div>
           <p style={{ color: '#999', fontSize: '14px', marginTop: '12px' }}>
-            访客可以通过此链接直接访问客服聊天页面
+            {t('staff_code_direct_link_desc')}
           </p>
         </div>
       </div>
@@ -231,10 +231,10 @@ export function StaffCode() {
             }}
           >
             {copied === 'script' ? <Check size={18} /> : <Copy size={18} />}
-            {copied === 'script' ? '已复制' : '复制代码'}
+            {copied === 'script' ? t('staff_code_copied') : t('staff_code_copy_code')}
           </button>
           <p style={{ color: '#999', fontSize: '14px', marginTop: '12px' }}>
-            将此脚本添加到您的网站页面中，访客点击即可打开客服聊天窗口
+            {t('staff_code_embed_script_desc')}
           </p>
         </div>
       </div>

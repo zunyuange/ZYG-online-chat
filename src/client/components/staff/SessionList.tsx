@@ -41,7 +41,7 @@ export function SessionList({
     if (minutes < 60) return `${minutes}${t('minutes_ago_suffix')}`;
     if (hours < 24) return `${hours}${t('hours_ago_suffix')}`;
     if (days < 7) return `${days}${t('days_ago_suffix')}`;
-    return new Date(date).toLocaleDateString('zh-CN');
+    return new Date(date).toLocaleDateString(navigator.language || 'en');
   };
 
   const getLastMessagePreview = (session: SessionWithPreview) => {

@@ -643,6 +643,7 @@ export const zhCN = {
   staff_transfer_confirm_reject: '确认拒绝',
   staff_transfer_resend_title: '重新发起转接请求',
   staff_transfer_resend_desc: '您正在向客服',
+  staff_transfer_resend_desc_apply: '重新发起转接申请',
   staff_transfer_reason_placeholder: '请输入转接原因（必填）',
   staff_transfer_send: '发送请求',
   staff_chat_source_title: '📍 来源',

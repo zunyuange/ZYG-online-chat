@@ -647,5 +647,11 @@ export default {
   admin_role_admin: 'Admin',
   admin_role_staff: 'Staff',
   admin_table_business: 'Business',
-  signature_online: 'Online Support System',
+  signature_online: 'Online Support System',
+  select_session: 'Select a session to start chatting',
+  clear: 'Clear',
+  end: 'End',
+  lang_zh_CN: '中文',
+  lang_en_US: 'English',
+  staff_transfer_resend_desc_apply: 'reapply the transfer request',
 };
