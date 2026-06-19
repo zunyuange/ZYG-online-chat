@@ -253,6 +253,13 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
       if (!row.pid && input.pid) { updates.push('pid = ?'); updateVals.push(input.pid) }
       if (!row.from_url && input.fromUrl) { updates.push('from_url = ?'); updateVals.push(input.fromUrl) }
       if (!row.referer && input.referer) { updates.push('referer = ?'); updateVals.push(input.referer) }
+      // params: 合并新旧参数（新值覆盖旧值，新增键保留）
+      if (input.params && Object.keys(input.params).length > 0) {
+        const existingParams = row.params ? JSON.parse(row.params) : {}
+        const mergedParams = { ...existingParams, ...input.params }
+        updates.push('params = ?')
+        updateVals.push(JSON.stringify(mergedParams))
+      }
       if (updates.length > 0) {
         updates.push('updated_at = ?')
         updateVals.push(Date.now())

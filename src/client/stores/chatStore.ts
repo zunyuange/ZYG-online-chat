@@ -20,19 +20,35 @@ const getUrlBusiness = (): string | null => {
   return params.get('business');
 };
 
+// 系统保留的 URL 参数名（不会被当作自定义参数）
+const SYSTEM_PARAMS = new Set([
+  'business', 's', 'userName', 'email', 'phone', 'pid',
+  'groupId', 'adminId', 'params', 'lang', 'avatar',
+]);
+
 // 从 URL 参数读取访客自定义信息
 const getVisitorInfoFromUrl = () => {
-  const params = new URLSearchParams(window.location.search);
+  const urlParams = new URLSearchParams(window.location.search);
+  
+  // 收集所有不在系统参数列表中的 URL 参数作为自定义参数
+  const extraParams: Record<string, string> = {};
+  urlParams.forEach((value, key) => {
+    if (!SYSTEM_PARAMS.has(key) && value) {
+      extraParams[key] = value;
+    }
+  });
+  
   return {
-    userName: params.get('userName') || undefined,
-    email: params.get('email') || undefined,
-    phone: params.get('phone') || undefined,
-    pid: params.get('pid') || undefined,
-    groupId: params.get('groupId') || undefined,
-    adminId: params.get('adminId') || undefined,
-    paramsStr: params.get('params') || undefined,
-    lang: params.get('lang') || undefined,
-    avatar: params.get('avatar') || undefined,
+    userName: urlParams.get('userName') || undefined,
+    email: urlParams.get('email') || undefined,
+    phone: urlParams.get('phone') || undefined,
+    pid: urlParams.get('pid') || undefined,
+    groupId: urlParams.get('groupId') || undefined,
+    adminId: urlParams.get('adminId') || undefined,
+    paramsStr: urlParams.get('params') || undefined,
+    lang: urlParams.get('lang') || undefined,
+    avatar: urlParams.get('avatar') || undefined,
+    extraParams: Object.keys(extraParams).length > 0 ? extraParams : undefined,
   };
 };
 
@@ -114,13 +130,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // 如果 URL 传了 userName，优先使用
       const finalVisitorName = visitorInfo.userName || visitorName;
       
-      // 解析 params JSON 字符串
+      // 合并自定义参数：JSON格式的 params 参数 + 其他未知 URL 参数
       let paramsObj: Record<string, string> | undefined;
       if (visitorInfo.paramsStr) {
         try {
           paramsObj = JSON.parse(visitorInfo.paramsStr);
         } catch {
           console.warn('[ChatStore] Failed to parse params JSON:', visitorInfo.paramsStr);
+        }
+      }
+      // 将 URL 中的其他未知参数也合并进 paramsObj（extraParams 中的值不覆盖显式 JSON 中的值）
+      if (visitorInfo.extraParams) {
+        if (!paramsObj) paramsObj = {};
+        for (const [key, value] of Object.entries(visitorInfo.extraParams)) {
+          if (!(key in paramsObj)) {
+            paramsObj[key] = value;
+          }
         }
       }
       
