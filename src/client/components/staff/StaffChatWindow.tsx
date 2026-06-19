@@ -87,6 +87,34 @@ export function StaffChatWindow({
     gap: '8px',
   };
 
+  // ===================== 来源信息提取 =====================
+  const extractDomain = (url?: string): string => {
+    if (!url) return '';
+    try {
+      const u = new URL(url);
+      // 去掉 www. 前缀
+      return u.hostname.replace(/^www\./, '');
+    } catch {
+      // 如果解析失败，尝试截取域名部分
+      const m = url.match(/^(?:https?:\/\/)?([^/\s?#]+)/);
+      return m ? m[1].replace(/^www\./, '') : url.substring(0, 40);
+    }
+  };
+  const extractPath = (url?: string): string => {
+    if (!url) return '';
+    try {
+      const u = new URL(url);
+      return u.pathname + u.search + u.hash;
+    } catch {
+      return '';
+    }
+  };
+
+  const targetDomain = extractDomain(session?.fromUrl || '');
+  const targetPath = extractPath(session?.fromUrl || '');
+  const refererDomain = extractDomain(session?.referer || '');
+  const hasSourceInfo = targetDomain || refererDomain;
+
   const statusDotStyle = (status: string): React.CSSProperties => ({
     width: '8px',
     height: '8px',
@@ -174,100 +202,107 @@ export function StaffChatWindow({
   return (
     <>
       <div style={containerStyle}>
-        <div style={headerStyle}>
-          <div style={infoStyle}>
-            <span style={statusDotStyle(session.status)}></span>
-            <span style={{ fontWeight: 500 }}>{session.visitorName}</span>
-            <span style={{ color: '#999', fontSize: '12px' }}>
-              {new Date(session.createdAt).toLocaleString('zh-CN', {
-                month: 'numeric',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {session.unreadByStaff > 0 && (
-              <span
-                style={{
-                  backgroundColor: '#ff4d4f',
-                  color: '#fff',
-                  padding: '2px 8px',
-                  borderRadius: '10px',
-                  fontSize: '12px',
-                }}
-              >
-                {session.unreadByStaff} {t('unread')}
+        <div style={{
+          ...headerStyle,
+          flexDirection: 'column',
+          padding: '10px 14px',
+          gap: hasSourceInfo ? '6px' : '0',
+        }}>
+          {/* 第一行：访客名称 + 时间 */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+            <div style={infoStyle}>
+              <span style={statusDotStyle(session.status)}></span>
+              <span style={{ fontWeight: 500, fontSize: '15px' }}>{session.visitorName}</span>
+              <span style={{ color: '#999', fontSize: '12px' }}>
+                {new Date(session.createdAt).toLocaleString('zh-CN', {
+                  month: 'numeric',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
               </span>
-            )}
-            {onClearMessages && messages.length > 0 && (
-              <button
-                onClick={onClearMessages}
-                style={{
-                  padding: '4px 8px',
-                  backgroundColor: 'transparent',
-                  border: '1px solid #ff4d4f',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  color: '#ff4d4f',
-                  fontSize: '12px',
-                }}
-                title={t('clear_messages')}
-              >
-                <Trash2 size={12} />
-                {t('clear')}
-              </button>
-            )}
-            {currentStaffId && session?.assignedStaffId === currentStaffId && session?.status === 'active' && staffList.length > 0 && (
-              <button
-                onClick={() => {
-                  setShowTransferModal(true);
-                  loadRecentRejections();
-                }}
-                style={{
-                  padding: '4px 8px',
-                  backgroundColor: 'transparent',
-                  border: '1px solid #1890ff',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  color: '#1890ff',
-                  fontSize: '12px',
-                }}
-                title="会话转接"
-              >
-                <ArrowRightLeft size={12} />
-                转接
-              </button>
-            )}
-            {onEndSession && session?.status === 'active' && (
-              <button
-                onClick={onEndSession}
-                style={{
-                  padding: '4px 8px',
-                  backgroundColor: '#ff4d4f',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  color: '#fff',
-                  fontSize: '12px',
-                }}
-                title={t('end_session')}
-              >
-                <LogOut size={12} />
-                {t('end')}
-              </button>
-            )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {session.unreadByStaff > 0 && (
+                <span style={{ backgroundColor: '#ff4d4f', color: '#fff', padding: '2px 8px', borderRadius: '10px', fontSize: '12px' }}>
+                  {session.unreadByStaff} {t('unread')}
+                </span>
+              )}
+              {onClearMessages && messages.length > 0 && (
+                <button onClick={onClearMessages}
+                  style={{ padding: '4px 8px', backgroundColor: 'transparent', border: '1px solid #ff4d4f', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: '#ff4d4f', fontSize: '12px' }}
+                  title={t('clear_messages')}
+                >
+                  <Trash2 size={12} />{t('clear')}
+                </button>
+              )}
+              {currentStaffId && session?.assignedStaffId === currentStaffId && session?.status === 'active' && staffList.length > 0 && (
+                <button onClick={() => { setShowTransferModal(true); loadRecentRejections(); }}
+                  style={{ padding: '4px 8px', backgroundColor: 'transparent', border: '1px solid #1890ff', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: '#1890ff', fontSize: '12px' }}
+                  title="会话转接"
+                >
+                  <ArrowRightLeft size={12} />转接
+                </button>
+              )}
+              {onEndSession && session?.status === 'active' && (
+                <button onClick={onEndSession}
+                  style={{ padding: '4px 8px', backgroundColor: '#ff4d4f', border: 'none', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: '#fff', fontSize: '12px' }}
+                  title={t('end_session')}
+                >
+                  <LogOut size={12} />{t('end')}
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* 第二行：来源信息（目标域名 ← 来源域名） */}
+          {hasSourceInfo && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '12px',
+              color: '#888',
+              width: '100%',
+            }}>
+              <span style={{ flexShrink: 0, color: '#bbb', fontSize: '11px' }}>📍 来源</span>
+              {targetDomain && (
+                <span style={{
+                  backgroundColor: '#e6f7ff',
+                  color: '#1890ff',
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  maxWidth: '200px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  cursor: 'default',
+                }} title={session?.fromUrl || ''}>
+                  🔗 {targetDomain}{targetPath && targetPath.length > 1 ? targetPath.substring(0, 30) + (targetPath.length > 30 ? '…' : '') : ''}
+                </span>
+              )}
+              {targetDomain && refererDomain && (
+                <span style={{ color: '#ccc', fontSize: '10px' }}>←</span>
+              )}
+              {refererDomain && (
+                <span style={{
+                  backgroundColor: '#fff7e6',
+                  color: '#d46b08',
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  maxWidth: '180px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  cursor: 'default',
+                }} title={session?.referer || ''}>
+                  📎 {refererDomain}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 访客信息面板 */}
@@ -652,12 +687,51 @@ function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fieldDefs?
     marginBottom: '2px',
   };
 
+  // 5. 提取域名辅助函数
+  const extractDomain = (url: string): { domain: string; path: string } => {
+    try {
+      const u = new URL(url);
+      return { domain: u.hostname.replace(/^www\./, ''), path: u.pathname + u.search + u.hash };
+    } catch {
+      return { domain: url, path: '' };
+    }
+  };
+
   const renderFieldValue = (field: FieldItem) => {
     if (field.fieldKey === 'avatar') {
       return (
         <a href={field.value} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff', fontSize: '11px' }}>
           查看头像
         </a>
+      );
+    }
+    // 进入链接 / 来源地址 — 域名突出 + 路径缩写显示
+    if (field.fieldKey === 'fromUrl' || field.fieldKey === 'referer') {
+      const { domain, path } = extractDomain(field.value);
+      const isTarget = field.fieldKey === 'fromUrl';
+      return (
+        <div style={{ fontSize: '12px' }}>
+          <a href={field.value} target="_blank" rel="noopener noreferrer"
+            style={{
+              color: isTarget ? '#1890ff' : '#d46b08',
+              fontWeight: 500,
+              display: 'block',
+              marginBottom: '2px',
+            }}>
+            {isTarget ? '🔗 ' : '📎 '}{domain}
+          </a>
+          {path && path.length > 1 && (
+            <span style={{ color: '#aaa', fontSize: '10px', wordBreak: 'break-all' }}>
+              {path.length > 45 ? path.substring(0, 45) + '…' : path}
+            </span>
+          )}
+          <div style={{ marginTop: '2px' }}>
+            <a href={field.value} target="_blank" rel="noopener noreferrer"
+              style={{ color: '#bbb', fontSize: '10px' }}>
+              完整链接 →
+            </a>
+          </div>
+        </div>
       );
     }
     if (field.type === 'url') {
