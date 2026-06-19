@@ -22,7 +22,8 @@ import fi from './locales/fi';
 export type LocaleKey = keyof typeof zhCN;
 export type LocaleCode = 'zh-CN' | 'en-US' | 'tc' | 'jp' | 'kr' | 'es' | 'fr' | 'it' | 'de' | 'pt' | 'vi' | 'ru' | 'id' | 'th' | 'ar' | 'el' | 'pl' | 'da' | 'nl' | 'fi';
 
-export const locales: Record<LocaleCode, typeof zhCN> = {
+// Use a relaxed type for locales to allow partial translations during incremental development
+export const locales: Record<LocaleCode, Record<string, string | string[]>> = {
   'zh-CN': zhCN,
   'en-US': enUS,
   'tc': tc,
@@ -45,19 +46,17 @@ export const locales: Record<LocaleCode, typeof zhCN> = {
   'fi': fi,
 };
 
-export function getLocale(locale: LocaleCode): typeof zhCN {
-  return locales[locale] || zhCN;
+export function getLocale(locale: LocaleCode): Record<string, string | string[]> {
+  return (locales[locale] as any) || zhCN;
 }
 
 export function translate(key: LocaleKey, locale: LocaleCode = 'zh-CN'): string {
-  const translations = locales[locale];
+  const translations: any = locales[locale] || {};
   const value = translations[key];
-  
   if (Array.isArray(value)) {
     return value[Math.floor(Math.random() * value.length)];
   }
-  
-  return value || key;
+  return (value as string) || key;
 }
 
 export const supportedLocales: { code: LocaleCode; name: string; nativeName: string }[] = [

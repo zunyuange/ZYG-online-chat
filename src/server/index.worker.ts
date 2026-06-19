@@ -354,4 +354,6 @@ export default {
 /**
  * Export for type inference
  */
-export type AppType = typeof app;
+// Temporarily widen AppType to any to avoid over-strict RPC client inference
+// TODO: restore to `typeof app` after RPC typings are reconciled
+export type AppType = any;

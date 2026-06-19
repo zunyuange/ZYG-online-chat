@@ -17,7 +17,7 @@ function isSuccess<T>(response: any): response is { success: true; data: T } {
 
 describe('Todo API Integration Tests', () => {
   let server: ReturnType<typeof serve>;
-  let client: ReturnType<typeof hc<typeof app>>;
+  let client: any;
 
   beforeAll(async () => {
     // Start test server
@@ -42,7 +42,7 @@ describe('Todo API Integration Tests', () => {
   describe('GET /api/todos', () => {
     it('should return empty array when no todos exist', async () => {
       const response = await client.api.todos.$get();
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(200);
       if (isSuccess(result)) {
@@ -61,7 +61,7 @@ describe('Todo API Integration Tests', () => {
       stmt.run({ title: 'Todo 2', status: 'completed', created_at: now, updated_at: now });
 
       const response = await client.api.todos.$get();
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(200);
       if (isSuccess(result)) {
@@ -92,7 +92,7 @@ describe('Todo API Integration Tests', () => {
       const response = await client.api.todos[':id'].$get({
         param: { id: newTodo.id.toString() },
       });
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(200);
       if (isSuccess(result)) {

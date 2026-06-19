@@ -192,6 +192,30 @@ export async function initializeSchema(): Promise<void> {
   await runMigrations(database)
 }
 
+// Convenience export for tests: provide a synchronous sqlite instance (better-sqlite3 / node:sqlite DatabaseSync)
+// Tests in this repo expect `sqlite.prepare(...).run()` API. We create a DatabaseSync instance when running in Node.
+export const sqlite: any = (() => {
+  try {
+    const nodeRequireLocal = getNodeRequire();
+    const { DatabaseSync } = nodeRequireLocal('node:sqlite');
+    const { existsSync, mkdirSync } = nodeRequireLocal('node:fs');
+    const { dirname } = nodeRequireLocal('node:path');
+
+    const dbPath = './data/todos.db';
+    const dbDir = dirname(dbPath);
+    if (!existsSync(dbDir)) {
+      mkdirSync(dbDir, { recursive: true });
+    }
+
+    const sdb = new DatabaseSync(dbPath);
+    sdb.exec('PRAGMA foreign_keys = ON');
+    return sdb as any;
+  } catch (e) {
+    // Not running in Node or node:sqlite not available
+    return null as any;
+  }
+})();
+
 async function createAllTables(database: Database): Promise<void> {
   // Create todos table
   await database.exec(

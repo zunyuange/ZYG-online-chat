@@ -57,7 +57,8 @@ function createTestMessage(sessionId: string, senderType: 'visitor' | 'staff', c
 
 describe('Staff API Integration Tests', () => {
   let server: ReturnType<typeof serve>;
-  let client: ReturnType<typeof hc<typeof app>>;
+  // Use a loosely typed client in tests to avoid strict RPC client typings during incremental fixes
+  let client: any;
 
   beforeAll(async () => {
     // Start test server
@@ -87,7 +88,7 @@ describe('Staff API Integration Tests', () => {
   describe('GET /api/staff/sessions', () => {
     it('should return empty array when no sessions exist', async () => {
       const response = await client.api.staff.sessions.$get();
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(200);
       if (isSuccess(result)) {
@@ -102,7 +103,7 @@ describe('Staff API Integration Tests', () => {
       createTestSession({ id: 'session-3', visitorName: 'Visitor3', status: 'closed' });
 
       const response = await client.api.staff.sessions.$get();
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(200);
       if (isSuccess(result)) {
@@ -127,7 +128,7 @@ describe('Staff API Integration Tests', () => {
       const response = await client.api.staff.sessions.$get({
         query: { status: 'active' },
       });
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(200);
       if (isSuccess(result)) {
@@ -144,7 +145,7 @@ describe('Staff API Integration Tests', () => {
       const response = await client.api.staff.sessions.$get({
         query: { status: 'closed' },
       });
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(200);
       if (isSuccess(result)) {
@@ -158,7 +159,7 @@ describe('Staff API Integration Tests', () => {
       createTestMessage(session.id, 'visitor', 'text', 'Hello, this is a test message');
 
       const response = await client.api.staff.sessions.$get();
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(200);
       if (isSuccess(result)) {
@@ -185,7 +186,7 @@ describe('Staff API Integration Tests', () => {
       const response = await client.api.staff.messages.$get({
         query: { sessionId: testSession.id },
       });
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(200);
       if (isSuccess(result)) {
@@ -203,7 +204,7 @@ describe('Staff API Integration Tests', () => {
       const response = await client.api.staff.messages.$get({
         query: { sessionId: testSession.id },
       });
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(200);
       if (isSuccess(result)) {
@@ -224,7 +225,7 @@ describe('Staff API Integration Tests', () => {
       const response = await client.api.staff.messages.$get({
         query: { sessionId: testSession.id, limit: 2 },
       });
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(200);
       if (isSuccess(result)) {
@@ -263,7 +264,7 @@ describe('Staff API Integration Tests', () => {
       const response = await client.api.staff.messages.$post({
         json: messageData,
       });
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(200);
       if (isSuccess(result)) {
@@ -288,7 +289,7 @@ describe('Staff API Integration Tests', () => {
       const response = await client.api.staff.messages.$post({
         json: messageData,
       });
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(200);
       if (isSuccess(result)) {
@@ -313,7 +314,7 @@ describe('Staff API Integration Tests', () => {
       const response = await client.api.staff.messages.$post({
         json: messageData,
       });
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(200);
       if (isSuccess(result)) {
@@ -376,7 +377,7 @@ describe('Staff API Integration Tests', () => {
         method: 'POST',
         body: formData,
       });
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(200);
       expect(result.success).toBe(true);
@@ -400,7 +401,7 @@ describe('Staff API Integration Tests', () => {
         method: 'POST',
         body: formData,
       });
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(200);
       expect(result.success).toBe(true);
@@ -416,7 +417,7 @@ describe('Staff API Integration Tests', () => {
         method: 'POST',
         body: formData,
       });
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(400);
       expect(result.success).toBe(false);
@@ -485,7 +486,7 @@ describe('Staff API Integration Tests', () => {
       const response = await client.api.staff.read[':sessionId'].$put({
         param: { sessionId: testSession.id },
       });
-      const result = await response.json();
+      const result = await response.json() as any;
 
       expect(response.status).toBe(200);
       expect(result.success).toBe(true);

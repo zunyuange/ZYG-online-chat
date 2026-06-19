@@ -97,28 +97,49 @@ export async function getQueueInfo(sessionId: string): Promise<QueueInfo> {
 /**
  * Get all items in the queue for a specific business (for staff view)
  */
-export async function getQueueList(businessId: number): Promise<QueueItem[]> {
+export async function getQueueList(businessId?: number): Promise<QueueItem[]> {
   const db = getDb()
-
-  const rows = await db.all<QueueListRow>(
-    `SELECT
-      id as sessionId,
-      visitor_name as visitorName,
-      topic,
-      task_status as taskStatus,
-      created_at as createdAt
-    FROM sessions
-    WHERE status = 'active'
-    AND business_id = ?
-    AND task_status IN ('requirement_discussion', 'requirement_confirmed')
-    ORDER BY
-      CASE task_status
-        WHEN 'requirement_confirmed' THEN 1
-        WHEN 'requirement_discussion' THEN 2
-      END,
-      created_at ASC`,
-    [businessId]
-  )
+  let rows: QueueListRow[]
+  if (typeof businessId === 'number') {
+    rows = await db.all<QueueListRow>(
+      `SELECT
+        id as sessionId,
+        visitor_name as visitorName,
+        topic,
+        task_status as taskStatus,
+        created_at as createdAt
+      FROM sessions
+      WHERE status = 'active'
+      AND business_id = ?
+      AND task_status IN ('requirement_discussion', 'requirement_confirmed')
+      ORDER BY
+        CASE task_status
+          WHEN 'requirement_confirmed' THEN 1
+          WHEN 'requirement_discussion' THEN 2
+        END,
+        created_at ASC`,
+      [businessId]
+    )
+  } else {
+    rows = await db.all<QueueListRow>(
+      `SELECT
+        id as sessionId,
+        visitor_name as visitorName,
+        topic,
+        task_status as taskStatus,
+        created_at as createdAt
+      FROM sessions
+      WHERE status = 'active'
+      AND task_status IN ('requirement_discussion', 'requirement_confirmed')
+      ORDER BY
+        CASE task_status
+          WHEN 'requirement_confirmed' THEN 1
+          WHEN 'requirement_discussion' THEN 2
+        END,
+        created_at ASC`,
+      []
+    )
+  }
 
   let confirmedPosition = 0
   let discussionPosition = 0
