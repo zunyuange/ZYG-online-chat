@@ -148,6 +148,27 @@ export function AdminPage() {
     checkAuth();
   }, []);
 
+  // Override global overflow:hidden to allow scrolling on admin page
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const root = document.getElementById('root');
+
+    const prevHtml = html.style.overflow;
+    const prevBody = body.style.overflow;
+    const prevRoot = root?.style.overflow;
+
+    html.style.overflow = 'auto';
+    body.style.overflow = 'auto';
+    if (root) root.style.overflow = 'auto';
+
+    return () => {
+      html.style.overflow = prevHtml;
+      body.style.overflow = prevBody;
+      if (root) root.style.overflow = prevRoot || '';
+    };
+  }, []);
+
   const checkAuth = async () => {
     const token = localStorage.getItem('admin_token');
     if (!token) {
