@@ -119,6 +119,7 @@ export interface CreateSessionInput {
   userAgent?: string;
   device?: string;
   lang?: string;
+  avatar?: string;
 }
 
 export interface SendMessageInput {

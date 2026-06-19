@@ -242,6 +242,34 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
       console.log(
         `[ChatService] Found existing session ${input.sessionId} with status: ${row.status}`
       )
+      // 更新已有的访客自定义字段（如果数据库中为空且本次传入了值）
+      const updates: string[] = []
+      const updateVals: unknown[] = []
+      if (!row.device && input.device) { updates.push('device = ?'); updateVals.push(input.device) }
+      if (!row.lang && input.lang) { updates.push('lang = ?'); updateVals.push(input.lang) }
+      if (!row.avatar && input.avatar) { updates.push('avatar = ?'); updateVals.push(input.avatar) }
+      if (!row.email && input.email) { updates.push('email = ?'); updateVals.push(input.email) }
+      if (!row.phone && input.phone) { updates.push('phone = ?'); updateVals.push(input.phone) }
+      if (!row.pid && input.pid) { updates.push('pid = ?'); updateVals.push(input.pid) }
+      if (!row.from_url && input.fromUrl) { updates.push('from_url = ?'); updateVals.push(input.fromUrl) }
+      if (!row.referer && input.referer) { updates.push('referer = ?'); updateVals.push(input.referer) }
+      if (updates.length > 0) {
+        updates.push('updated_at = ?')
+        updateVals.push(Date.now())
+        updateVals.push(input.sessionId)
+        await db.run(
+          `UPDATE sessions SET ${updates.join(', ')} WHERE id = ?`,
+          updateVals
+        )
+        // 重新查询更新后的记录
+        const updatedRow = await db.get<SessionRow>(
+          'SELECT * FROM sessions WHERE id = ?',
+          [input.sessionId]
+        )
+        if (updatedRow) {
+          return mapRowToSession(updatedRow, business || undefined)
+        }
+      }
       return mapRowToSession(row, business || undefined)
     }
   }
@@ -267,6 +295,7 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
   if (input.userAgent) { fields.push('user_agent'); values.push(input.userAgent); placeholders.push('?') }
   if (input.device) { fields.push('device'); values.push(input.device); placeholders.push('?') }
   if (input.lang) { fields.push('lang'); values.push(input.lang); placeholders.push('?') }
+  if (input.avatar) { fields.push('avatar'); values.push(input.avatar); placeholders.push('?') }
 
   const sql = `INSERT INTO sessions (${fields.join(', ')}) VALUES (${placeholders.join(', ')})`
   await db.run(sql, values)

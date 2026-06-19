@@ -32,6 +32,7 @@ const getVisitorInfoFromUrl = () => {
     adminId: params.get('adminId') || undefined,
     paramsStr: params.get('params') || undefined,
     lang: params.get('lang') || undefined,
+    avatar: params.get('avatar') || undefined,
   };
 };
 
@@ -126,6 +127,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // 获取当前页面 URL 作为 fromUrl
       const currentUrl = window.location.href;
 
+      // 检测设备类型
+      const getDeviceType = (): string => {
+        const ua = navigator.userAgent;
+        if (/Mobile|Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua)) {
+          return 'Mobile';
+        }
+        if (/Tablet|iPad/i.test(ua)) {
+          return 'Tablet';
+        }
+        return 'Desktop';
+      };
+
       const response = await fetch('/api/chat/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -139,6 +152,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
           params: paramsObj,
           fromUrl: currentUrl,
           lang: visitorInfo.lang || navigator.language,
+          device: getDeviceType(),
+          avatar: visitorInfo.avatar,
         }),
       });
 

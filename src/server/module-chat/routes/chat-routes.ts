@@ -72,6 +72,13 @@ chatRoutes.post('/session', async c => {
     const userAgent = c.req.header('User-Agent')
     const referer = c.req.header('Referer')
     
+    // 服务端从 User-Agent 自动检测设备类型（兜底）
+    const detectDevice = (ua: string): string => {
+      if (/Mobile|Android|iPhone|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua)) return 'Mobile';
+      if (/iPad|Tablet/i.test(ua)) return 'Tablet';
+      return 'Desktop';
+    };
+
     const input = {
       visitorName: body.visitorName,
       sessionId: body.sessionId,
@@ -85,8 +92,9 @@ chatRoutes.post('/session', async c => {
       referer: referer || body.referer,
       ip: forwardedIp || body.ip,
       userAgent: userAgent || body.userAgent,
-      device: body.device,
+      device: body.device || (userAgent ? detectDevice(userAgent) : undefined),
       lang: body.lang,
+      avatar: body.avatar,
     }
 
     const session = await chatService.createOrGetSession(input)
