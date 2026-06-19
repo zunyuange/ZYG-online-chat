@@ -643,9 +643,7 @@ export const enUS = {
   staff_chat_system_fields: '📌 System Fields',
   staff_chat_custom_fields: '🔧 Custom Fields',
   staff_chat_items: ' items',
-  chat_mode_title: 'Chat Mode',
   chat_mode_chat: 'Chat',
-  topic_mode_title: 'Topic Mode',
   topic_mode_topic: 'Topic',
   send_emoji_title: 'Send Emoji',
   topic_no_notice: 'No notice',
@@ -653,4 +651,8 @@ export const enUS = {
   admin_role_staff: 'Staff',
   admin_table_business: 'Business',
   signature_online: 'Online Support System',
+
+  // ===== Language Names =====
+  lang_zh_CN: '中文',
+  lang_en_US: 'English',
 };

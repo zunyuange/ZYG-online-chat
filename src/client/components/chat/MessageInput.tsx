@@ -241,19 +241,19 @@ export function MessageInput({
             type="button"
             style={modeIconStyle(inputMode === 'chat')}
             onClick={() => onModeChange('chat')}
-            title="聊天模式"
+            title={t('chat_mode_title')}
           >
             <MessageSquare size={isMobile ? 14 : 16} />
-            {!isMobile && inputMode === 'chat' && '聊天'}
+            {!isMobile && inputMode === 'chat' && t('chat_mode_chat')}
           </button>
           <button
             type="button"
             style={modeIconStyle(inputMode === 'topic')}
             onClick={() => onModeChange('topic')}
-            title="主题模式"
+            title={t('topic_mode_title')}
           >
             <Pin size={isMobile ? 14 : 16} />
-            {!isMobile && inputMode === 'topic' && '主题'}
+            {!isMobile && inputMode === 'topic' && t('topic_mode_topic')}
           </button>
         </div>
       )}
@@ -268,7 +268,7 @@ export function MessageInput({
             setShowEmojiPicker(!showEmojiPicker);
           }}
           disabled={disabled || sending}
-          title="发送表情"
+          title={t('send_emoji_title')}
         >
           <Smile size={isMobile ? 20 : 22} />
         </button>

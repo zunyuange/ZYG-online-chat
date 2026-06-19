@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { UserPlus, Trash2, Edit2, Save, X, Eye, EyeOff } from 'lucide-react';
+import { useI18n } from '@client/context/I18nContext';
 
 interface StaffUser {
   id: number;
@@ -19,6 +20,7 @@ interface CreateUserModal {
 }
 
 export function StaffManagement() {
+  const { t } = useI18n();
   const [users, setUsers] = useState<StaffUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<CreateUserModal>({ show: false });
@@ -87,11 +89,11 @@ export function StaffManagement() {
 
   const handleSubmit = async () => {
     if (!formData.username) {
-      setMessage('用户名不能为空');
+      setMessage(t('staff_mgmt_username_required'));
       return;
     }
     if (!modal.editing && !formData.password) {
-      setMessage('密码不能为空');
+      setMessage(t('staff_mgmt_password_required'));
       return;
     }
 
@@ -121,7 +123,7 @@ export function StaffManagement() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('确定要删除这个账号吗？')) return;
+    if (!confirm(t('staff_mgmt_delete_confirm'))) return;
 
     try {
       const response = await fetch(`/api/staff/users/${id}`, {
@@ -134,11 +136,11 @@ export function StaffManagement() {
       if (result.success) {
         fetchUsers();
       } else {
-        alert(result.error || '删除失败');
+        alert(result.error || t('delete_failed'));
       }
     } catch (error) {
       console.error('Failed to delete:', error);
-      alert('删除失败');
+      alert(t('delete_failed'));
     }
   };
 
@@ -157,7 +159,7 @@ export function StaffManagement() {
           borderRadius: '50%',
           margin: '0 auto 16px',
         }}></div>
-        <p style={{ color: '#6b7280' }}>加载中...</p>
+        <p style={{ color: '#6b7280' }}>{t('loading_text')}</p>
       </div>
     );
   }
@@ -166,7 +168,7 @@ export function StaffManagement() {
     <div style={{ padding: '24px', height: '100%', overflowY: 'auto' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 500, margin: 0 }}>客服账号管理</h2>
+        <h2 style={{ fontSize: '20px', fontWeight: 500, margin: 0 }}>{t('staff_mgmt_title')}</h2>
         <button
           onClick={() => handleOpenModal()}
           style={{
@@ -183,7 +185,7 @@ export function StaffManagement() {
           }}
         >
           <UserPlus size={18} />
-          添加账号
+          {t('staff_mgmt_add_account')}
         </button>
       </div>
 
@@ -251,7 +253,7 @@ export function StaffManagement() {
                           cursor: 'pointer',
                           color: '#666',
                         }}
-                        title="编辑"
+                        title={t('staff_mgmt_edit')}
                       >
                         <Edit2 size={16} />
                       </button>
@@ -265,7 +267,7 @@ export function StaffManagement() {
                           cursor: 'pointer',
                           color: '#ff4d4f',
                         }}
-                        title="删除"
+                        title={t('staff_mgmt_delete')}
                       >
                         <Trash2 size={16} />
                       </button>
@@ -313,7 +315,7 @@ export function StaffManagement() {
             </button>
 
             <h3 style={{ fontSize: '18px', fontWeight: 500, marginBottom: '24px' }}>
-              {modal.editing ? '编辑账号' : '添加账号'}
+              {modal.editing ? t('staff_mgmt_edit_account') : t('staff_mgmt_add_account')}
             </h3>
 
             {message && (
@@ -321,8 +323,8 @@ export function StaffManagement() {
                 padding: '12px',
                 borderRadius: '4px',
                 marginBottom: '16px',
-                backgroundColor: message.includes('成功') ? '#f6ffed' : '#fff2f0',
-                color: message.includes('成功') ? '#52c41a' : '#ff4d4f',
+                backgroundColor: message.includes(t('success')) ? '#f6ffed' : '#fff2f0',
+                color: message.includes(t('success')) ? '#52c41a' : '#ff4d4f',
                 fontSize: '14px',
               }}>
                 {message}
@@ -368,7 +370,7 @@ export function StaffManagement() {
                       fontSize: '14px',
                       boxSizing: 'border-box',
                     }}
-                    placeholder="请输入密码"
+                    placeholder={t('staff_mgmt_password_placeholder')}
                   />
                   <button
                     onClick={() => setShowPassword(!showPassword)}
@@ -389,7 +391,7 @@ export function StaffManagement() {
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>姓名</label>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>{t('staff_mgmt_name')}</label>
                 <input
                   type="text"
                   value={formData.name}
@@ -402,7 +404,7 @@ export function StaffManagement() {
                     fontSize: '14px',
                     boxSizing: 'border-box',
                   }}
-                  placeholder="请输入姓名"
+                  placeholder={t('staff_mgmt_name_placeholder')}
                 />
               </div>
 
@@ -438,8 +440,8 @@ export function StaffManagement() {
                     boxSizing: 'border-box',
                   }}
                 >
-                  <option value="staff">客服</option>
-                  <option value="admin">管理员</option>
+                  <option value="staff">{t('staff_mgmt_role_staff')}</option>
+                  <option value="admin">{t('staff_mgmt_role_admin')}</option>
                 </select>
               </div>
 
@@ -455,7 +457,7 @@ export function StaffManagement() {
                     fontSize: '14px',
                   }}
                 >
-                  取消
+                  {t('cancel')}
                 </button>
                 <button
                   onClick={handleSubmit}
@@ -473,7 +475,7 @@ export function StaffManagement() {
                   }}
                 >
                   <Save size={16} />
-                  {modal.editing ? '保存' : '创建'}
+                  {modal.editing ? t('save') : t('staff_mgmt_create')}
                 </button>
               </div>
             </div>

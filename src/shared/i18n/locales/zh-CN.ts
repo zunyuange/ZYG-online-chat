@@ -636,9 +636,7 @@ export const zhCN = {
   staff_chat_system_fields: '📌 系统固定字段',
   staff_chat_custom_fields: '🔧 自定义字段',
   staff_chat_items: '项',
-  chat_mode_title: '聊天模式',
   chat_mode_chat: '聊天',
-  topic_mode_title: '主题模式',
   topic_mode_topic: '主题',
   send_emoji_title: '发送表情',
   topic_no_notice: '暂无通知',
@@ -646,4 +644,8 @@ export const zhCN = {
   admin_role_staff: '客服',
   admin_table_business: '商家',
   signature_online: '在线客服系统',
+
+  // ===== 语言名称 =====
+  lang_zh_CN: '中文',
+  lang_en_US: 'English',
 };

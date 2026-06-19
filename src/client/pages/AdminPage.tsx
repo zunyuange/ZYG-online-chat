@@ -109,7 +109,7 @@ export function AdminPage() {
     defaultLanguage: string;
     enableAuth: boolean;
   }>({
-    siteName: '在线客服系统',
+    siteName: '', // will be loaded from settings
     defaultLanguage: 'zh-CN',
     enableAuth: true,
   });
@@ -752,11 +752,11 @@ export function AdminPage() {
     color,
   });
 
-  // 角色中文映射
+  // Role label mapping
   const getRoleLabel = (role: string): string => {
     const roleMap: Record<string, string> = {
-      admin: '管理员',
-      staff: '客服',
+      admin: t('admin_role_admin'),
+      staff: t('admin_role_staff'),
     };
     return roleMap[role] || role;
   };
@@ -940,7 +940,7 @@ export function AdminPage() {
               <th style={thStyle}>{t('username')}</th>
               <th style={thStyle}>{t('name')}</th>
               <th style={thStyle}>Email</th>
-              <th style={thStyle}>商家</th>
+              <th style={thStyle}>{t('admin_table_business')}</th>
               <th style={thStyle}>{t('role')}</th>
               <th style={thStyle}>{t('status')}</th>
               <th style={thStyle}>{t('created_at')}</th>
@@ -1219,8 +1219,8 @@ export function AdminPage() {
               onChange={(e) => setSettings(prev => ({ ...prev, defaultLanguage: e.target.value }))}
               style={inputStyle}
             >
-              <option value="zh-CN">中文</option>
-              <option value="en-US">English</option>
+              <option value="zh-CN">{t('lang_zh_CN')}</option>
+              <option value="en-US">{t('lang_en_US')}</option>
             </select>
           </div>
           
@@ -1417,8 +1417,8 @@ export function AdminPage() {
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                     style={inputStyle}
                   >
-                    <option value="admin">管理员</option>
-                    <option value="staff">客服</option>
+                    <option value="admin">{t('admin_role_admin')}</option>
+                    <option value="staff">{t('admin_role_staff')}</option>
                   </select>
                 </>
               ) : (

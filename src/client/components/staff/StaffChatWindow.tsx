@@ -8,6 +8,7 @@ import { MessageInput } from '@client/components/chat/MessageInput';
 import { TopicHeader } from '@client/components/chat/TopicHeader';
 import { Trash2, LogOut, ArrowRightLeft, X } from 'lucide-react';
 import { useState } from 'react';
+import { useI18n } from '@client/context/I18nContext';
 
 export interface VisitorFieldDef {
   fieldKey: string;
@@ -424,7 +425,7 @@ export function StaffChatWindow({
                       {t('rejected_by_staff')}<strong>{rejection.to_staff_name || rejection.to_staff_id}</strong>{t('rejected')}
                     </div>
                     <div style={{ color: '#999' }}>
-                      拒绝原因: {rejection.reject_reason}
+                      {t('reject_reason_prefix')}{rejection.reject_reason}
                     </div>
                     <div style={{ color: '#bbb', marginTop: '4px' }}>
                       {new Date(rejection.created_at).toLocaleString('zh-CN')}
@@ -464,7 +465,7 @@ export function StaffChatWindow({
                   fontSize: '14px',
                 }}
               >
-                取消
+                {t('cancel')}
               </button>
               <button
                 onClick={handleTransfer}
@@ -478,7 +479,7 @@ export function StaffChatWindow({
                   fontSize: '14px',
                 }}
               >
-                发送请求
+                {t('send_request')}
               </button>
             </div>
           </div>
@@ -503,6 +504,7 @@ function extractUrlParts(url?: string): { domain: string; path: string } {
  * 来源面板 — 仅显示「进入链接」+「来源地址」，紧凑模式
  */
 function SourcePanel({ session }: { session: Session }) {
+  const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const fromUrl = session.fromUrl || '';
   const referer = session.referer || '';
@@ -527,7 +529,7 @@ function SourcePanel({ session }: { session: Session }) {
   return (
     <div style={panelStyle}>
       <div style={headerRowStyle} onClick={() => setExpanded(!expanded)}>
-        <span>📍 来源</span>
+        <span>{t('staff_chat_source_title')}</span>
         <span style={{ fontSize: '10px' }}>{expanded ? '▲' : '▼'}</span>
       </div>
 
@@ -544,7 +546,7 @@ function SourcePanel({ session }: { session: Session }) {
           )}
           {referer && (
             <SourceUrlRow
-              label="📎 来源地址"
+              label={t('staff_chat_source_url')}
               url={referer}
               color="#d46b08"
               bgColor="#fff7e6"
@@ -592,7 +594,9 @@ function SourceUrlRow({ label, url, color, bgColor, borderColor }: {
  * 访客信息面板 — 竖屏单列布局，分区显示（系统固定字段 / 自定义字段）
  * 注意：fromUrl 和 referer 已在「来源」面板显示，此处隐藏
  */
-export function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fieldDefs?: VisitorFieldDef[] }) {
+export function VisitorInfoPanel({ session, fieldDefs, t: externalT }: { session: Session; fieldDefs?: VisitorFieldDef[]; t?: (key: string) => string }) {
+  const { t: hookT } = useI18n();
+  const t = externalT || hookT;
   // ═══════════════ 字段定义 ═══════════════
   interface FixedFieldDef { fieldKey: string; label: string; type: string; icon: string }
   const defaultFixedDefs: FixedFieldDef[] = [
@@ -707,7 +711,7 @@ export function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fie
   // ═══════════════ 渲染 ═══════════════
   const renderValue = (field: FieldItem) => {
     if (field.fieldKey === 'avatar') {
-      return <a href={field.value} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff' }}>查看头像</a>;
+      return <a href={field.value} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff' }}>{t('staff_chat_view_avatar')}</a>;
     }
     if (field.type === 'url') {
       return <a href={field.value} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff', wordBreak: 'break-all' }}>{field.value.length > 60 ? field.value.substring(0, 60) + '…' : field.value}</a>;
@@ -731,12 +735,12 @@ export function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fie
         marginBottom: '10px',
         fontWeight: 500,
       }}>
-        📋 访客信息 ({allFields.length}项)
+        {t('staff_chat_visitor_info_title')} ({allFields.length}{t('staff_chat_items')})
       </div>
 
       {/* ═══ 系统固定字段 ═══ */}
       {fixedFields.length > 0 && (
-        <div style={sectionStyle}>📌 系统固定字段</div>
+        <div style={sectionStyle}>{t('staff_chat_system_fields')}</div>
       )}
       {fixedFields.map((field) => (
         <div key={field.fieldKey} style={fieldRowStyle}>
@@ -748,7 +752,7 @@ export function VisitorInfoPanel({ session, fieldDefs }: { session: Session; fie
       {/* ═══ 自定义字段 ═══ */}
       {customFields.length > 0 && (
         <div style={{ ...sectionStyle, ...(hasBothSections ? {} : { borderTop: 'none', paddingTop: 0 }) }}>
-          🔧 自定义字段
+          {t('staff_chat_custom_fields')}
         </div>
       )}
       {customFields.map((field) => (

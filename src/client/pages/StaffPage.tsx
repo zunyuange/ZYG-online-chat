@@ -959,7 +959,7 @@ export function StaffPage() {
                   }}
                 >
                   <User size={14} />
-                  修改个人资料
+                  {t('staff_nav_profile')}
                 </button>
                 <button
                   onClick={handleLogout}
@@ -994,7 +994,7 @@ export function StaffPage() {
           style={navTabItemStyle(currentPage === 'home')}
         >
           <MessageCircle size={16} />
-          <span>首页</span>
+          <span>{t('staff_nav_home')}</span>
         </div>
         {userInfo?.role === 'admin' && (
           <div
@@ -1002,7 +1002,7 @@ export function StaffPage() {
             style={navTabItemStyle(currentPage === 'staff')}
           >
             <Users size={16} />
-            <span>客服管理</span>
+            <span>{t('staff_nav_management')}</span>
           </div>
         )}
         <div
@@ -1010,14 +1010,14 @@ export function StaffPage() {
           style={navTabItemStyle(currentPage === 'visitorFields')}
         >
           <ListChecks size={16} />
-          <span>访客字段</span>
+          <span>{t('staff_nav_visitor_fields')}</span>
         </div>
         <div
           onClick={() => setCurrentPage('code')}
           style={navTabItemStyle(currentPage === 'code')}
         >
           <Code2 size={16} />
-          <span>代码</span>
+          <span>{t('staff_nav_code')}</span>
         </div>
         {userInfo?.role === 'admin' && (
           <div
@@ -1025,7 +1025,7 @@ export function StaffPage() {
             style={navTabItemStyle(currentPage === 'settings')}
           >
             <Settings size={16} />
-            <span>设置</span>
+            <span>{t('staff_nav_settings')}</span>
           </div>
         )}
       </div>
@@ -1193,32 +1193,32 @@ export function StaffPage() {
               {currentPage === 'home' && (
                 <div style={{ padding: '12px', borderBottom: '1px solid #e8e8e8', backgroundColor: '#fff' }}>
                   <div style={{ fontSize: '13px', fontWeight: 500, color: '#666', marginBottom: '12px', paddingLeft: '4px' }}>
-                    统计概览
+                    {t('staff_stats_overview')}
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     <div style={{ backgroundColor: '#f6ffed', padding: '8px', borderRadius: '6px' }}>
                       <div style={{ fontSize: '18px', fontWeight: 600, color: '#52c41a' }}>
                         {statsLoading ? '...' : stats?.todaySessions || 0}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#8c8c8c' }}>今日会话</div>
+                      <div style={{ fontSize: '11px', color: '#8c8c8c' }}>{t('staff_stats_today_sessions')}</div>
                     </div>
                     <div style={{ backgroundColor: '#fff7e6', padding: '8px', borderRadius: '6px' }}>
                       <div style={{ fontSize: '18px', fontWeight: 600, color: '#fa8c16' }}>
                         {statsLoading ? '...' : stats?.activeSessions || 0}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#8c8c8c' }}>活跃会话</div>
+                      <div style={{ fontSize: '11px', color: '#8c8c8c' }}>{t('staff_stats_active_sessions')}</div>
                     </div>
                     <div style={{ backgroundColor: '#fff1f0', padding: '8px', borderRadius: '6px' }}>
                       <div style={{ fontSize: '18px', fontWeight: 600, color: '#ff4d4f' }}>
                         {statsLoading ? '...' : stats?.queueCount || 0}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#8c8c8c' }}>排队人数</div>
+                      <div style={{ fontSize: '11px', color: '#8c8c8c' }}>{t('staff_stats_queue_count')}</div>
                     </div>
                     <div style={{ backgroundColor: '#e6f7ff', padding: '8px', borderRadius: '6px' }}>
                       <div style={{ fontSize: '18px', fontWeight: 600, color: '#1890ff' }}>
                         {statsLoading ? '...' : stats?.todayMessages || 0}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#8c8c8c' }}>今日消息</div>
+                      <div style={{ fontSize: '11px', color: '#8c8c8c' }}>{t('staff_stats_today_messages')}</div>
                     </div>
                   </div>
                 </div>
@@ -1332,7 +1332,7 @@ export function StaffPage() {
         <button
           style={floatingButtonStyle}
           onClick={toggleSessionList}
-          title="会话列表"
+          title={t('staff_session_list')}
         >
           <MessageCircle size={24} />
           {totalUnread > 0 && (
@@ -1359,7 +1359,7 @@ export function StaffPage() {
         </button>
       )}
 
-      {/* 修改个人资料模态框 */}
+      {/* Profile Edit Modal */}
       {showProfileModal && (
         <div
           style={{
@@ -1387,7 +1387,7 @@ export function StaffPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: 'bold' }}>
-              修改个人资料
+              {t('staff_nav_profile')}
             </h3>
             {profileMessage && (
               <div
@@ -1395,8 +1395,8 @@ export function StaffPage() {
                   padding: '8px 12px',
                   marginBottom: '16px',
                   borderRadius: '4px',
-                  backgroundColor: profileMessage.includes('成功') ? '#f6ffed' : '#fff2f0',
-                  color: profileMessage.includes('成功') ? '#52c41a' : '#ff4d4f',
+                  backgroundColor: profileMessage.includes(t('success')) ? '#f6ffed' : '#fff2f0',
+                  color: profileMessage.includes(t('success')) ? '#52c41a' : '#ff4d4f',
                   fontSize: '13px',
                 }}
               >
@@ -1405,13 +1405,13 @@ export function StaffPage() {
             )}
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: '#666' }}>
-                姓名
+                {t('staff_profile_name')}
               </label>
               <input
                 type="text"
                 value={profileForm.name}
                 onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-                placeholder="输入新姓名（留空则不修改）"
+                placeholder={t('staff_profile_name_placeholder')}
                 style={{
                   width: '100%',
                   padding: '8px 12px',
@@ -1424,13 +1424,13 @@ export function StaffPage() {
             </div>
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: '#666' }}>
-                新密码
+                {t('staff_profile_new_password')}
               </label>
               <input
                 type="password"
                 value={profileForm.password}
                 onChange={(e) => setProfileForm({ ...profileForm, password: e.target.value })}
-                placeholder="输入新密码（留空则不修改）"
+                placeholder={t('staff_profile_password_placeholder')}
                 style={{
                   width: '100%',
                   padding: '8px 12px',
@@ -1473,7 +1473,7 @@ export function StaffPage() {
                   color: '#666',
                 }}
               >
-                取消
+              {t('cancel')}
               </button>
               <button
                 onClick={handleUpdateProfile}
@@ -1487,7 +1487,7 @@ export function StaffPage() {
                   color: '#fff',
                 }}
               >
-                保存
+                {t('staff_profile_save')}
               </button>
             </div>
           </div>
@@ -1530,7 +1530,7 @@ export function StaffPage() {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <ArrowRightLeft size={16} />
-              <span style={{ fontWeight: 500 }}>待处理转接请求 ({pendingTransfers.length})</span>
+              <span style={{ fontWeight: 500 }}>{t('staff_transfer_pending')} ({pendingTransfers.length})</span>
             </div>
             <button
               onClick={() => setShowTransferNotification(false)}
@@ -1558,14 +1558,14 @@ export function StaffPage() {
               >
                 <div style={{ marginBottom: '8px' }}>
                   <div style={{ fontSize: '14px', fontWeight: 500, color: '#333' }}>
-                    来自: {request.from_staff_name || request.from_staff_id}
+                    {t('staff_transfer_from')}{request.from_staff_name || request.from_staff_id}
                   </div>
                   <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
-                    会话: {request.session_visitor_name || request.session_id}
+                    {t('staff_transfer_session')}{request.session_visitor_name || request.session_id}
                   </div>
                   {request.reason && (
                     <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                      原因: {request.reason}
+                      {t('staff_transfer_reason')}{request.reason}
                     </div>
                   )}
                   <div style={{ fontSize: '11px', color: '#bbb', marginTop: '4px' }}>
@@ -1586,7 +1586,7 @@ export function StaffPage() {
                       fontSize: '12px',
                     }}
                   >
-                    接受
+                    {t('staff_transfer_accept')}
                   </button>
                   <button
                     onClick={() => {
@@ -1604,7 +1604,7 @@ export function StaffPage() {
                       fontSize: '12px',
                     }}
                   >
-                    拒绝
+                    {t('staff_transfer_reject')}
                   </button>
                 </div>
               </div>
@@ -1643,7 +1643,7 @@ export function StaffPage() {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <XCircle size={16} />
-              <span style={{ fontWeight: 500 }}>转接被拒绝 ({rejectedTransfers.length})</span>
+              <span style={{ fontWeight: 500 }}>{t('staff_transfer_rejected')} ({rejectedTransfers.length})</span>
             </div>
             <button
               onClick={() => setShowRejectionNotification(false)}
@@ -1671,14 +1671,14 @@ export function StaffPage() {
               >
                 <div style={{ marginBottom: '8px' }}>
                   <div style={{ fontSize: '14px', fontWeight: 500, color: '#333' }}>
-                    被客服 {request.to_staff_name || request.to_staff_id} 拒绝
+                    {t('staff_transfer_rejected_by')} {request.to_staff_name || request.to_staff_id} {t('rejected')}
                   </div>
                   <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
-                    会话: {request.session_visitor_name || request.session_id}
+                    {t('staff_transfer_session')}{request.session_visitor_name || request.session_id}
                   </div>
                   {request.reject_reason && (
                     <div style={{ fontSize: '12px', color: '#ff4d4f', marginTop: '4px', padding: '8px', backgroundColor: '#fff1f0', borderRadius: '4px' }}>
-                      拒绝原因: {request.reject_reason}
+                      {t('reject_reason_prefix')}{request.reject_reason}
                     </div>
                   )}
                   <div style={{ fontSize: '11px', color: '#bbb', marginTop: '4px' }}>
@@ -1702,7 +1702,7 @@ export function StaffPage() {
                       fontSize: '12px',
                     }}
                   >
-                    继续申请
+                    {t('staff_transfer_continue')}
                   </button>
                   <button
                     onClick={() => handleCancelRejection(request.id)}
@@ -1717,7 +1717,7 @@ export function StaffPage() {
                       fontSize: '12px',
                     }}
                   >
-                    取消
+                    {t('cancel')}
                   </button>
                 </div>
               </div>
@@ -1754,15 +1754,15 @@ export function StaffPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 'bold' }}>
-              拒绝转接请求
+              {t('staff_transfer_reject_title')}
             </h3>
             <div style={{ marginBottom: '16px', fontSize: '14px', color: '#666' }}>
-              您正在拒绝来自客服 <strong>{selectedRejectRequest.from_staff_name || selectedRejectRequest.from_staff_id}</strong> 的转接申请
+              {t('staff_transfer_reject_desc')} <strong>{selectedRejectRequest.from_staff_name || selectedRejectRequest.from_staff_id}</strong> {t('rejecting_transfer_from')}
             </div>
             <textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="请输入拒绝原因（必填）"
+              placeholder={t('staff_transfer_reject_placeholder')}
               rows={4}
               style={{
                 width: '100%',
@@ -1791,7 +1791,7 @@ export function StaffPage() {
                   color: '#666',
                 }}
               >
-                取消
+                {t('cancel')}
               </button>
               <button
                 onClick={handleRejectTransfer}
@@ -1806,7 +1806,7 @@ export function StaffPage() {
                   color: '#fff',
                 }}
               >
-                确认拒绝
+                {t('staff_transfer_confirm_reject')}
               </button>
             </div>
           </div>
@@ -1852,7 +1852,7 @@ export function StaffPage() {
             <textarea
               value={reapplyReason}
               onChange={(e) => setReapplyReason(e.target.value)}
-              placeholder="请输入转接原因（必填）"
+              placeholder={t('staff_transfer_reason_placeholder')}
               rows={4}
               style={{
                 width: '100%',
@@ -1881,7 +1881,7 @@ export function StaffPage() {
                   color: '#666',
                 }}
               >
-                取消
+                {t('cancel')}
               </button>
               <button
                 onClick={handleReapplyTransfer}
@@ -1896,7 +1896,7 @@ export function StaffPage() {
                   color: '#fff',
                 }}
               >
-                发送请求
+                {t('staff_transfer_send')}
               </button>
             </div>
           </div>
