@@ -76,15 +76,15 @@ function getCtxString(c: any, key: string, defaultVal = ''): string {
 // Returns { businessId, isSuperAdmin } or sends a 403 response and returns null.
 //
 // 多租户隔离核心逻辑：
-// - 超级管理员 (role=admin, businessSlug='default', businessId=0): 可查看所有商家数据
+// - 超级管理员 (role=admin, businessSlug='default'): 可查看所有商家数据
 // - 商家管理员 (role=admin, businessSlug!=default): 只能查看自己商家的数据
 // - 普通客服 (role=staff): 只能查看自己商家的数据
 function requireBusiness(c: any): { businessId: number; isSuperAdmin: boolean } | null {
   const businessId = getCtxNumber(c, 'businessId')
   const role = getCtxString(c, 'role')
   const businessSlug = getCtxString(c, 'businessSlug')
-  // 只有 default 商家的 admin 才是超级管理员（businessId=0）
-  const isSuperAdmin = role === 'admin' && businessSlug === 'default' && businessId === 0
+  // 超级管理员：role=admin 且 businessSlug=default
+  const isSuperAdmin = role === 'admin' && businessSlug === 'default'
 
   // 非超级管理员必须有 businessId
   if (!isSuperAdmin && (businessId === undefined || businessId === 0)) {

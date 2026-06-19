@@ -331,16 +331,18 @@ chatRoutes.post('/sessions/:id/accept', requireAuth, async c => {
     }
 
     // 多租户隔离：UPDATE 带 business_id 条件防御
+    // 同时更新 assigned_staff_id 和 service_id，确保转接等操作能正确识别当前客服
     if (businessId === 0) {
-      await db.run('UPDATE sessions SET assigned_staff_id = ?, updated_at = ? WHERE id = ?', [
+      await db.run('UPDATE sessions SET assigned_staff_id = ?, service_id = ?, updated_at = ? WHERE id = ?', [
+        staffId,
         staffId,
         Date.now(),
         sessionId,
       ])
     } else {
       await db.run(
-        'UPDATE sessions SET assigned_staff_id = ?, updated_at = ? WHERE id = ? AND business_id = ?',
-        [staffId, Date.now(), sessionId, businessId]
+        'UPDATE sessions SET assigned_staff_id = ?, service_id = ?, updated_at = ? WHERE id = ? AND business_id = ?',
+        [staffId, staffId, Date.now(), sessionId, businessId]
       )
     }
 
@@ -396,16 +398,18 @@ chatRoutes.post('/sessions/:id/transfer', requireAuth, async c => {
     }
 
     // 多租户隔离：UPDATE 带 business_id 条件防御
+    // 同时更新 assigned_staff_id 和 service_id
     if (businessId === 0) {
-      await db.run('UPDATE sessions SET assigned_staff_id = ?, updated_at = ? WHERE id = ?', [
+      await db.run('UPDATE sessions SET assigned_staff_id = ?, service_id = ?, updated_at = ? WHERE id = ?', [
+        targetStaffId,
         targetStaffId,
         Date.now(),
         sessionId,
       ])
     } else {
       await db.run(
-        'UPDATE sessions SET assigned_staff_id = ?, updated_at = ? WHERE id = ? AND business_id = ?',
-        [targetStaffId, Date.now(), sessionId, businessId]
+        'UPDATE sessions SET assigned_staff_id = ?, service_id = ?, updated_at = ? WHERE id = ? AND business_id = ?',
+        [targetStaffId, targetStaffId, Date.now(), sessionId, businessId]
       )
     }
 

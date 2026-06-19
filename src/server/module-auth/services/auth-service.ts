@@ -375,14 +375,12 @@ export async function login(username: string, password: string, clientIp: string
       // Update last_active timestamp for online status tracking
       await updateStaffLastActive(userId);
       
-      // 商家主账号：business_id = 0，但有 business_slug/business_name，使用自己的ID作为businessId
-      // 这样创建的客服和会话都会关联到这个商家
-      // 系统管理员(admin用户且business_slug为'default')：保持business_id = 0，可以看到所有会话
+      // 商家主账号：数据库中 business_id = 0，但有 business_slug/business_name
+      // 使用自己的 userId 作为 token 中的 businessId，实现数据隔离
+      // 所有商家（包括 default）都用自己的 ID，不再有 businessId=0 的超管特权
+      // 真正的超级管理员通过 role='admin' + businessSlug='default' 判断
       if (businessId === 0 && (u.business_slug || u.business_name)) {
-        // default 商家保持 businessId=0（超级管理员权限）
-        if (u.business_slug !== 'default') {
-          businessId = userId;
-        }
+        businessId = userId;
       }
       
       const token = await generateToken(

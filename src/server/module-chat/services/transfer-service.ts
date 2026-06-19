@@ -39,7 +39,9 @@ export async function createTransferRequest(
       return { success: false, error: '无权访问该会话' }
     }
 
-    if (session.service_id !== params.fromStaffId) {
+    // 检查是否是该会话的当前客服（service_id 由 accept/transfer 路由同步更新）
+    const currentStaffId = session.service_id || 0;
+    if (currentStaffId !== params.fromStaffId) {
       return { success: false, error: '您不是该会话的当前客服' }
     }
 

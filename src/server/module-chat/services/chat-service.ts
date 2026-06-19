@@ -304,13 +304,20 @@ export async function listSessions(
     params.push(status)
   }
 
-  // 管理员 (business_id = 0) 可以看到所有会话，普通商家只能看到自己的会话
-  if (businessId && businessId !== 0) {
+  // 多租户隔离：只有明确传入 businessId > 0 时才过滤
+  // businessId === 0 表示超级管理员，businessId === undefined 表示无上下文
+  // 注意：默认商家 admin（business_id=0）不应该看到所有商家会话
+  // 而是应该只看 business_id 等于自己 userId 的会话
+  if (businessId !== undefined && businessId > 0) {
     conditions.push('business_id = ?')
     params.push(businessId)
     console.log('[ChatService] Filtering sessions by business_id =', businessId)
+  } else if (businessId === undefined) {
+    // 没有 business 上下文，不应该返回任何会话
+    console.log('[ChatService] No businessId provided, returning empty list')
+    return []
   } else {
-    console.log('[ChatService] No business filter applied (admin or no businessId)')
+    console.log('[ChatService] businessId=0 (super admin), no filter applied')
   }
 
   if (conditions.length > 0) {
