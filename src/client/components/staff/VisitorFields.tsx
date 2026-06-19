@@ -287,12 +287,12 @@ export function VisitorFields({ t = (s: string) => s }: VisitorFieldsProps) {
 
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: '#666', fontWeight: 500 }}>
-                备注说明
+                {t('visitor_fields_remark')}
               </label>
               <textarea
                 value={formRemark}
                 onChange={(e) => setFormRemark(e.target.value)}
-                placeholder="描述这个字段的用途..."
+                placeholder={t('visitor_fields_remark_placeholder')}
                 rows={3}
                 style={{
                   width: '100%', padding: '8px 12px', border: '1px solid #d9d9d9',
@@ -373,9 +373,9 @@ export function VisitorFields({ t = (s: string) => s }: VisitorFieldsProps) {
           display: 'flex', alignItems: 'center', gap: '8px',
         }}>
           <Edit3 size={18} style={{ color: '#52c41a' }} />
-          <h3 style={{ fontSize: '16px', fontWeight: 500, margin: 0 }}>自定义字段</h3>
+          <h3 style={{ fontSize: '16px', fontWeight: 500, margin: 0 }}>{t('visitor_fields_custom_fields')}</h3>
           <span style={{ fontSize: '12px', color: '#999', backgroundColor: '#f0f0f0', padding: '2px 8px', borderRadius: '10px' }}>
-            {customFields.length} 个
+            {customFields.length} {t('visitor_fields_items')}
           </span>
         </div>
 
@@ -389,10 +389,10 @@ export function VisitorFields({ t = (s: string) => s }: VisitorFieldsProps) {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ backgroundColor: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
-                  <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '13px', color: '#666', fontWeight: 500, width: '160px' }}>字段标识</th>
-                  <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '13px', color: '#666', fontWeight: 500, width: '120px' }}>显示名称</th>
-                  <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '13px', color: '#666', fontWeight: 500, width: '80px' }}>类型</th>
-                  <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '13px', color: '#666', fontWeight: 500 }}>备注说明</th>
+                  <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '13px', color: '#666', fontWeight: 500, width: '160px' }}>{t('visitor_fields_field_key')}</th>
+                  <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '13px', color: '#666', fontWeight: 500, width: '120px' }}>{t('visitor_fields_display_name')}</th>
+                  <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '13px', color: '#666', fontWeight: 500, width: '80px' }}>{t('type_label')}</th>
+                  <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '13px', color: '#666', fontWeight: 500 }}>{t('visitor_fields_remark')}</th>
                   <th style={{ padding: '12px 20px', textAlign: 'center', fontSize: '13px', color: '#666', fontWeight: 500, width: '120px' }}>{t('action_label')}</th>
                 </tr>
               </thead>
@@ -438,3 +438,4 @@ export function VisitorFields({ t = (s: string) => s }: VisitorFieldsProps) {
       </div>
     </div>
   );
+}
