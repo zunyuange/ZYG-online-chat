@@ -214,39 +214,35 @@ businessRoutes.post('/info', requireAuth, async (c) => {
     const db = getDb();
     let businessId = c.get('businessId');
     
-    // businessId 可能是 0（超级管理员使用旧 token），需要重新从 token 解析
-    // 0 在数据库中不存在（id 从 1 开始），会修改失败
-    if (businessId === 0) {
-      const authHeader = c.req.header('Authorization');
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7);
-        const result = await verifyToken(token);
-        if (result.valid && result.userId) {
-          // 对于 businessId=0 的旧 token，使用 userId 作为实际的商家 ID
-          businessId = result.userId;
-        }
-      }
-    }
-    
-    // businessId 可能是 undefined，需要用 !== undefined 判断
-    if (businessId !== undefined && businessId > 0) {
-      await db.run(
-        'UPDATE staff_users SET business_name = ?, updated_at = ? WHERE id = ?',
-        [business_name, Date.now(), businessId]
-      );
-      return c.json({ success: true });
-    }
-    
-    // 回退：从 token 中获取 businessId
+    // 从 token 重新解析以获取完整信息（用于调试和准确判断）
     const authHeader = c.req.header('Authorization');
+    let tokenPayload: any = null;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       const result = await verifyToken(token);
-      if (result.valid && result.businessId !== undefined && result.businessId > 0) {
+      if (result.valid) {
+        tokenPayload = result;
+      }
+    }
+    
+    console.log('[POST /info] businessId from context:', businessId, 'type:', typeof businessId);
+    console.log('[POST /info] tokenPayload:', JSON.stringify(tokenPayload));
+    console.log('[POST /info] business_name to set:', business_name);
+    
+    // 直接使用 token 中的 businessId 或 userId
+    if (tokenPayload) {
+      let effectiveId = tokenPayload.businessId;
+      if (effectiveId === undefined || effectiveId === 0) {
+        effectiveId = tokenPayload.userId;
+      }
+      console.log('[POST /info] effectiveId:', effectiveId);
+      
+      if (effectiveId && effectiveId > 0) {
         await db.run(
           'UPDATE staff_users SET business_name = ?, updated_at = ? WHERE id = ?',
-          [business_name, Date.now(), result.businessId]
+          [business_name, Date.now(), effectiveId]
         );
+        console.log('[POST /info] Updated staff_users id=' + effectiveId + ' to business_name=' + business_name);
         return c.json({ success: true });
       }
     }
