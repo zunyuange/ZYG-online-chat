@@ -35,10 +35,19 @@ interface UnreadCountRow {
  */
 export async function updateSessionTopic(
   sessionId: string,
-  topic: string
+  topic: string,
+  businessId?: number
 ): Promise<Session | null> {
   const db = getDb()
   const now = Date.now()
+
+  if (businessId && businessId !== 0) {
+    const session = await db.get<{ id: string }>(
+      'SELECT id FROM sessions WHERE id = ? AND business_id = ?',
+      [sessionId, businessId]
+    )
+    if (!session) return null
+  }
 
   await db.run('UPDATE sessions SET topic = ?, updated_at = ? WHERE id = ?', [
     topic,
@@ -54,10 +63,19 @@ export async function updateSessionTopic(
  */
 export async function updateTaskStatus(
   sessionId: string,
-  taskStatus: TaskStatus
+  taskStatus: TaskStatus,
+  businessId?: number
 ): Promise<Session | null> {
   const db = getDb()
   const now = Date.now()
+
+  if (businessId && businessId !== 0) {
+    const session = await db.get<{ id: string }>(
+      'SELECT id FROM sessions WHERE id = ? AND business_id = ?',
+      [sessionId, businessId]
+    )
+    if (!session) return null
+  }
 
   await db.run(
     'UPDATE sessions SET task_status = ?, task_status_updated_at = ?, updated_at = ? WHERE id = ?',
@@ -70,9 +88,17 @@ export async function updateTaskStatus(
 /**
  * End a session (close it) and delete related messages
  */
-export async function endSession(sessionId: string): Promise<Session | null> {
+export async function endSession(sessionId: string, businessId?: number): Promise<Session | null> {
   const db = getDb()
   const now = Date.now()
+
+  if (businessId && businessId !== 0) {
+    const session = await db.get<{ id: string }>(
+      'SELECT id FROM sessions WHERE id = ? AND business_id = ?',
+      [sessionId, businessId]
+    )
+    if (!session) return null
+  }
 
   console.log(`[StaffService] Ending session ${sessionId}`)
 
@@ -98,7 +124,11 @@ export async function endSession(sessionId: string): Promise<Session | null> {
 /**
  * Get session with message preview
  */
-export async function getSessionWithPreview(sessionId: string): Promise<{
+export async function getSessionWithPreview(
+  sessionId: string,
+  businessId?: number,
+  isSuperAdmin?: boolean
+): Promise<{
   session: Session | null
   lastMessage?: {
     content: string
@@ -108,6 +138,10 @@ export async function getSessionWithPreview(sessionId: string): Promise<{
 }> {
   const session = await getSessionBase(sessionId)
   if (!session) {
+    return { session: null }
+  }
+
+  if (!isSuperAdmin && businessId && businessId !== 0 && session.businessId !== businessId) {
     return { session: null }
   }
 
@@ -224,7 +258,8 @@ export async function getTotalUnreadCount(businessId?: number): Promise<number> 
  * Delete all messages for a session
  */
 export async function deleteSessionMessages(
-  sessionId: string
+  sessionId: string,
+  businessId?: number
 ): Promise<{ success: boolean; error?: string }> {
   const db = getDb()
 
@@ -232,6 +267,10 @@ export async function deleteSessionMessages(
     const session = await getSessionBase(sessionId)
     if (!session) {
       return { success: false, error: 'Session not found' }
+    }
+
+    if (businessId && businessId !== 0 && session.businessId !== businessId) {
+      return { success: false, error: 'Access denied' }
     }
 
     await db.run('DELETE FROM messages WHERE session_id = ?', [sessionId])
@@ -534,10 +573,19 @@ export async function getOfflineMessages(businessId?: number): Promise<OfflineMe
 
 export async function updateOfflineMessageStatus(
   id: number,
-  status: string
+  status: string,
+  businessId?: number
 ): Promise<OfflineMessage | null> {
   const db = getDb()
-  await db.run('UPDATE offline_messages SET status = ? WHERE id = ?', [status, id])
+  if (businessId && businessId !== 0) {
+    await db.run('UPDATE offline_messages SET status = ? WHERE id = ? AND business_id = ?', [
+      status,
+      id,
+      businessId,
+    ])
+  } else {
+    await db.run('UPDATE offline_messages SET status = ? WHERE id = ?', [status, id])
+  }
   return db.get<OfflineMessage>('SELECT * FROM offline_messages WHERE id = ?', [id])
 }
 
@@ -631,12 +679,34 @@ export async function getAvailableStaffForTransfer(
 export async function transferSession(
   sessionId: string,
   targetStaffId: number,
-  reason?: string
+  reason?: string,
+  businessId?: number
 ): Promise<{ success: boolean; error?: string }> {
   const db = getDb()
   const now = Date.now()
 
   try {
+    if (businessId && businessId !== 0) {
+      const session = await db.get<{ business_id: number }>(
+        'SELECT business_id FROM sessions WHERE id = ?',
+        [sessionId]
+      )
+      if (!session) {
+        return { success: false, error: 'Session not found' }
+      }
+      if (session.business_id !== businessId) {
+        return { success: false, error: 'Access denied' }
+      }
+
+      const targetStaff = await db.get<{ business_id: number }>(
+        'SELECT business_id FROM staff_users WHERE id = ?',
+        [targetStaffId]
+      )
+      if (!targetStaff || targetStaff.business_id !== businessId) {
+        return { success: false, error: 'Target staff does not belong to this business' }
+      }
+    }
+
     // Update session with new staff
     await db.run('UPDATE sessions SET service_id = ?, updated_at = ? WHERE id = ?', [
       targetStaffId,
@@ -669,22 +739,33 @@ interface EvaluationSetting {
   word_title: string
 }
 
-export async function getEvaluationSettings(): Promise<EvaluationSetting | null> {
+export async function getEvaluationSettings(
+  businessId?: number
+): Promise<EvaluationSetting | null> {
   const db = getDb()
+  if (businessId && businessId !== 0) {
+    return db.get<EvaluationSetting>(
+      'SELECT * FROM evaluation_setting WHERE business_id = ? LIMIT 1',
+      [businessId]
+    )
+  }
   const setting = await db.get<EvaluationSetting>('SELECT * FROM evaluation_setting LIMIT 1')
   return setting
 }
 
-export async function updateEvaluationSettings(data: {
-  title?: string
-  questions?: string
-  word_switch?: string
-  word_title?: string
-}): Promise<EvaluationSetting> {
+export async function updateEvaluationSettings(
+  data: {
+    title?: string
+    questions?: string
+    word_switch?: string
+    word_title?: string
+  },
+  businessId?: number
+): Promise<EvaluationSetting> {
   const db = getDb()
   const now = Date.now()
 
-  const existing = await getEvaluationSettings()
+  const existing = await getEvaluationSettings(businessId)
 
   if (existing) {
     const updates: string[] = ['updated_at = ?']
@@ -707,12 +788,22 @@ export async function updateEvaluationSettings(data: {
       params.push(data.word_title)
     }
 
-    params.push(existing.id)
-    await db.run(`UPDATE evaluation_setting SET ${updates.join(', ')} WHERE id = ?`, params)
+    if (businessId && businessId !== 0) {
+      params.push(existing.id)
+      params.push(businessId)
+      await db.run(
+        `UPDATE evaluation_setting SET ${updates.join(', ')} WHERE id = ? AND business_id = ?`,
+        params
+      )
+    } else {
+      params.push(existing.id)
+      await db.run(`UPDATE evaluation_setting SET ${updates.join(', ')} WHERE id = ?`, params)
+    }
   } else {
     await db.run(
-      'INSERT INTO evaluation_setting (title, questions, word_switch, word_title, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+      'INSERT INTO evaluation_setting (business_id, title, questions, word_switch, word_title, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [
+        businessId || 1,
         data.title || '',
         data.questions || '[]',
         data.word_switch || 'close',
@@ -723,7 +814,7 @@ export async function updateEvaluationSettings(data: {
     )
   }
 
-  return (await getEvaluationSettings())!
+  return (await getEvaluationSettings(businessId))!
 }
 
 // Staff user management

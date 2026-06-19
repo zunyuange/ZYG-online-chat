@@ -627,12 +627,14 @@ chatRoutes.post('/transfer/request', requireAuth, async c => {
     }
 
     const staffId = parseInt(c.get('userId'), 10)
+    const businessId = c.get('businessId')
 
     const result = await transferService.createTransferRequest({
       sessionId,
       fromStaffId: staffId,
       toStaffId: parseInt(toStaffId, 10),
       reason: reason || '',
+      businessId,
     })
 
     if (!result.success) {
@@ -665,12 +667,14 @@ chatRoutes.post('/transfer/:requestId/respond', requireAuth, async c => {
     }
 
     const staffId = c.get('userId')
+    const businessId = c.get('businessId')
 
     const result = await transferService.respondToTransferRequest(
       parseInt(requestId, 10),
       staffId,
       action as 'accept' | 'reject',
-      reason
+      reason,
+      businessId
     )
 
     if (!result.success) {

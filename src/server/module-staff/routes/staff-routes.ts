@@ -66,7 +66,13 @@ staffRoutes.get('/sessions', async c => {
     const role = c.get('role')
     const businessSlug = c.get('businessSlug')
 
-    const sessions = await staffService.listSessionsWithPreview(status, businessId, staffId, role, businessSlug)
+    const sessions = await staffService.listSessionsWithPreview(
+      status,
+      businessId,
+      staffId,
+      role,
+      businessSlug
+    )
     return c.json({ success: true, data: sessions })
   } catch (error) {
     console.error('List sessions error:', error)
@@ -78,7 +84,11 @@ staffRoutes.get('/sessions', async c => {
 staffRoutes.get('/sessions/:sessionId', async c => {
   try {
     const sessionId = c.req.param('sessionId')
-    const result = await staffService.getSessionWithPreview(sessionId)
+    const businessId = c.get('businessId')
+    const role = c.get('role')
+    const businessSlug = c.get('businessSlug')
+    const isSuperAdmin = role === 'admin' && businessSlug === 'default'
+    const result = await staffService.getSessionWithPreview(sessionId, businessId, isSuperAdmin)
     if (!result.session) {
       return c.json({ success: false, error: 'Session not found' }, 404)
     }
@@ -115,8 +125,9 @@ staffRoutes.get('/messages', async c => {
 
     const before = c.req.query('before') ? parseInt(c.req.query('before')!) : undefined
     const limit = c.req.query('limit') ? parseInt(c.req.query('limit')!) : 20
+    const businessId = c.get('businessId')
 
-    const result = await staffService.getMessages(sessionId, before, limit)
+    const result = await staffService.getMessages(sessionId, before, limit, businessId)
     return c.json({ success: true, data: result.messages, hasMore: result.hasMore })
   } catch (error) {
     console.error('Get messages error:', error)
@@ -134,21 +145,26 @@ staffRoutes.post('/messages', async c => {
       return c.json({ success: false, error: 'Missing required fields' }, 400)
     }
 
-    const message = await staffService.sendMessage({
-      sessionId,
-      senderType: 'staff',
-      contentType,
-      content,
-      thumbnailUrl,
-      fileName,
-      fileSize,
-    })
+    const businessId = c.get('businessId')
+
+    const message = await staffService.sendMessage(
+      {
+        sessionId,
+        senderType: 'staff',
+        contentType,
+        content,
+        thumbnailUrl,
+        fileName,
+        fileSize,
+      },
+      businessId
+    )
 
     // Broadcast to SSE clients
     await sseService.broadcastMessage(message)
 
     // Broadcast session update to staff
-    const session = await chatService.getSession(sessionId)
+    const session = await chatService.getSession(sessionId, businessId)
     if (session) {
       await sseService.broadcastSessionUpdate(session)
     }
@@ -192,15 +208,19 @@ staffRoutes.post('/upload', async c => {
     const uploadResult = await uploadService.saveFileBuffer(buffer, file.name, file.type)
 
     // Create message
-    const message = await staffService.sendMessage({
-      sessionId,
-      senderType: 'staff',
-      contentType,
-      content: uploadResult.url,
-      thumbnailUrl: uploadResult.thumbnailUrl,
-      fileName: uploadResult.fileName,
-      fileSize: uploadResult.fileSize,
-    })
+    const businessId = c.get('businessId')
+    const message = await staffService.sendMessage(
+      {
+        sessionId,
+        senderType: 'staff',
+        contentType,
+        content: uploadResult.url,
+        thumbnailUrl: uploadResult.thumbnailUrl,
+        fileName: uploadResult.fileName,
+        fileSize: uploadResult.fileSize,
+      },
+      businessId
+    )
 
     // Broadcast to SSE clients
     await sseService.broadcastMessage(message)
@@ -260,7 +280,8 @@ staffRoutes.get('/sse', async c => {
 staffRoutes.put('/read/:sessionId', async c => {
   try {
     const sessionId = c.req.param('sessionId')
-    const messageIds = await staffService.markAsRead(sessionId, 'staff')
+    const businessId = c.get('businessId')
+    const messageIds = await staffService.markAsRead(sessionId, 'staff', businessId)
 
     // Broadcast message read status to visitor
     if (messageIds.length > 0) {
@@ -290,12 +311,13 @@ staffRoutes.put('/sessions/:sessionId/topic', async c => {
     const sessionId = c.req.param('sessionId')
     const body = await c.req.json()
     const { topic } = body
+    const businessId = c.get('businessId')
 
     if (typeof topic !== 'string') {
       return c.json({ success: false, error: 'Topic must be a string' }, 400)
     }
 
-    const session = await staffService.updateSessionTopic(sessionId, topic)
+    const session = await staffService.updateSessionTopic(sessionId, topic, businessId)
     if (!session) {
       return c.json({ success: false, error: 'Session not found' }, 404)
     }
@@ -316,6 +338,7 @@ staffRoutes.put('/sessions/:sessionId/status', async c => {
     const sessionId = c.req.param('sessionId')
     const body = await c.req.json()
     const { taskStatus } = body
+    const businessId = c.get('businessId')
 
     const validStatuses = [
       'requirement_discussion',
@@ -328,7 +351,7 @@ staffRoutes.put('/sessions/:sessionId/status', async c => {
       return c.json({ success: false, error: 'Invalid task status' }, 400)
     }
 
-    const session = await staffService.updateTaskStatus(sessionId, taskStatus)
+    const session = await staffService.updateTaskStatus(sessionId, taskStatus, businessId)
     if (!session) {
       return c.json({ success: false, error: 'Session not found' }, 404)
     }
@@ -351,8 +374,9 @@ staffRoutes.put('/sessions/:sessionId/status', async c => {
 staffRoutes.delete('/messages/:sessionId', async c => {
   try {
     const sessionId = c.req.param('sessionId')
+    const businessId = c.get('businessId')
 
-    const result = await staffService.deleteSessionMessages(sessionId)
+    const result = await staffService.deleteSessionMessages(sessionId, businessId)
 
     if (result.success) {
       return c.json({ success: true, message: 'Messages deleted successfully' })
@@ -369,8 +393,9 @@ staffRoutes.delete('/messages/:sessionId', async c => {
 staffRoutes.post('/sessions/:sessionId/end', async c => {
   try {
     const sessionId = c.req.param('sessionId')
+    const businessId = c.get('businessId')
 
-    const session = await staffService.endSession(sessionId)
+    const session = await staffService.endSession(sessionId, businessId)
     if (!session) {
       return c.json({ success: false, error: 'Session not found' }, 404)
     }
@@ -542,8 +567,9 @@ staffRoutes.put('/offline-messages/:id', async c => {
     const id = parseInt(c.req.param('id'), 10)
     const body = await c.req.json()
     const { status } = body
+    const businessId = c.get('businessId')
 
-    const message = await staffService.updateOfflineMessageStatus(id, status)
+    const message = await staffService.updateOfflineMessageStatus(id, status, businessId)
     if (!message) {
       return c.json({ success: false, error: 'Message not found' }, 404)
     }
@@ -632,6 +658,7 @@ staffRoutes.post('/transfer/:sessionId', async c => {
     const sessionId = c.req.param('sessionId')
     const body = await c.req.json()
     const { targetStaffId, reason } = body
+    const businessId = c.get('businessId')
 
     if (!targetStaffId) {
       return c.json({ success: false, error: 'Target staff ID is required' }, 400)
@@ -640,7 +667,8 @@ staffRoutes.post('/transfer/:sessionId', async c => {
     const result = await staffService.transferSession(
       sessionId,
       parseInt(targetStaffId, 10),
-      reason
+      reason,
+      businessId
     )
     if (!result.success) {
       return c.json({ success: false, error: result.error }, 400)
@@ -660,7 +688,8 @@ staffRoutes.post('/transfer/:sessionId', async c => {
 // Get evaluation settings
 staffRoutes.get('/evaluation-settings', async c => {
   try {
-    const settings = await staffService.getEvaluationSettings()
+    const businessId = c.get('businessId')
+    const settings = await staffService.getEvaluationSettings(businessId)
     return c.json({ success: true, data: settings })
   } catch (error) {
     console.error('Get evaluation settings error:', error)
@@ -672,7 +701,8 @@ staffRoutes.get('/evaluation-settings', async c => {
 staffRoutes.put('/evaluation-settings', async c => {
   try {
     const body = await c.req.json()
-    const settings = await staffService.updateEvaluationSettings(body)
+    const businessId = c.get('businessId')
+    const settings = await staffService.updateEvaluationSettings(body, businessId)
     return c.json({ success: true, data: settings })
   } catch (error) {
     console.error('Update evaluation settings error:', error)
