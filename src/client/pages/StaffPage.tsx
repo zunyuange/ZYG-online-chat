@@ -698,13 +698,14 @@ export function StaffPage() {
     width: '8px',
     height: '8px',
     borderRadius: '50%',
-    backgroundColor: connected ? '#52c41a' : polling ? '#faad14' : '#ff4d4f',
+    // SSE连接成功 → 绿色；Polling后备连接正常 → 绿色；都未连接 → 红色
+    backgroundColor: (connected || polling) ? '#52c41a' : '#ff4d4f',
   });
 
   const getStatusText = () => {
     if (sseConnected) return t('service_online');
-    if (usePolling) return 'Polling...';
-    return 'Connecting...';
+    if (usePolling) return t('polling');
+    return t('connecting');
   };
 
   const errorStyle: React.CSSProperties = {

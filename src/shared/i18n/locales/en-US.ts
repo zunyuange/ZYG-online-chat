@@ -221,4 +221,8 @@ export const enUS = {
   leave_empty_to_keep: 'Leave empty to keep current',
   saving: 'Saving...',
   save: 'Save',
+
+  // Connection status
+  polling: 'Polling...',
+  connecting: 'Connecting...',
 };

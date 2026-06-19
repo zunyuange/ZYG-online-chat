@@ -215,4 +215,8 @@ export const zhCN = {
   leave_empty_to_keep: '留空保持不变',
   saving: '保存中...',
   save: '保存',
+
+  // 连接状态
+  polling: '轮询中',
+  connecting: '连接中...',
 };

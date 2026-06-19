@@ -88,7 +88,8 @@ export function ChatWindow({
     width: '8px',
     height: '8px',
     borderRadius: '50%',
-    backgroundColor: staffOnline === false ? '#999' : (sseConnected ? '#52c41a' : (usePolling ? '#faad14' : '#ff4d4f')),
+    // 客服离线 → 灰色；SSE/Polling连接正常 → 绿色；都未连接 → 红色
+    backgroundColor: staffOnline === false ? '#999' : ((sseConnected || usePolling) ? '#52c41a' : '#ff4d4f'),
   };
 
   const langButtonStyle: React.CSSProperties = {
@@ -161,8 +162,8 @@ export function ChatWindow({
   const getStatusText = () => {
     if (staffOnline === false) return t('service_offline');
     if (sseConnected) return t('service_online');
-    if (usePolling) return 'Polling...';
-    return 'Connecting...';
+    if (usePolling) return t('polling');
+    return t('connecting');
   };
 
   const handleLangSelect = (selectedLocale: string) => {
