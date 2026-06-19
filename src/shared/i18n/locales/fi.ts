@@ -77,6 +77,7 @@ export default {
   please_enter_message: 'Anna viesti',
   choose_lang: 'Valitse kieli',
   service_title: 'Verkkopalvelu',
+  about: 'noin',
   banword_tip: 'Lähetys epäonnistui, sisältö sisältää kiellettyjä sanoja',
 
   login: 'Kirjaudu sisään',
@@ -303,7 +304,8 @@ export default {
   chat_mode_title: 'Keskustelutila', chat_mode: 'Keskustelu', topic_mode_title: 'Aihetila', topic_mode: 'Aihe',
   send_emoji: 'Lähetä emoji', send_files: 'Lähetä tiedostoja/kuvia/videoita',
   click_view_image: 'Napsauta nähdäksesi kuva', click_view_video: 'Napsauta nähdäksesi video',
-  file_type: 'Tiedosto', download: 'Lataa', pull_up_load_more: '↑ Vedä ylös ladataksesi lisää',
+  file_type: 'Tiedosto',
+  browser_no_video: 'Selaimesi ei tue videota.', download: 'Lataa', pull_up_load_more: '↑ Vedä ylös ladataksesi lisää',
   enter_notice_placeholder: 'Syötä ilmoitus...', click_add_notice: 'Napsauta lisätäksesi ilmoitus',
   pwa_tap: 'Napauta', pwa_share: 'Jaa', pwa_add_to_home: '→ Lisää aloitusnäyttöön',
   pwa_install_prompt: '📱 Lisää aloitusnäyttöön', pwa_install: 'Asenna', pwa_not_now: 'Ei nyt',

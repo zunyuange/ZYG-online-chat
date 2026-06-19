@@ -77,6 +77,7 @@ export default {
   please_enter_message: 'Пожалуйста, введите сообщение',
   choose_lang: 'Выбрать язык',
   service_title: 'Онлайн-сервис',
+  about: 'около',
   banword_tip: 'Ошибка отправки, содержимое содержит запрещенные слова',
 
   login: 'Вход',
@@ -300,7 +301,8 @@ export default {
   chat_mode_title: 'Режим чата', chat_mode: 'Чат', topic_mode_title: 'Режим темы', topic_mode: 'Тема',
   send_emoji: 'Отправить эмодзи', send_files: 'Отправить файлы/изображения/видео',
   click_view_image: 'Нажмите для просмотра', click_view_video: 'Нажмите для просмотра видео',
-  file_type: 'Файл', download: 'Скачать', pull_up_load_more: '↑ Потяните вверх для загрузки',
+  file_type: 'Файл',
+  browser_no_video: 'Ваш браузер не поддерживает видео.', download: 'Скачать', pull_up_load_more: '↑ Потяните вверх для загрузки',
   enter_notice_placeholder: 'Введите уведомление...', click_add_notice: 'Нажмите для добавления уведомления',
   pwa_tap: 'Нажмите', pwa_share: 'Поделиться', pwa_add_to_home: '→ Добавить на главный экран',
   pwa_install_prompt: '📱 Добавить на главный экран', pwa_install: 'Установить', pwa_not_now: 'Не сейчас',

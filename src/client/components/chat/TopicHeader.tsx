@@ -27,7 +27,7 @@ export function TopicHeader({
   const [editTopic, setEditTopic] = useState(session.topic || '');
 
   const showQueueInfo = queuePosition && queuePosition > 1;
-  const noticeLabel = t('important_notice') || '重要通知';
+  const noticeLabel = t('important_notice');
 
   const containerStyle: React.CSSProperties = {
     backgroundColor: '#fafafa',

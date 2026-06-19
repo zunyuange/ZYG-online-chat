@@ -77,6 +77,7 @@ export default {
   please_enter_message: 'Εισάγετε μήνυμα',
   choose_lang: 'Επιλέξτε γλώσσα',
   service_title: 'Διαδικτυακή υπηρεσία',
+  about: 'περίπου',
   banword_tip: 'Η αποστολή απέτυχε, το περιεχόμενο περιέχει απαγορευμένες λέξεις',
 
   login: 'Σύνδεση',
@@ -303,7 +304,8 @@ export default {
   chat_mode_title: 'Λειτουργία συνομιλίας', chat_mode: 'Συνομιλία', topic_mode_title: 'Λειτουργία θέματος', topic_mode: 'Θέμα',
   send_emoji: 'Αποστολή emoji', send_files: 'Αποστολή αρχείων/εικόνων/βίντεο',
   click_view_image: 'Κλικ για προβολή εικόνας', click_view_video: 'Κλικ για προβολή βίντεο',
-  file_type: 'Αρχείο', download: 'Λήψη', pull_up_load_more: '↑ Σύρετε προς τα πάνω για περισσότερα',
+  file_type: 'Αρχείο',
+  browser_no_video: 'Το πρόγραμμα περιήγησής σας δεν υποστηρίζει βίντεο.', download: 'Λήψη', pull_up_load_more: '↑ Σύρετε προς τα πάνω για περισσότερα',
   enter_notice_placeholder: 'Εισάγετε ειδοποίηση...', click_add_notice: 'Κλικ για προσθήκη ειδοποίησης',
   pwa_tap: 'Πατήστε', pwa_share: 'Κοινοποίηση', pwa_add_to_home: '→ Προσθήκη στην αρχική οθόνη',
   pwa_install_prompt: '📱 Προσθήκη στην αρχική οθόνη', pwa_install: 'Εγκατάσταση', pwa_not_now: 'Όχι τώρα',

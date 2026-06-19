@@ -77,6 +77,7 @@ export default {
   please_enter_message: 'Voer bericht in',
   choose_lang: 'Selecteer taal',
   service_title: 'Online service',
+  about: 'ong.',
   banword_tip: 'Verzenden mislukt, inhoud bevat verboden woorden',
 
   login: 'Inloggen',
@@ -303,7 +304,8 @@ export default {
   chat_mode_title: 'Chatmodus', chat_mode: 'Chat', topic_mode_title: 'Onderwerpmodus', topic_mode: 'Onderwerp',
   send_emoji: 'Emoji verzenden', send_files: 'Bestanden/afbeeldingen/video\'s verzenden',
   click_view_image: 'Klik om afbeelding te bekijken', click_view_video: 'Klik om video te bekijken',
-  file_type: 'Bestand', download: 'Downloaden', pull_up_load_more: '↑ Omhoog trekken om meer te laden',
+  file_type: 'Bestand',
+  browser_no_video: 'Uw browser ondersteunt geen video.', download: 'Downloaden', pull_up_load_more: '↑ Omhoog trekken om meer te laden',
   enter_notice_placeholder: 'Bericht invoeren...', click_add_notice: 'Klik om bericht toe te voegen',
   pwa_tap: 'Tik', pwa_share: 'Delen', pwa_add_to_home: '→ Aan beginscherm toevoegen',
   pwa_install_prompt: '📱 Aan beginscherm toevoegen', pwa_install: 'Installeren', pwa_not_now: 'Niet nu',

@@ -337,6 +337,7 @@ export const zhCN = {
   refresh: '刷新',
   no_queue_items: '暂无排队中的任务',
   my_sessions: '我的会话',
+  about: '约',
   minutes_unit: '分钟',
 
   // ===== 客服登录页 =====
@@ -353,6 +354,7 @@ export const zhCN = {
   click_view_video: '点击查看视频',
   file_type: '文件',
   download: '下载',
+  browser_no_video: '您的浏览器不支持视频。',
   pull_up_load_more: '↑ 上拉加载更多',
 
   // ===== 通知头部 =====

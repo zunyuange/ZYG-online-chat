@@ -77,6 +77,7 @@ export default {
   please_enter_message: 'โปรดป้อนข้อความ',
   choose_lang: 'เลือกภาษา',
   service_title: 'บริการออนไลน์',
+  about: 'ประมาณ',
   banword_tip: 'ส่งล้มเหลว เนื้อหามีคำต้องห้าม',
 
   login: 'เข้าสู่ระบบ',
@@ -303,7 +304,8 @@ export default {
   chat_mode_title: 'โหมดแชท', chat_mode: 'แชท', topic_mode_title: 'โหมดหัวข้อ', topic_mode: 'หัวข้อ',
   send_emoji: 'ส่งอีโมจิ', send_files: 'ส่งไฟล์/รูปภาพ/วิดีโอ',
   click_view_image: 'คลิกเพื่อดูรูปภาพ', click_view_video: 'คลิกเพื่อดูวิดีโอ',
-  file_type: 'ไฟล์', download: 'ดาวน์โหลด', pull_up_load_more: '↑ ดึงขึ้นเพื่อโหลดเพิ่ม',
+  file_type: 'ไฟล์',
+  browser_no_video: 'เบราว์เซอร์ของคุณไม่รองรับวิดีโอ', download: 'ดาวน์โหลด', pull_up_load_more: '↑ ดึงขึ้นเพื่อโหลดเพิ่ม',
   enter_notice_placeholder: 'ป้อนประกาศ...', click_add_notice: 'คลิกเพื่อเพิ่มประกาศ',
   pwa_tap: 'แตะ', pwa_share: 'แชร์', pwa_add_to_home: '→ เพิ่มไปยังหน้าจอหลัก',
   pwa_install_prompt: '📱 เพิ่มไปยังหน้าจอหลัก', pwa_install: 'ติดตั้ง', pwa_not_now: 'ไม่ใช่ตอนนี้',

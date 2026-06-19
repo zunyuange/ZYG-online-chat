@@ -161,7 +161,7 @@ export function ChatPage() {
       />
 
       {/* PWA Install Prompt */}
-      <PWAInstallPrompt t={t} />
+      <PWAInstallPrompt />
     </div>
   );
 }

@@ -77,6 +77,7 @@ export default {
   please_enter_message: 'Indtast venligst besked',
   choose_lang: 'Vælg sprog',
   service_title: 'Online service',
+  about: 'ca.',
   banword_tip: 'Send mislykkedes, indhold indeholder forbudte ord',
 
   login: 'Log ind',
@@ -303,7 +304,8 @@ export default {
   chat_mode_title: 'Chattilstand', chat_mode: 'Chat', topic_mode_title: 'Emnetilstand', topic_mode: 'Emne',
   send_emoji: 'Send emoji', send_files: 'Send filer/billeder/videoer',
   click_view_image: 'Klik for at se billede', click_view_video: 'Klik for at se video',
-  file_type: 'Fil', download: 'Download', pull_up_load_more: '↑ Træk op for at indlæse mere',
+  file_type: 'Fil',
+  browser_no_video: 'Din browser understøtter ikke video.', download: 'Download', pull_up_load_more: '↑ Træk op for at indlæse mere',
   enter_notice_placeholder: 'Indtast besked...', click_add_notice: 'Klik for at tilføje besked',
   pwa_tap: 'Tryk', pwa_share: 'Del', pwa_add_to_home: '→ Føj til hjemmeskærm',
   pwa_install_prompt: '📱 Føj til hjemmeskærm', pwa_install: 'Installer', pwa_not_now: 'Ikke nu',

@@ -77,6 +77,7 @@ export default {
   please_enter_message: 'Vui lòng nhập tin nhắn',
   choose_lang: 'Chọn ngôn ngữ',
   service_title: 'Dịch vụ trực tuyến',
+  about: 'khoảng',
   banword_tip: 'Gửi thất bại, nội dung chứa từ cấm',
 
   login: 'Đăng nhập',
@@ -300,7 +301,8 @@ export default {
   chat_mode_title: 'Chế độ Chat', chat_mode: 'Chat', topic_mode_title: 'Chế độ Chủ đề', topic_mode: 'Chủ đề',
   send_emoji: 'Gửi biểu tượng cảm xúc', send_files: 'Gửi tệp/hình ảnh/video',
   click_view_image: 'Nhấp để xem hình ảnh', click_view_video: 'Nhấp để xem video',
-  file_type: 'Tệp', download: 'Tải xuống', pull_up_load_more: '↑ Kéo lên để tải thêm',
+  file_type: 'Tệp',
+  browser_no_video: 'Trình duyệt của bạn không hỗ trợ video.', download: 'Tải xuống', pull_up_load_more: '↑ Kéo lên để tải thêm',
   enter_notice_placeholder: 'Nhập thông báo...', click_add_notice: 'Nhấp để thêm thông báo',
   pwa_tap: 'Chạm', pwa_share: 'Chia sẻ', pwa_add_to_home: '→ Thêm vào màn hình chính',
   pwa_install_prompt: '📱 Thêm vào màn hình chính', pwa_install: 'Cài đặt', pwa_not_now: 'Để sau',

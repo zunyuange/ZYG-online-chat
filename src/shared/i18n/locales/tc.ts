@@ -334,6 +334,7 @@ export default {
   refresh: '刷新',
   no_queue_items: '暫無排隊中的任務',
   my_sessions: '我的會話',
+  about: '約',
   minutes_unit: '分鐘',
 
   staff_login_title_page: '🔐 客服後台',
@@ -348,6 +349,7 @@ export default {
   click_view_video: '點擊查看視頻',
   file_type: '文件',
   download: '下載',
+  browser_no_video: '您的瀏覽器不支援影片。',
   pull_up_load_more: '↑ 上拉加載更多',
 
   enter_notice_placeholder: '輸入通知...',

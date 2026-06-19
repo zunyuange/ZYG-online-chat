@@ -3,17 +3,15 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useI18n } from '@client/context/I18nContext';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-interface PWAInstallPromptProps {
-  t?: (key: string) => string;
-}
-
-export function PWAInstallPrompt({ t = (key: string) => key }: PWAInstallPromptProps) {
+export function PWAInstallPrompt() {
+  const { t } = useI18n();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
@@ -128,7 +126,7 @@ export function PWAInstallPrompt({ t = (key: string) => key }: PWAInstallPromptP
       </div>
       {!isIOS && deferredPrompt && (
         <button style={primaryButtonStyle} onClick={handleInstall}>
-          安装
+          {t('pwa_install')}
         </button>
       )}
       <button style={secondaryButtonStyle} onClick={handleDismiss}>

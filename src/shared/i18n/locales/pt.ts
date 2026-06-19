@@ -77,6 +77,7 @@ export default {
   please_enter_message: 'Insira uma mensagem',
   choose_lang: 'Selecionar idioma',
   service_title: 'Serviço online',
+  about: 'aprox.',
   banword_tip: 'Falha ao enviar, conteúdo contém palavras proibidas',
 
   login: 'Login',
@@ -305,7 +306,8 @@ export default {
   chat_mode_title: 'Modo Chat', chat_mode: 'Chat', topic_mode_title: 'Modo Tópico', topic_mode: 'Tópico',
   send_emoji: 'Enviar emoji', send_files: 'Enviar arquivos/imagens/vídeos',
   click_view_image: 'Clique para ver a imagem', click_view_video: 'Clique para ver o vídeo',
-  file_type: 'Arquivo', download: 'Baixar', pull_up_load_more: '↑ Deslize para cima para carregar mais',
+  file_type: 'Arquivo',
+  browser_no_video: 'Seu navegador não suporta vídeo.', download: 'Baixar', pull_up_load_more: '↑ Deslize para cima para carregar mais',
   enter_notice_placeholder: 'Digitar aviso...', click_add_notice: 'Clique para adicionar aviso',
   pwa_tap: 'Tocar', pwa_share: 'Compartilhar', pwa_add_to_home: '→ Adicionar à tela inicial',
   pwa_install_prompt: '📱 Adicionar à tela inicial', pwa_install: 'Instalar', pwa_not_now: 'Agora não',

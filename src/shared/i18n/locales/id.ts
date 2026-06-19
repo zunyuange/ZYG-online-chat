@@ -77,6 +77,7 @@ export default {
   please_enter_message: 'Silakan masukkan pesan',
   choose_lang: 'Pilih bahasa',
   service_title: 'Layanan Online',
+  about: 'sekitar',
   banword_tip: 'Pengiriman gagal, konten mengandung kata terlarang',
 
   login: 'Masuk',
@@ -303,7 +304,8 @@ export default {
   chat_mode_title: 'Mode Obrolan', chat_mode: 'Obrolan', topic_mode_title: 'Mode Topik', topic_mode: 'Topik',
   send_emoji: 'Kirim Emoji', send_files: 'Kirim File/Gambar/Video',
   click_view_image: 'Klik untuk melihat gambar', click_view_video: 'Klik untuk melihat video',
-  file_type: 'File', download: 'Unduh', pull_up_load_more: '↑ Tarik ke atas untuk memuat lebih',
+  file_type: 'File',
+  browser_no_video: 'Browser Anda tidak mendukung video.', download: 'Unduh', pull_up_load_more: '↑ Tarik ke atas untuk memuat lebih',
   enter_notice_placeholder: 'Masukkan pemberitahuan...', click_add_notice: 'Klik untuk menambah pemberitahuan',
   pwa_tap: 'Ketuk', pwa_share: 'Bagikan', pwa_add_to_home: '→ Tambah ke Layar Utama',
   pwa_install_prompt: '📱 Tambah ke Layar Utama', pwa_install: 'Pasang', pwa_not_now: 'Nanti',

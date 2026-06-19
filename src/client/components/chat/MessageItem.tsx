@@ -15,7 +15,7 @@ interface MessageItemProps {
 export function MessageItem({ message, isOwn, t = (key: string) => key }: MessageItemProps) {
   const [expandedMedia, setExpandedMedia] = useState<Record<string, boolean>>({});
 
-  const formattedTime = new Date(message.createdAt).toLocaleTimeString('zh-CN', {
+  const formattedTime = new Date(message.createdAt).toLocaleTimeString(navigator.language || 'en', {
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -204,7 +204,7 @@ export function MessageItem({ message, isOwn, t = (key: string) => key }: Messag
             preload="metadata"
           >
             <source src={message.content} />
-            Your browser does not support video.
+            {t('browser_no_video')}
           </video>
         ) : (
           renderVideoPlaceholder(message)

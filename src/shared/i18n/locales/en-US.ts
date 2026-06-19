@@ -344,6 +344,7 @@ export const enUS = {
   refresh: 'Refresh',
   no_queue_items: 'No queued tasks',
   my_sessions: 'My Sessions',
+  about: 'about',
   minutes_unit: 'min',
 
   // ===== Staff Login Page =====
@@ -360,6 +361,7 @@ export const enUS = {
   click_view_video: 'Click to view video',
   file_type: 'File',
   download: 'Download',
+  browser_no_video: 'Your browser does not support video.',
   pull_up_load_more: '↑ Pull up to load more',
 
   // ===== Notice Header =====

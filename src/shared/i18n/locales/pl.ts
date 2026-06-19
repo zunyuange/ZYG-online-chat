@@ -77,6 +77,7 @@ export default {
   please_enter_message: 'Wprowadź wiadomość',
   choose_lang: 'Wybierz język',
   service_title: 'Usługa online',
+  about: 'ok.',
   banword_tip: 'Wysyłanie nie powiodło się, treść zawiera zabronione słowa',
 
   login: 'Zaloguj się',
@@ -303,7 +304,8 @@ export default {
   chat_mode_title: 'Tryb czatu', chat_mode: 'Czat', topic_mode_title: 'Tryb tematu', topic_mode: 'Temat',
   send_emoji: 'Wyślij emoji', send_files: 'Wyślij pliki/obrazy/wideo',
   click_view_image: 'Kliknij, aby zobaczyć obraz', click_view_video: 'Kliknij, aby zobaczyć wideo',
-  file_type: 'Plik', download: 'Pobierz', pull_up_load_more: '↑ Przeciągnij w górę, aby załadować więcej',
+  file_type: 'Plik',
+  browser_no_video: 'Twoja przeglądarka nie obsługuje wideo.', download: 'Pobierz', pull_up_load_more: '↑ Przeciągnij w górę, aby załadować więcej',
   enter_notice_placeholder: 'Wprowadź powiadomienie...', click_add_notice: 'Kliknij, aby dodać powiadomienie',
   pwa_tap: 'Stuknij', pwa_share: 'Udostępnij', pwa_add_to_home: '→ Dodaj do ekranu głównego',
   pwa_install_prompt: '📱 Dodaj do ekranu głównego', pwa_install: 'Zainstaluj', pwa_not_now: 'Nie teraz',

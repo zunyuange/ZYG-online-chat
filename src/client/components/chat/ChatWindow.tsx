@@ -44,7 +44,7 @@ export function ChatWindow({
   onSend,
   onUpload,
   isOwn,
-  title = '在线客服',
+  title = '',
   visitorName,
   sseConnected,
   usePolling,

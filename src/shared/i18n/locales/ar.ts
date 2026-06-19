@@ -77,6 +77,7 @@ export default {
   please_enter_message: 'يرجى إدخال الرسالة',
   choose_lang: 'اختر اللغة',
   service_title: 'خدمة عبر الإنترنت',
+  about: 'حوالي',
   banword_tip: 'فشل الإرسال، يحتوي المحتوى على كلمات محظورة',
 
   login: 'تسجيل الدخول',
@@ -303,7 +304,8 @@ export default {
   chat_mode_title: 'وضع الدردشة', chat_mode: 'دردشة', topic_mode_title: 'وضع الموضوع', topic_mode: 'موضوع',
   send_emoji: 'إرسال إيموجي', send_files: 'إرسال ملفات/صور/فيديو',
   click_view_image: 'انقر لعرض الصورة', click_view_video: 'انقر لعرض الفيديو',
-  file_type: 'ملف', download: 'تحميل', pull_up_load_more: '↑ اسحب للأعلى لتحميل المزيد',
+  file_type: 'ملف',
+  browser_no_video: 'متصفحك لا يدعم الفيديو.', download: 'تحميل', pull_up_load_more: '↑ اسحب للأعلى لتحميل المزيد',
   enter_notice_placeholder: 'أدخل إشعار...', click_add_notice: 'انقر لإضافة إشعار',
   pwa_tap: 'اضغط', pwa_share: 'مشاركة', pwa_add_to_home: '→ إضافة إلى الشاشة الرئيسية',
   pwa_install_prompt: '📱 إضافة إلى الشاشة الرئيسية', pwa_install: 'تثبيت', pwa_not_now: 'ليس الآن',
