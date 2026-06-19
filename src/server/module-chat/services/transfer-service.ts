@@ -123,11 +123,19 @@ export async function respondToTransferRequest(
     const status = action === 'accept' ? 'accepted' : 'rejected'
 
     if (action === 'accept') {
-      await db.run('UPDATE sessions SET assigned_staff_id = ?, updated_at = ? WHERE id = ?', [
-        staffId,
-        Date.now(),
-        request.session_id,
-      ])
+      // 多租户隔离：UPDATE 带 business_id 条件防御
+      if (businessId && businessId !== 0) {
+        await db.run(
+          'UPDATE sessions SET assigned_staff_id = ?, updated_at = ? WHERE id = ? AND business_id = ?',
+          [staffId, Date.now(), request.session_id, businessId]
+        )
+      } else {
+        await db.run('UPDATE sessions SET assigned_staff_id = ?, updated_at = ? WHERE id = ?', [
+          staffId,
+          Date.now(),
+          request.session_id,
+        ])
+      }
 
       await db.run('UPDATE transfer_requests SET status = ?, updated_at = ? WHERE id = ?', [
         status,

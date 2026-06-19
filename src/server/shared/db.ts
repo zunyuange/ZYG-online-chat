@@ -603,6 +603,20 @@ async function runMigrations(database: Database): Promise<void> {
     }
   }
 
+  // Add business_id to sessions table (多租户隔离：每个会话归属的商家主体)
+  await addColumnIfMissing('sessions', 'business_id', 'INTEGER NOT NULL DEFAULT 1')
+
+  // Add business_id index for sessions
+  try {
+    const indexes = await database.all<{ name: string }>(`PRAGMA index_list(sessions)`)
+    if (!indexes.some(i => i.name === 'sessions_business_id_idx')) {
+      await database.exec('CREATE INDEX sessions_business_id_idx ON sessions(business_id)')
+      console.log('[Migration] Created index sessions_business_id_idx')
+    }
+  } catch (error) {
+    console.error('[Migration] Failed to create index sessions_business_id_idx:', error)
+  }
+
   // Add business_id to sentences table
   await addColumnIfMissing('sentences', 'business_id', 'INTEGER NOT NULL DEFAULT 0')
 

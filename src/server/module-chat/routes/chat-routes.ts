@@ -330,11 +330,19 @@ chatRoutes.post('/sessions/:id/accept', requireAuth, async c => {
       return c.json({ success: false, error: '会话已被其他客服接收' }, 400)
     }
 
-    await db.run('UPDATE sessions SET assigned_staff_id = ?, updated_at = ? WHERE id = ?', [
-      staffId,
-      Date.now(),
-      sessionId,
-    ])
+    // 多租户隔离：UPDATE 带 business_id 条件防御
+    if (businessId === 0) {
+      await db.run('UPDATE sessions SET assigned_staff_id = ?, updated_at = ? WHERE id = ?', [
+        staffId,
+        Date.now(),
+        sessionId,
+      ])
+    } else {
+      await db.run(
+        'UPDATE sessions SET assigned_staff_id = ?, updated_at = ? WHERE id = ? AND business_id = ?',
+        [staffId, Date.now(), sessionId, businessId]
+      )
+    }
 
     return c.json({ success: true })
   } catch (error) {
@@ -387,11 +395,19 @@ chatRoutes.post('/sessions/:id/transfer', requireAuth, async c => {
       return c.json({ success: false, error: '目标客服不存在、未激活或不属于同一商家' }, 400)
     }
 
-    await db.run('UPDATE sessions SET assigned_staff_id = ?, updated_at = ? WHERE id = ?', [
-      targetStaffId,
-      Date.now(),
-      sessionId,
-    ])
+    // 多租户隔离：UPDATE 带 business_id 条件防御
+    if (businessId === 0) {
+      await db.run('UPDATE sessions SET assigned_staff_id = ?, updated_at = ? WHERE id = ?', [
+        targetStaffId,
+        Date.now(),
+        sessionId,
+      ])
+    } else {
+      await db.run(
+        'UPDATE sessions SET assigned_staff_id = ?, updated_at = ? WHERE id = ? AND business_id = ?',
+        [targetStaffId, Date.now(), sessionId, businessId]
+      )
+    }
 
     const transferRecord = {
       timestamp: Date.now(),
@@ -400,10 +416,18 @@ chatRoutes.post('/sessions/:id/transfer', requireAuth, async c => {
       reason: reason || '主动转接',
     }
 
-    await db.run('UPDATE sessions SET transfer_history = ? WHERE id = ?', [
-      JSON.stringify(transferRecord),
-      sessionId,
-    ])
+    // 多租户隔离：transfer_history 更新也带 business_id 条件
+    if (businessId === 0) {
+      await db.run('UPDATE sessions SET transfer_history = ? WHERE id = ?', [
+        JSON.stringify(transferRecord),
+        sessionId,
+      ])
+    } else {
+      await db.run(
+        'UPDATE sessions SET transfer_history = ? WHERE id = ? AND business_id = ?',
+        [JSON.stringify(transferRecord), sessionId, businessId]
+      )
+    }
 
     return c.json({
       success: true,

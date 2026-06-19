@@ -261,15 +261,23 @@ export async function updateSessionQueueInfo(sessionId: string): Promise<void> {
   const position = await calculateQueuePosition(sessionId)
   const estimatedWaitMinutes = await estimateWaitTime(sessionId)
 
+  // 获取 session 的 business_id 以做隔离防御
+  const session = await db.get<{ business_id: number }>(
+    'SELECT business_id FROM sessions WHERE id = ?',
+    [sessionId]
+  )
+  if (!session) return
+
   await db.run(
     `UPDATE sessions
      SET queue_position = ?, estimated_wait_minutes = ?, updated_at = ?
-     WHERE id = ?`,
+     WHERE id = ? AND business_id = ?`,
     [
       position > 0 ? position : null,
       estimatedWaitMinutes > 0 ? estimatedWaitMinutes : null,
       Date.now(),
       sessionId,
+      session.business_id,
     ]
   )
 }

@@ -193,8 +193,12 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
   const visitorId = input.sessionId || randomUUID()
 
   // If sessionId provided, try to get existing session
+  // 多租户隔离：校验已有 session 的 business_id 与当前商家一致，防止跨商家 session 复用
   if (input.sessionId) {
-    const row = await db.get<SessionRow>('SELECT * FROM sessions WHERE id = ?', [input.sessionId])
+    const row = await db.get<SessionRow>(
+      'SELECT * FROM sessions WHERE id = ? AND business_id = ?',
+      [input.sessionId, businessId]
+    )
     if (row) {
       console.log(
         `[ChatService] Found existing session ${input.sessionId} with status: ${row.status}`
@@ -314,15 +318,26 @@ export async function listSessions(
 
 /**
  * Update session's last message time
+ * 多租户隔离：如果传入 businessId，校验 session 归属；不传则仅按 id 更新（兼容 visitor 端无上下文场景）
  */
-export async function updateSessionLastMessage(sessionId: string): Promise<void> {
+export async function updateSessionLastMessage(
+  sessionId: string,
+  businessId?: number
+): Promise<void> {
   const db = getDb()
   const now = Date.now()
-  await db.run('UPDATE sessions SET last_message_at = ?, updated_at = ? WHERE id = ?', [
-    now,
-    now,
-    sessionId,
-  ])
+  if (businessId && businessId !== 0) {
+    await db.run(
+      'UPDATE sessions SET last_message_at = ?, updated_at = ? WHERE id = ? AND business_id = ?',
+      [now, now, sessionId, businessId]
+    )
+  } else {
+    await db.run('UPDATE sessions SET last_message_at = ?, updated_at = ? WHERE id = ?', [
+      now,
+      now,
+      sessionId,
+    ])
+  }
 }
 
 // ==========================================
@@ -362,20 +377,34 @@ export async function sendMessage(input: SendMessageInput, businessId?: number):
     ]
   )
 
-  // Update session
-  await updateSessionLastMessage(input.sessionId)
+  // Update session (多租户隔离：传入 businessId 防止跨商家更新)
+  await updateSessionLastMessage(input.sessionId, businessId)
 
-  // Increment unread counter
+  // Increment unread counter (带 business_id 条件防御)
   if (input.senderType === 'visitor') {
-    await db.run(
-      'UPDATE sessions SET unread_by_staff = unread_by_staff + 1, updated_at = ? WHERE id = ?',
-      [now, input.sessionId]
-    )
+    if (businessId && businessId !== 0) {
+      await db.run(
+        'UPDATE sessions SET unread_by_staff = unread_by_staff + 1, updated_at = ? WHERE id = ? AND business_id = ?',
+        [now, input.sessionId, businessId]
+      )
+    } else {
+      await db.run(
+        'UPDATE sessions SET unread_by_staff = unread_by_staff + 1, updated_at = ? WHERE id = ?',
+        [now, input.sessionId]
+      )
+    }
   } else {
-    await db.run(
-      'UPDATE sessions SET unread_by_visitor = unread_by_visitor + 1, updated_at = ? WHERE id = ?',
-      [now, input.sessionId]
-    )
+    if (businessId && businessId !== 0) {
+      await db.run(
+        'UPDATE sessions SET unread_by_visitor = unread_by_visitor + 1, updated_at = ? WHERE id = ? AND business_id = ?',
+        [now, input.sessionId, businessId]
+      )
+    } else {
+      await db.run(
+        'UPDATE sessions SET unread_by_visitor = unread_by_visitor + 1, updated_at = ? WHERE id = ?',
+        [now, input.sessionId]
+      )
+    }
   }
 
   return {
@@ -477,12 +506,19 @@ export async function markAsRead(
     )
     console.log(`[ChatService] Updated ${result.changes} messages as read`)
 
-    // Reset unread counter
+    // Reset unread counter (多租户隔离：带 business_id 条件防御)
     const counterField = readerType === 'visitor' ? 'unread_by_visitor' : 'unread_by_staff'
-    await db.run(`UPDATE sessions SET ${counterField} = 0, updated_at = ? WHERE id = ?`, [
-      now,
-      sessionId,
-    ])
+    if (businessId && businessId !== 0) {
+      await db.run(
+        `UPDATE sessions SET ${counterField} = 0, updated_at = ? WHERE id = ? AND business_id = ?`,
+        [now, sessionId, businessId]
+      )
+    } else {
+      await db.run(`UPDATE sessions SET ${counterField} = 0, updated_at = ? WHERE id = ?`, [
+        now,
+        sessionId,
+      ])
+    }
     console.log(`[ChatService] Reset ${counterField} counter for session ${sessionId}`)
   }
 

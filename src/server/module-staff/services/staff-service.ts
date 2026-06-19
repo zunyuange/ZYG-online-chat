@@ -47,13 +47,18 @@ export async function updateSessionTopic(
       [sessionId, businessId]
     )
     if (!session) return null
-  }
 
-  await db.run('UPDATE sessions SET topic = ?, updated_at = ? WHERE id = ?', [
-    topic,
-    now,
-    sessionId,
-  ])
+    await db.run(
+      'UPDATE sessions SET topic = ?, updated_at = ? WHERE id = ? AND business_id = ?',
+      [topic, now, sessionId, businessId]
+    )
+  } else {
+    await db.run('UPDATE sessions SET topic = ?, updated_at = ? WHERE id = ?', [
+      topic,
+      now,
+      sessionId,
+    ])
+  }
 
   return getSessionBase(sessionId)
 }
@@ -75,12 +80,17 @@ export async function updateTaskStatus(
       [sessionId, businessId]
     )
     if (!session) return null
-  }
 
-  await db.run(
-    'UPDATE sessions SET task_status = ?, task_status_updated_at = ?, updated_at = ? WHERE id = ?',
-    [taskStatus, now, now, sessionId]
-  )
+    await db.run(
+      'UPDATE sessions SET task_status = ?, task_status_updated_at = ?, updated_at = ? WHERE id = ? AND business_id = ?',
+      [taskStatus, now, now, sessionId, businessId]
+    )
+  } else {
+    await db.run(
+      'UPDATE sessions SET task_status = ?, task_status_updated_at = ?, updated_at = ? WHERE id = ?',
+      [taskStatus, now, now, sessionId]
+    )
+  }
 
   return getSessionBase(sessionId)
 }
@@ -102,17 +112,24 @@ export async function endSession(sessionId: string, businessId?: number): Promis
 
   console.log(`[StaffService] Ending session ${sessionId}`)
 
-  // Delete all messages for this session
+  // Delete all messages for this session (前置校验已确保 session 归属，直接按 session_id 删除)
   const deleteResult = await db.run('DELETE FROM messages WHERE session_id = ?', [sessionId])
   console.log(`[StaffService] Deleted ${deleteResult.changes} messages for session ${sessionId}`)
 
-  // Update session status to closed
-  const updateResult = await db.run('UPDATE sessions SET status = ?, updated_at = ? WHERE id = ?', [
-    'closed',
-    now,
-    sessionId,
-  ])
-  console.log(`[StaffService] Updated ${updateResult.changes} sessions, status set to closed`)
+  // Update session status to closed (多租户隔离)
+  if (businessId && businessId !== 0) {
+    await db.run(
+      'UPDATE sessions SET status = ?, updated_at = ? WHERE id = ? AND business_id = ?',
+      ['closed', now, sessionId, businessId]
+    )
+  } else {
+    await db.run('UPDATE sessions SET status = ?, updated_at = ? WHERE id = ?', [
+      'closed',
+      now,
+      sessionId,
+    ])
+  }
+  console.log(`[StaffService] Session ${sessionId} status set to closed`)
 
   const updatedSession = await getSessionBase(sessionId)
   console.log(
@@ -278,10 +295,18 @@ export async function deleteSessionMessages(
 
     await db.run('DELETE FROM messages WHERE session_id = ?', [sessionId])
 
-    await db.run(
-      'UPDATE sessions SET unread_by_visitor = 0, unread_by_staff = 0, updated_at = ? WHERE id = ?',
-      [Date.now(), sessionId]
-    )
+    // 多租户隔离：UPDATE 带 business_id 条件防御
+    if (businessId && businessId !== 0) {
+      await db.run(
+        'UPDATE sessions SET unread_by_visitor = 0, unread_by_staff = 0, updated_at = ? WHERE id = ? AND business_id = ?',
+        [Date.now(), sessionId, businessId]
+      )
+    } else {
+      await db.run(
+        'UPDATE sessions SET unread_by_visitor = 0, unread_by_staff = 0, updated_at = ? WHERE id = ?',
+        [Date.now(), sessionId]
+      )
+    }
 
     return { success: true }
   } catch (error) {
@@ -710,12 +735,19 @@ export async function transferSession(
       }
     }
 
-    // Update session with new staff
-    await db.run('UPDATE sessions SET service_id = ?, updated_at = ? WHERE id = ?', [
-      targetStaffId,
-      now,
-      sessionId,
-    ])
+    // Update session with new staff (多租户隔离：带 business_id 条件)
+    if (businessId && businessId !== 0) {
+      await db.run(
+        'UPDATE sessions SET service_id = ?, updated_at = ? WHERE id = ? AND business_id = ?',
+        [targetStaffId, now, sessionId, businessId]
+      )
+    } else {
+      await db.run('UPDATE sessions SET service_id = ?, updated_at = ? WHERE id = ?', [
+        targetStaffId,
+        now,
+        sessionId,
+      ])
+    }
 
     // Log the transfer
     console.log(
