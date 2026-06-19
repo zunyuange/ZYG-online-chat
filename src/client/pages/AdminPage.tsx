@@ -7,12 +7,12 @@ import { useState, useEffect } from 'react';
 import { 
   Shield, User, Users, Settings, BarChart3, 
   UserPlus, Edit, Trash2, X, Check, Plus, 
-  Home, Key, Globe, MessageCircle, ArrowRightLeft
+  Home, Key, Globe
 } from 'lucide-react';
 import { useI18n } from '../context/I18nContext';
 import { useSiteSettings } from '@client/hooks/useSiteSettings';
 
-type TabType = 'dashboard' | 'staff' | 'admin' | 'roles' | 'settings' | 'sessions';
+type TabType = 'dashboard' | 'staff' | 'admin' | 'roles' | 'settings';
 
 interface UserData {
   id: number;
@@ -66,18 +66,6 @@ interface RoleFormData {
   permissions: string[];
 }
 
-interface SessionData {
-  id: string;
-  visitor_name: string;
-  status: string;
-  task_status: string;
-  assigned_staff_id: number | null;
-  assigned_staff_name?: string;
-  created_at: number;
-  last_message_at?: number;
-  unread_by_staff: number;
-}
-
 export function AdminPage() {
   const { t, locale, setLocale } = useI18n();
   const { siteName: globalSiteName } = useSiteSettings();
@@ -86,7 +74,6 @@ export function AdminPage() {
   const [adminUsers, setAdminUsers] = useState<UserData[]>([]);
   const [staffUsers, setStaffUsers] = useState<StaffData[]>([]);
   const [roles, setRoles] = useState<RoleData[]>([]);
-  const [sessions, setSessions] = useState<SessionData[]>([]);
   const [statistics, setStatistics] = useState<{
     adminCount: number;
     staffCount: number;
@@ -183,38 +170,25 @@ export function AdminPage() {
     try {
       const token = localStorage.getItem('admin_token');
       
-      const [adminRes, staffRes, roleRes, settingsRes, onlineStaffRes, sessionsRes] = await Promise.all([
+      const [adminRes, staffRes, roleRes, settingsRes, onlineStaffRes] = await Promise.all([
         fetch('/api/admin-auth/users', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/admin/staff-users', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/admin/roles', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/admin/settings', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/admin/online-staff', { headers: { Authorization: `Bearer ${token}` } }),
-        fetch('/api/chat/sessions?limit=100', { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
-      const [adminData, staffData, roleData, settingsData, onlineStaffData, sessionsData] = await Promise.all([
+      const [adminData, staffData, roleData, settingsData, onlineStaffData] = await Promise.all([
         adminRes.json(),
         staffRes.json(),
         roleRes.json(),
         settingsRes.json(),
         onlineStaffRes.json(),
-        sessionsRes.json(),
       ]);
 
       if (adminData.success) setAdminUsers(adminData.data);
       if (staffData.success) setStaffUsers(staffData.data);
       if (roleData.success) setRoles(roleData.data);
-      if (sessionsData.success && sessionsData.data) {
-        // Enrich sessions with staff names
-        const enrichedSessions = sessionsData.data.map((session: SessionData) => {
-          const staff = staffData.success ? staffData.data.find((s: StaffData) => s.id === session.assigned_staff_id) : null;
-          return {
-            ...session,
-            assigned_staff_name: staff ? (staff.name || staff.username) : null,
-          };
-        });
-        setSessions(enrichedSessions);
-      }
       
       if (settingsData.success) {
         const data = settingsData.data;
@@ -792,7 +766,6 @@ export function AdminPage() {
     { key: 'staff' as const, label: t('staff_management'), icon: Users },
     { key: 'admin' as const, label: t('admin_management'), icon: User },
     { key: 'roles' as const, label: t('role_management'), icon: Key },
-    { key: 'sessions' as const, label: '会话管理', icon: MessageCircle },
     { key: 'settings' as const, label: t('settings'), icon: Settings },
   ];
 
@@ -1220,139 +1193,6 @@ export function AdminPage() {
     </div>
   );
 
-  const renderSessionManagement = () => {
-    const formatTime = (timestamp: number) => {
-      return new Date(timestamp).toLocaleString('zh-CN');
-    };
-
-    const getStatusText = (status: string) => {
-      const statusMap: Record<string, string> = {
-        active: '活跃',
-        closed: '已关闭',
-        pending: '等待中',
-      };
-      return statusMap[status] || status;
-    };
-
-    const getTaskStatusText = (taskStatus: string) => {
-      const taskStatusMap: Record<string, string> = {
-        requirement_discussion: '需求讨论',
-        requirement_confirmed: '需求确认',
-        in_progress: '进行中',
-        delivered: '已交付',
-        reviewed: '已评价',
-      };
-      return taskStatusMap[taskStatus] || taskStatus;
-    };
-
-    return (
-      <div>
-        <h1 style={{ fontSize: '20px', fontWeight: 500, marginBottom: '24px' }}>会话管理</h1>
-
-        <div style={cardStyle}>
-          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: 500 }}>所有会话 ({sessions.length})</h2>
-            <button
-              onClick={loadData}
-              style={{ ...buttonStyle('primary'), padding: '6px 12px', fontSize: '13px' }}
-            >
-              刷新
-            </button>
-          </div>
-
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid #f0f0f0' }}>
-                  <th style={thStyle}>访客名称</th>
-                  <th style={thStyle}>状态</th>
-                  <th style={thStyle}>任务阶段</th>
-                  <th style={thStyle}>归属客服</th>
-                  <th style={thStyle}>未读消息</th>
-                  <th style={thStyle}>创建时间</th>
-                  <th style={thStyle}>最后消息</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sessions.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
-                      暂无会话数据
-                    </td>
-                  </tr>
-                ) : (
-                  sessions.map((session) => (
-                    <tr key={session.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                      <td style={tdStyle}>{session.visitor_name}</td>
-                      <td style={tdStyle}>
-                        <span
-                          style={{
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            backgroundColor: session.status === 'active' ? '#f6ffed' : '#f5f5f5',
-                            color: session.status === 'active' ? '#52c41a' : '#999',
-                          }}
-                        >
-                          {getStatusText(session.status)}
-                        </span>
-                      </td>
-                      <td style={tdStyle}>
-                        <span
-                          style={{
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            backgroundColor: '#e6f7ff',
-                            color: '#1890ff',
-                          }}
-                        >
-                          {getTaskStatusText(session.task_status)}
-                        </span>
-                      </td>
-                      <td style={tdStyle}>
-                        {session.assigned_staff_name ? (
-                          <span style={{ color: '#52c41a', fontWeight: 500 }}>
-                            {session.assigned_staff_name}
-                          </span>
-                        ) : (
-                          <span style={{ color: '#999' }}>未分配</span>
-                        )}
-                      </td>
-                      <td style={tdStyle}>
-                        {session.unread_by_staff > 0 ? (
-                          <span
-                            style={{
-                              backgroundColor: '#ff4d4f',
-                              color: '#fff',
-                              padding: '2px 8px',
-                              borderRadius: '10px',
-                              fontSize: '12px',
-                            }}
-                          >
-                            {session.unread_by_staff}
-                          </span>
-                        ) : (
-                          <span style={{ color: '#999' }}>0</span>
-                        )}
-                      </td>
-                      <td style={{ ...tdStyle, fontSize: '12px', color: '#999' }}>
-                        {formatTime(session.created_at)}
-                      </td>
-                      <td style={{ ...tdStyle, fontSize: '12px', color: '#999' }}>
-                        {session.last_message_at ? formatTime(session.last_message_at) : '-'}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   const renderSettings = () => (
     <div>
       <h1 style={{ fontSize: '20px', fontWeight: 500, marginBottom: '24px' }}>{t('settings')}</h1>
@@ -1502,7 +1342,6 @@ export function AdminPage() {
         {activeTab === 'staff' && renderStaffManagement()}
         {activeTab === 'admin' && renderAdminManagement()}
         {activeTab === 'roles' && renderRoleManagement()}
-        {activeTab === 'sessions' && renderSessionManagement()}
         {activeTab === 'settings' && renderSettings()}
       </div>
 

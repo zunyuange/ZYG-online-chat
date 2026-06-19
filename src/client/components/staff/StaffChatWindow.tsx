@@ -492,7 +492,7 @@ export function StaffChatWindow({
 function VisitorInfoPanel({ session }: { session: Session }) {
   const [expanded, setExpanded] = useState(false);
   
-  const hasVisitorInfo = session.email || session.phone || session.pid || session.fromUrl || session.referer || session.ip || session.userAgent || (session.params && Object.keys(session.params).length > 0);
+  const hasVisitorInfo = session.visitorName || session.email || session.phone || session.pid || session.fromUrl || session.referer || session.ip || session.userAgent || session.device || session.lang || session.avatar || (session.params && Object.keys(session.params).length > 0);
   
   if (!hasVisitorInfo) return null;
 
@@ -546,6 +546,12 @@ function VisitorInfoPanel({ session }: { session: Session }) {
       
       {expanded && (
         <div style={gridStyle}>
+          {session.visitorName && (
+            <div style={itemStyle}>
+              <div style={labelStyle}>👤 姓名</div>
+              <div style={valueStyle}>{session.visitorName}</div>
+            </div>
+          )}
           {session.email && (
             <div style={itemStyle}>
               <div style={labelStyle}>📧 邮箱</div>
@@ -586,6 +592,28 @@ function VisitorInfoPanel({ session }: { session: Session }) {
             <div style={{ ...itemStyle, gridColumn: '1 / -1' }}>
               <div style={labelStyle}>💻 浏览器</div>
               <div style={{ ...valueStyle, fontSize: '11px' }}>{session.userAgent}</div>
+            </div>
+          )}
+          {session.device && (
+            <div style={itemStyle}>
+              <div style={labelStyle}>📱 设备</div>
+              <div style={valueStyle}>{session.device}</div>
+            </div>
+          )}
+          {session.lang && (
+            <div style={itemStyle}>
+              <div style={labelStyle}>🌍 语言</div>
+              <div style={valueStyle}>{session.lang}</div>
+            </div>
+          )}
+          {session.avatar && (
+            <div style={itemStyle}>
+              <div style={labelStyle}>🖼️ 头像</div>
+              <div style={valueStyle}>
+                <a href={session.avatar} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff', fontSize: '11px' }}>
+                  查看头像
+                </a>
+              </div>
             </div>
           )}
           {session.params && Object.keys(session.params).length > 0 && (
