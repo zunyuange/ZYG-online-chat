@@ -341,5 +341,5 @@ CREATE TABLE IF NOT EXISTS visitor_custom_fields (
   created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
   updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
 );
-CREATE INDEX IF NOT EXISTS idx_vcf_business_id ON visitor_custom_fields(business_id);
-CREATE INDEX IF NOT EXISTS idx_vcf_field_key ON visitor_custom_fields(business_id, field_key);
+CREATE INDEX IF NOT EXISTS visitor_custom_fields_business_id_idx ON visitor_custom_fields(business_id);
+CREATE INDEX IF NOT EXISTS visitor_custom_fields_field_key_idx ON visitor_custom_fields(business_id, field_key);

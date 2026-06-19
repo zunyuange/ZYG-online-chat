@@ -646,6 +646,44 @@ async function runMigrations(database: Database): Promise<void> {
   // Ensure staff_users has business_name column
   await addColumnIfMissing('staff_users', 'business_name', 'TEXT')
 
+  // Add visitor info fields to sessions table (访客信息字段)
+  await addColumnIfMissing('sessions', 'email', 'TEXT')
+  await addColumnIfMissing('sessions', 'phone', 'TEXT')
+  await addColumnIfMissing('sessions', 'pid', 'TEXT')
+  await addColumnIfMissing('sessions', 'params', 'TEXT')
+  await addColumnIfMissing('sessions', 'referer', 'TEXT')
+  await addColumnIfMissing('sessions', 'user_agent', 'TEXT')
+
+  // Add reject_reason to transfer_requests table (转接拒绝原因)
+  await addColumnIfMissing('transfer_requests', 'reject_reason', 'TEXT')
+
+  // Ensure visitor_custom_fields table exists (访客自定义字段定义表)
+  try {
+    const vcfExists = await database.get<{ name: string }>(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='visitor_custom_fields'"
+    )
+    if (!vcfExists) {
+      await database.exec(
+        'CREATE TABLE IF NOT EXISTS visitor_custom_fields (' +
+          'id INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+          'business_id INTEGER NOT NULL DEFAULT 0, ' +
+          'field_key TEXT NOT NULL, ' +
+          'label TEXT NOT NULL, ' +
+          'type TEXT NOT NULL DEFAULT "text", ' +
+          'remark TEXT, ' +
+          'sort_order INTEGER NOT NULL DEFAULT 0, ' +
+          'is_active INTEGER NOT NULL DEFAULT 1, ' +
+          'created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), ' +
+          'updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))'
+      )
+      await database.exec('CREATE INDEX IF NOT EXISTS visitor_custom_fields_business_id_idx ON visitor_custom_fields(business_id)')
+      await database.exec('CREATE INDEX IF NOT EXISTS visitor_custom_fields_field_key_idx ON visitor_custom_fields(business_id, field_key)')
+      console.log('[Migration] Created visitor_custom_fields table and indexes')
+    }
+  } catch (error) {
+    console.error('[Migration] Failed to ensure visitor_custom_fields table:', error)
+  }
+
   console.log('[Database] Migrations complete')
 }
 
