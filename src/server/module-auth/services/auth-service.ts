@@ -327,6 +327,7 @@ export interface VerifyResult {
   businessId?: number;
   businessSlug?: string;
   businessName?: string;
+  role?: string;
 }
 
 /**

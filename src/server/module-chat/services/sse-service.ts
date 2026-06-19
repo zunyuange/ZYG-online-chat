@@ -38,23 +38,25 @@ export function removeSessionClient(sessionId: string, stream: SSEStream): void 
 }
 
 export function addStaffClient(stream: SSEStream, businessId: number): void {
-  if (!staffClients.has(businessId)) {
-    staffClients.set(businessId, new Set())
+  const bid = typeof businessId === 'number' && Number.isFinite(businessId) ? businessId : 0
+  if (!staffClients.has(bid)) {
+    staffClients.set(bid, new Set())
   }
-  staffClients.get(businessId)!.add(stream)
-  console.log(`[SSE] Staff client connected for business ${businessId}`)
+  staffClients.get(bid)!.add(stream)
+  console.log(`[SSE] Staff client connected for business ${bid}`)
 }
 
 export function removeStaffClient(stream: SSEStream, businessId: number): void {
-  const clients = staffClients.get(businessId)
+  const bid = typeof businessId === 'number' && Number.isFinite(businessId) ? businessId : 0
+  const clients = staffClients.get(bid)
   if (clients) {
     clients.delete(stream)
     deadStreams.add(stream)
     if (clients.size === 0) {
-      staffClients.delete(businessId)
+      staffClients.delete(bid)
     }
   }
-  console.log(`[SSE] Staff client disconnected from business ${businessId}`)
+  console.log(`[SSE] Staff client disconnected from business ${bid}`)
 }
 
 function isStreamDead(stream: SSEStream): boolean {
@@ -124,7 +126,12 @@ async function broadcastToStaffByBusiness(
   event: string,
   eventData: unknown
 ): Promise<void> {
-  const clients = staffClients.get(businessId)
+  const bid = typeof businessId === 'number' && Number.isFinite(businessId) ? businessId : undefined
+  if (bid === undefined) {
+    console.warn('[SSE] broadcastToStaffByBusiness called with invalid businessId:', businessId)
+    return
+  }
+  const clients = staffClients.get(bid)
   if (!clients || clients.size === 0) {
     return
   }
@@ -152,14 +159,20 @@ export async function broadcastMessage(message: Message): Promise<void> {
   }
 
   // Send to staff clients of the same business only
-  const businessId = await getSessionBusinessId(message.sessionId)
-  if (businessId) {
-    const staffSet = staffClients.get(businessId)
-    if (staffSet) {
-      for (const client of staffSet) {
-        sendPromises.push(sendToStream(client, 'message', eventData))
+  try {
+    const businessId = await getSessionBusinessId(message.sessionId)
+    if (!businessId && businessId !== 0) {
+      console.warn('[SSE] broadcastMessage: session has no businessId, skipping staff broadcast', message.sessionId)
+    } else {
+      const staffSet = staffClients.get(businessId || 0)
+      if (staffSet) {
+        for (const client of staffSet) {
+          sendPromises.push(sendToStream(client, 'message', eventData))
+        }
       }
     }
+  } catch (err) {
+    console.error('[SSE] broadcastMessage error resolving businessId:', err)
   }
 
   await Promise.allSettled(sendPromises)
@@ -175,13 +188,15 @@ export async function broadcastSessionUpdate(session: Session): Promise<void> {
   const sendPromises: Promise<boolean>[] = []
 
   // Send to staff clients of the same business only
-  if (session.businessId) {
+  if (session && typeof session.businessId === 'number') {
     const staffSet = staffClients.get(session.businessId)
     if (staffSet) {
       for (const client of staffSet) {
         sendPromises.push(sendToStream(client, 'session_update', eventData))
       }
     }
+  } else {
+    console.warn('[SSE] broadcastSessionUpdate called with invalid session.businessId', session && session.businessId)
   }
 
   // Also send to the session's clients (for user-side updates)

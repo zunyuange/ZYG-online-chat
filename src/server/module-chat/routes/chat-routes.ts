@@ -45,6 +45,20 @@ async function requireAuth(c: any, next: any) {
   await next()
 }
 
+function getCtxNumber(c: any, key: string, defaultVal?: number): number | undefined {
+  const v = c.get(key)
+  if (v === undefined || v === null) return defaultVal
+  if (typeof v === 'number') return v
+  const n = parseInt(String(v), 10)
+  return Number.isNaN(n) ? defaultVal : n
+}
+
+function getCtxString(c: any, key: string): string | null {
+  const v = c.get(key)
+  if (v === undefined || v === null) return null
+  return String(v)
+}
+
 // ==========================================
 // Session Routes
 // ==========================================
@@ -288,8 +302,8 @@ chatRoutes.get('/queue/:sessionId', async c => {
 chatRoutes.post('/sessions/:id/accept', requireAuth, async c => {
   try {
     const sessionId = c.req.param('id')
-    const businessId = c.get('businessId')
-    const staffId = c.get('userId')
+    const businessId = getCtxNumber(c, 'businessId')
+    const staffId = getCtxNumber(c, 'userId')
 
     const db = getDb()
 
@@ -327,7 +341,7 @@ chatRoutes.post('/sessions/:id/transfer', requireAuth, async c => {
     const sessionId = c.req.param('id')
     const body = await c.req.json()
     const { targetStaffId, reason } = body
-    const businessId = c.get('businessId')
+    const businessId = getCtxNumber(c, 'businessId')
 
     const db = getDb()
 
@@ -386,7 +400,7 @@ chatRoutes.post('/messages/:id/delete', requireAuth, async c => {
     const messageId = parseInt(c.req.param('id'), 10)
     const body = await c.req.json()
     const { sessionId } = body
-    const businessId = c.get('businessId')
+    const businessId = getCtxNumber(c, 'businessId')
 
     const db = getDb()
 
@@ -424,7 +438,7 @@ chatRoutes.post('/messages/:id/delete', requireAuth, async c => {
 
 chatRoutes.get('/stats', requireAuth, async c => {
   try {
-    const businessId = c.get('businessId')
+    const businessId = getCtxNumber(c, 'businessId')
     const db = getDb()
 
     const todayStart = new Date()
@@ -486,7 +500,7 @@ chatRoutes.post('/blacklist/add', requireAuth, async c => {
   try {
     const body = await c.req.json()
     const { visitorId, ip, reason, days } = body
-    const businessId = c.get('businessId')
+    const businessId = getCtxNumber(c, 'businessId')
 
     const db = getDb()
 
@@ -517,7 +531,7 @@ chatRoutes.post('/blacklist/remove', requireAuth, async c => {
   try {
     const body = await c.req.json()
     const { visitorId } = body
-    const businessId = c.get('businessId')
+    const businessId = getCtxNumber(c, 'businessId')
 
     const db = getDb()
 
@@ -535,7 +549,7 @@ chatRoutes.post('/blacklist/remove', requireAuth, async c => {
 
 chatRoutes.get('/blacklist', requireAuth, async c => {
   try {
-    const businessId = c.get('businessId')
+    const businessId = getCtxNumber(c, 'businessId')
     const db = getDb()
 
     const blacklist = await db.all(
@@ -626,8 +640,9 @@ chatRoutes.post('/transfer/request', requireAuth, async c => {
       return c.json({ success: false, error: '会话ID和目标客服ID不能为空' }, 400)
     }
 
-    const staffId = parseInt(c.get('userId'), 10)
-    const businessId = c.get('businessId')
+    const staffIdVal = getCtxNumber(c, 'userId')
+    const staffId = staffIdVal ?? 0
+    const businessId = getCtxNumber(c, 'businessId')
 
     const result = await transferService.createTransferRequest({
       sessionId,
@@ -666,8 +681,8 @@ chatRoutes.post('/transfer/:requestId/respond', requireAuth, async c => {
       return c.json({ success: false, error: '拒绝时必须填写原因' }, 400)
     }
 
-    const staffId = c.get('userId')
-    const businessId = c.get('businessId')
+    const staffId = getCtxNumber(c, 'userId')
+    const businessId = getCtxNumber(c, 'businessId')
 
     const result = await transferService.respondToTransferRequest(
       parseInt(requestId, 10),
@@ -690,7 +705,7 @@ chatRoutes.post('/transfer/:requestId/respond', requireAuth, async c => {
 
 chatRoutes.get('/transfer/pending', requireAuth, async c => {
   try {
-    const staffId = c.get('userId')
+    const staffId = getCtxNumber(c, 'userId')
     const requests = await transferService.getPendingTransferRequests(staffId)
     return c.json({ success: true, data: requests })
   } catch (error) {
@@ -702,7 +717,7 @@ chatRoutes.get('/transfer/pending', requireAuth, async c => {
 // Get my transfer requests history (for the requester to view rejected requests)
 chatRoutes.get('/transfer/my', requireAuth, async c => {
   try {
-    const staffId = c.get('userId')
+    const staffId = getCtxNumber(c, 'userId')
     const sessionId = c.req.query('sessionId')
     const requests = await transferService.getMyTransferRequests(staffId, sessionId)
     return c.json({ success: true, data: requests })
@@ -715,7 +730,7 @@ chatRoutes.get('/transfer/my', requireAuth, async c => {
 chatRoutes.delete('/transfer/:requestId', requireAuth, async c => {
   try {
     const { requestId } = c.req.param()
-    const staffId = c.get('userId')
+    const staffId = getCtxNumber(c, 'userId')
 
     const result = await transferService.deleteTransferRequest(parseInt(requestId, 10), staffId)
 
