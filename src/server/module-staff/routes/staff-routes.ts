@@ -135,8 +135,7 @@ staffRoutes.get('/sessions/:sessionId', async c => {
     if (!bizCtx) return
     const result = await staffService.getSessionWithPreview(
       sessionId,
-      bizCtx.businessId,
-      bizCtx.isSuperAdmin
+      bizCtx.businessId
     )
     if (!result.session) {
       return c.json({ success: false, error: 'Session not found' }, 404)

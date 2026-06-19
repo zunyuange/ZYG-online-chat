@@ -143,8 +143,7 @@ export async function endSession(sessionId: string, businessId?: number): Promis
  */
 export async function getSessionWithPreview(
   sessionId: string,
-  businessId?: number,
-  isSuperAdmin?: boolean
+  businessId?: number
 ): Promise<{
   session: Session | null
   lastMessage?: {
@@ -158,7 +157,8 @@ export async function getSessionWithPreview(
     return { session: null }
   }
 
-  if (!isSuperAdmin && businessId && businessId !== 0 && session.businessId !== businessId) {
+  // 所有账号都做 business_id 校验：只能查看自己商家的会话
+  if (businessId && businessId !== 0 && session.businessId !== businessId) {
     return { session: null }
   }
 
@@ -209,22 +209,20 @@ export async function listSessionsWithPreview(
   })[]
 > {
   // 多租户隔离逻辑：
-  // - businessSlug='default' + role='admin' = 超级管理员，不过滤，查看所有商家会话
-  // - 其他情况：按 businessId 过滤，只查看自己商家的会话
+  // - 所有账号都按 businessId 过滤，只查看自己商家的会话
   // - businessId 为 undefined：无上下文，不返回数据
-  const isSuperAdmin = role === 'admin' && businessSlug === 'default'
   if (businessId === undefined) {
     console.error('[StaffService] listSessionsWithPreview: businessId is undefined, no sessions returned')
     return []
   }
-  let sessions = await listSessionsBase(status, isSuperAdmin ? 0 : businessId)
+  let sessions = await listSessionsBase(status, businessId)
 
   if (sessions.length === 0) {
     return []
   }
 
   // Filter sessions by permission:
-  // - Admin (including super admin) can see all sessions within their business
+  // - Admin (商家管理员) can see all sessions within their business
   // - Regular staff can see unassigned sessions + sessions assigned to them
   if (role !== 'admin' && staffId) {
     sessions = sessions.filter(
