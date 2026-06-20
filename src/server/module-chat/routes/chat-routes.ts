@@ -299,19 +299,25 @@ chatRoutes.post('/messages', async c => {
       return c.json({ success: false, error: 'Missing required fields' }, 400)
     }
 
-    // 自动翻译：访客消息翻译为客服的默认语言
+    // 自动翻译：访客消息翻译为访客的界面语言(session.lang)，让客服看到访客视角的译文
     let translatedContent: string | undefined;
     if (contentType === 'text') {
       const session = await chatService.getSession(sessionId);
       if (session) {
         const txSettings = await getTranslationSettings(session.businessId);
-        if (txSettings?.enabled && txSettings?.defaultLang) {
-          console.log('[ChatRoutes] Auto-translating visitor message, to:', txSettings.defaultLang,
-            'businessId:', session.businessId,
-            'hasBaidu:', !!(txSettings.appid && txSettings.secret));
+        // 翻译目标：优先使用访客界面语言(lang)，如果没有则用客服默认语言
+        const targetLang = session.lang || txSettings?.defaultLang;
+        if (txSettings?.enabled && targetLang) {
+          console.log('[ChatRoutes] 🈂️ Auto-translating visitor message',
+            '| source:', (content as string).substring(0, 30),
+            '| to:', targetLang,
+            '| sessionLang:', session.lang,
+            '| staffDefaultLang:', txSettings.defaultLang,
+            '| businessId:', session.businessId,
+            '| hasBaidu:', !!(txSettings.appid && txSettings.secret));
           translatedContent = await translateText({
             text: content,
-            to: txSettings.defaultLang,
+            to: targetLang,
             businessId: session.businessId,
             _settings: txSettings as any,
           } as any);
