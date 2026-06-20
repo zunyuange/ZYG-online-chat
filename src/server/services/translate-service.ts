@@ -53,10 +53,62 @@ const LEGACY_LANG_TO_BAIDU: Record<string, string> = {
 };
 
 /**
+ * BCP 47 标准语言标签 → 百度翻译语言代码
+ * navigator.language 返回的是 BCP 47 标签如 "ja", "ko", "zh", "en" 等
+ * 但百度翻译 API 使用自己的语言代码体系（如 jp, kor）
+ */
+const BCP47_TO_BAIDU: Record<string, string> = {
+  'ja': 'jp',      // 日语: BCP 47 "ja" → 百度 "jp"
+  'ko': 'kor',     // 韩语: BCP 47 "ko" → 百度 "kor"
+  'zh': 'zh',      // 中文
+  'zh-CN': 'zh',
+  'zh-TW': 'cht',
+  'zh-HK': 'cht',
+  'en': 'en',      // 英语
+  'en-US': 'en',
+  'en-GB': 'en',
+  'fr': 'fra',     // 法语
+  'fr-FR': 'fra',
+  'de': 'de',      // 德语
+  'de-DE': 'de',
+  'es': 'spa',     // 西班牙语
+  'es-ES': 'spa',
+  'pt': 'pt',      // 葡萄牙语
+  'pt-BR': 'pt',
+  'pt-PT': 'pt',
+  'it': 'it',      // 意大利语
+  'it-IT': 'it',
+  'ru': 'ru',      // 俄语
+  'ru-RU': 'ru',
+  'vi': 'vie',     // 越南语
+  'vi-VN': 'vie',
+  'th': 'th',      // 泰语
+  'th-TH': 'th',
+  'id': 'id',      // 印尼语
+  'id-ID': 'id',
+  'ar': 'ara',     // 阿拉伯语
+  'ar-SA': 'ara',
+  'nl': 'nl',      // 荷兰语
+  'nl-NL': 'nl',
+  'pl': 'pl',      // 波兰语
+  'pl-PL': 'pl',
+  'da': 'dan',     // 丹麦语
+  'da-DK': 'dan',
+  'fi': 'fin',     // 芬兰语
+  'fi-FI': 'fin',
+  'el': 'el',      // 希腊语
+  'el-GR': 'el',
+};
+
+/**
  * 获取某个 locale 对应的百度翻译语言代码
+ * 优先级：LOCALE_TO_BAIDU > LEGACY_LANG_TO_BAIDU > BCP47_TO_BAIDU > 原值
  */
 function toBaiduLang(localeCode: string): string {
-  return LOCALE_TO_BAIDU[localeCode] || LEGACY_LANG_TO_BAIDU[localeCode] || localeCode;
+  return LOCALE_TO_BAIDU[localeCode]
+    || LEGACY_LANG_TO_BAIDU[localeCode]
+    || BCP47_TO_BAIDU[localeCode]
+    || localeCode;
 }
 
 export interface TranslateOptions {

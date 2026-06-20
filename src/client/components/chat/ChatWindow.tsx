@@ -166,9 +166,31 @@ export function ChatWindow({
     return t('connecting');
   };
 
-  const handleLangSelect = (selectedLocale: string) => {
+  const handleLangSelect = async (selectedLocale: string) => {
     if (setLocale) {
       setLocale(selectedLocale);
+    }
+    // 同步更新 session.lang 到数据库，确保客服回复时能翻译为正确的语言
+    if (session?.id) {
+      try {
+        // 将 UI locale 映射为数据库 lang 字段值（BCP 47 格式）
+        const langMap: Record<string, string> = {
+          'zh-CN': 'zh-CN', 'en-US': 'en-US', 'jp': 'ja', 'kr': 'ko',
+          'es': 'es', 'fr': 'fr', 'it': 'it', 'de': 'de', 'pt': 'pt',
+          'vi': 'vi', 'ru': 'ru', 'id': 'id', 'th': 'th', 'ar': 'ar',
+          'el': 'el', 'pl': 'pl', 'da': 'da', 'nl': 'nl', 'fi': 'fi',
+          'tc': 'zh-TW',
+        };
+        const dbLang = langMap[selectedLocale] || selectedLocale;
+        await fetch('/api/chat/session/lang', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: session.id, lang: dbLang }),
+        });
+        console.log('[ChatWindow] Updated session lang:', selectedLocale, '→ db:', dbLang);
+      } catch (err) {
+        console.error('[ChatWindow] Failed to update session lang:', err);
+      }
     }
     setShowLangModal(false);
   };

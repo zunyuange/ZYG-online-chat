@@ -210,7 +210,8 @@ staffRoutes.post('/messages', async c => {
     if (contentType === 'text') {
       const session = await chatService.getSession(sessionId, bizCtx.businessId);
       if (session?.lang) {
-        console.log('[StaffRoutes] Auto-translating staff message to visitor lang:', session.lang);
+        console.log('[StaffRoutes] Auto-translating staff message to visitor lang:', session.lang,
+          'businessId:', bizCtx.businessId);
         translatedContent = await translateText({
           text: content,
           to: session.lang,
@@ -218,7 +219,12 @@ staffRoutes.post('/messages', async c => {
         });
         if (!isTranslationUseful(content, translatedContent)) {
           translatedContent = undefined; // 翻译无变化，不存储
+          console.log('[StaffRoutes] Translation not useful (same as original or disabled)');
+        } else {
+          console.log('[StaffRoutes] Translation successful, length:', translatedContent.length);
         }
+      } else {
+        console.log('[StaffRoutes] Translation skipped: session has no lang set (visitor never set a language)');
       }
     }
 

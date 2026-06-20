@@ -106,6 +106,27 @@ chatRoutes.post('/session', async c => {
   }
 })
 
+// Update session language (访客切换界面语言时同步更新 session.lang)
+chatRoutes.put('/session/lang', async c => {
+  try {
+    const body = await c.req.json()
+    const { sessionId, lang } = body
+    if (!sessionId || !lang) {
+      return c.json({ success: false, error: 'Missing sessionId or lang' }, 400)
+    }
+    const db = getDb()
+    await db.run(
+      'UPDATE sessions SET lang = ?, updated_at = ? WHERE id = ?',
+      [lang, Date.now(), sessionId]
+    )
+    console.log('[ChatRoutes] Updated session lang:', sessionId, '→', lang)
+    return c.json({ success: true, data: { lang } })
+  } catch (error) {
+    console.error('Update session lang error:', error)
+    return c.json({ success: false, error: 'Failed to update session lang' }, 500)
+  }
+})
+
 // ==========================================
 // Message Routes
 // ==========================================
@@ -145,11 +166,11 @@ chatRoutes.post('/messages', async c => {
       const session = await chatService.getSession(sessionId);
       if (session) {
         const db = getDb();
-        const businessSettings = await db.get<{ default_lang: string }>(
-          'SELECT default_lang FROM staff_users WHERE id = ?',
+        const businessSettings = await db.get<{ enable_auto_trans: number; default_lang: string }>(
+          'SELECT enable_auto_trans, default_lang FROM staff_users WHERE id = ?',
           [session.businessId]
         );
-        if (businessSettings?.default_lang) {
+        if (businessSettings?.enable_auto_trans === 1 && businessSettings?.default_lang) {
           console.log('[ChatRoutes] Auto-translating visitor message to business lang:', businessSettings.default_lang);
           translatedContent = await translateText({
             text: content,
@@ -158,7 +179,11 @@ chatRoutes.post('/messages', async c => {
           });
           if (!isTranslationUseful(content, translatedContent)) {
             translatedContent = undefined; // 翻译无变化，不存储
+            console.log('[ChatRoutes] Translation not useful (same as original)');
           }
+        } else {
+          console.log('[ChatRoutes] Translation skipped: enable_auto_trans=',
+            businessSettings?.enable_auto_trans, 'default_lang=', businessSettings?.default_lang);
         }
       }
     }
