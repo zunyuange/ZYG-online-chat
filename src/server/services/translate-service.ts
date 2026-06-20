@@ -333,6 +333,32 @@ function toIso639Lang(localeCode: string): string {
 }
 
 /**
+ * 简单的语言检测：根据文本字符特征判断源语言
+ * 用于 MyMemory API（不支持 'auto' 源语言）
+ */
+function detectSourceLanguage(text: string): string {
+  // 统计各类字符
+  let cjkCount = 0;
+  let asciiCount = 0;
+  for (const char of text) {
+    const code = char.charCodeAt(0);
+    if ((code >= 0x4E00 && code <= 0x9FFF) ||  // CJK 统一表意文字
+        (code >= 0x3040 && code <= 0x309F) ||  // 平假名
+        (code >= 0x30A0 && code <= 0x30FF) ||  // 片假名
+        (code >= 0xAC00 && code <= 0xD7AF)) {   // 韩文
+      cjkCount++;
+    } else if (code < 128) {
+      asciiCount++;
+    }
+  }
+  // 如果 CJK 字符占比高，判断为中文；否则默认英文
+  if (cjkCount > asciiCount && cjkCount > 0) {
+    return 'zh-CN';
+  }
+  return 'en';
+}
+
+/**
  * 调用 MyMemory 免费翻译 API（无 API Key 限制，每天 1000 词免费）
  * 文档: https://mymemory.translated.net/doc/spec.php
  */
@@ -341,6 +367,12 @@ async function callMyMemoryTranslate(
   targetLang: string,
   sourceLang: string = 'auto'
 ): Promise<string> {
+  // MyMemory 不支持 'auto'，自动检测源语言
+  if (sourceLang === 'auto') {
+    sourceLang = detectSourceLanguage(text);
+    console.log(`[TranslateService-MyMemory] Auto-detected source language: ${sourceLang}`);
+  }
+
   // 源语言和目标语言相同则跳过
   if (sourceLang === targetLang || sourceLang === targetLang.split('-')[0]) {
     console.log('[TranslateService-MyMemory] Source and target language match, skipping');

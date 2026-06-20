@@ -215,7 +215,7 @@ chatRoutes.get('/translation-test', async c => {
     const targetLang = txSettings.defaultLang || 'zh-CN'
     const startTime = Date.now()
 
-    console.log('[TranslationTest] Testing Baidu API with:', testText, '→', targetLang)
+    console.log('[TranslationTest] Testing translation with:', testText, '→', targetLang)
     const translated = await translateText({
       text: testText,
       to: targetLang,
@@ -253,8 +253,8 @@ chatRoutes.get('/translation-test', async c => {
           success: revTranslated !== revTestText,
         } : null,
         diagnostics: success
-          ? '✅ 百度翻译 API 正常工作'
-          : `❌ 翻译失败: translateText返回了原文 "${translated}"，请检查百度翻译 API 凭据是否正确`,
+          ? '✅ 翻译功能正常工作'
+          : `❌ 翻译失败: translateText返回了原文 "${translated.substring(0, 30)}"，请检查网络连接或翻译设置`,
       }
     })
   } catch (error) {
