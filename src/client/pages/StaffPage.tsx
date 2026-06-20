@@ -790,12 +790,15 @@ export function StaffPage() {
   // Navigation tabs style
   const navTabStyle: React.CSSProperties = {
     display: 'flex',
+    flexWrap: 'nowrap',
+    overflowX: 'auto',
     borderBottom: '1px solid #e8e8e8',
     backgroundColor: '#fff',
+    scrollbarWidth: 'thin',
   };
 
   const navTabItemStyle = (active: boolean): React.CSSProperties => ({
-    padding: '12px 24px',
+    padding: '12px 20px',
     borderBottom: active ? '2px solid #1890ff' : '2px solid transparent',
     backgroundColor: active ? '#f0f5ff' : 'transparent',
     cursor: 'pointer',
@@ -806,6 +809,8 @@ export function StaffPage() {
     color: active ? '#1890ff' : '#666',
     fontWeight: active ? 500 : 400,
     transition: 'all 0.2s',
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
   });
 
   // ============ MAIN RENDER ============

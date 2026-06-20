@@ -587,6 +587,10 @@ export function AdminPage() {
     backgroundColor: '#002140',
     padding: '0 24px',
     borderBottom: '1px solid #001529',
+    display: 'flex',
+    flexWrap: 'nowrap',
+    overflowX: 'auto',
+    scrollbarWidth: 'thin',
   };
 
   const navItemStyle = (active: boolean): React.CSSProperties => ({
@@ -600,6 +604,8 @@ export function AdminPage() {
     borderBottom: active ? '2px solid #1890ff' : '2px solid transparent',
     transition: 'all 0.2s',
     gap: '8px',
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
   } as React.CSSProperties);
 
   const containerStyle: React.CSSProperties = {
