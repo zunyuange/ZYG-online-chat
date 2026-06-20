@@ -643,4 +643,8 @@ export default {
   lang_zh_CN: '中文',
   lang_en_US: 'English',
   staff_transfer_resend_desc_apply: 'inviare nuovamente la richiesta di trasferimento',
+
+  select_session: 'Seleziona una sessione',
+  clear: 'Cancella',
+  end: 'Termina',
 };

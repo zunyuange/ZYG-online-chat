@@ -651,4 +651,8 @@ export default {
   lang_zh_CN: '中文',
   lang_en_US: 'English',
   staff_transfer_resend_desc_apply: 'soumettre à nouveau la demande de transfert',
+
+  select_session: 'Sélectionnez une session',
+  clear: 'Effacer',
+  end: 'Terminer',
 };

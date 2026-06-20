@@ -220,7 +220,7 @@ export default {
   save: 'Speichern',
 
   // Connection status
-  polling: 'Polling...',
+  polling: 'Polling',
   connecting: 'Verbinden...',
 
   // Loading
@@ -285,7 +285,7 @@ export default {
   permission_role_view: 'Rollen anzeigen',
   permission_role_edit: 'Rollen bearbeiten',
   permission_settings: 'Systemeinstellungen',
-  role_admin: 'Administrator',
+  role_admin: 'Admin',
   role_staff: 'Mitarbeiter',
   staff_primary_account: 'Mitarbeiter-Hauptkonto',
   unassigned: 'Nicht zugewiesen',
@@ -584,7 +584,7 @@ export default {
   staff_mgmt_password_placeholder: 'Passwort eingeben',
   staff_mgmt_name_placeholder: 'Name eingeben',
   staff_mgmt_email_placeholder: 'E-Mail eingeben',
-  staff_mgmt_role_admin: 'Administrator',
+  staff_mgmt_role_admin: 'Admin',
   staff_mgmt_role_staff: 'Mitarbeiter',
   staff_mgmt_create: 'Erstellen',
   staff_nav_profile: 'Profil bearbeiten',
@@ -645,7 +645,7 @@ export default {
   topic_mode_topic: 'Thema',
   send_emoji_title: 'Emoji senden',
   topic_no_notice: 'Keine Benachrichtigungen',
-  admin_role_admin: 'Administrator',
+  admin_role_admin: 'Admin',
   admin_role_staff: 'Mitarbeiter',
   admin_table_business: 'Unternehmen',
   signature_online: 'Online-Supportsystem',
