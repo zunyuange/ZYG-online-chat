@@ -97,6 +97,7 @@ export interface Message {
   senderType: SenderType;
   contentType: ContentType;
   content: string;
+  translatedContent?: string;  // 自动翻译后的内容
   thumbnailUrl?: string;
   fileName?: string;
   fileSize?: number;
@@ -127,6 +128,7 @@ export interface SendMessageInput {
   senderType: SenderType;
   contentType: ContentType;
   content: string;
+  translatedContent?: string;
   thumbnailUrl?: string;
   fileName?: string;
   fileSize?: number;

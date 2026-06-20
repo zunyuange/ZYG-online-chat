@@ -267,6 +267,7 @@ async function createAllTables(database: Database): Promise<void> {
       'sender_type TEXT NOT NULL, ' +
       'content_type TEXT NOT NULL, ' +
       'content TEXT NOT NULL, ' +
+      'translated_content TEXT, ' +
       'thumbnail_url TEXT, ' +
       'file_name TEXT, ' +
       'file_size INTEGER, ' +
@@ -683,6 +684,9 @@ async function runMigrations(database: Database): Promise<void> {
   } catch (error) {
     console.error('[Migration] Failed to ensure visitor_custom_fields table:', error)
   }
+
+  // Add translated_content to messages table (自动翻译功能)
+  await addColumnIfMissing('messages', 'translated_content', 'TEXT')
 
   console.log('[Database] Migrations complete')
 }

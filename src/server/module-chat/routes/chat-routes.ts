@@ -10,6 +10,7 @@ import * as sseService from '../services/sse-service'
 import * as queueService from '../services/queue-service'
 import * as transferService from '../services/transfer-service'
 import * as barkService from '@server/services/bark-service'
+import { translateText, isTranslationUseful } from '@server/services/translate-service'
 import { verifyToken } from '@server/module-auth/services/auth-service'
 import { getDb } from '@server/shared/db'
 
@@ -138,11 +139,36 @@ chatRoutes.post('/messages', async c => {
       return c.json({ success: false, error: 'Missing required fields' }, 400)
     }
 
+    // 自动翻译：访客消息翻译为客服的默认语言
+    let translatedContent: string | undefined;
+    if (contentType === 'text') {
+      const session = await chatService.getSession(sessionId);
+      if (session) {
+        const db = getDb();
+        const businessSettings = await db.get<{ default_lang: string }>(
+          'SELECT default_lang FROM staff_users WHERE id = ?',
+          [session.businessId]
+        );
+        if (businessSettings?.default_lang) {
+          console.log('[ChatRoutes] Auto-translating visitor message to business lang:', businessSettings.default_lang);
+          translatedContent = await translateText({
+            text: content,
+            to: businessSettings.default_lang,
+            businessId: session.businessId,
+          });
+          if (!isTranslationUseful(content, translatedContent)) {
+            translatedContent = undefined; // 翻译无变化，不存储
+          }
+        }
+      }
+    }
+
     const message = await chatService.sendMessage({
       sessionId,
       senderType: 'visitor',
       contentType,
       content,
+      translatedContent,
       thumbnailUrl,
       fileName,
       fileSize,

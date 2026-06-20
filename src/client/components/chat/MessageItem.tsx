@@ -214,6 +214,24 @@ export function MessageItem({ message, isOwn, t = (key: string) => key }: Messag
         return renderFileContent(message);
 
       default:
+        // 文本消息：如果有翻译内容，同时显示原文和翻译
+        if (message.translatedContent && message.contentType === 'text') {
+          return (
+            <div>
+              <div>{message.content}</div>
+              <div style={{
+                marginTop: '6px',
+                paddingTop: '6px',
+                borderTop: `1px solid ${isOwn ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)'}`,
+                opacity: 0.75,
+                fontSize: '0.92em',
+                fontStyle: 'italic',
+              }}>
+                {message.translatedContent}
+              </div>
+            </div>
+          );
+        }
         return <span>{message.content}</span>;
     }
   };

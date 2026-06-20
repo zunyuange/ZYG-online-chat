@@ -79,6 +79,7 @@ interface MessageRow {
   sender_type: string
   content_type: string
   content: string
+  translated_content: string | null
   thumbnail_url: string | null
   file_name: string | null
   file_size: number | null
@@ -130,6 +131,7 @@ function mapRowToMessage(row: MessageRow): Message {
     senderType: row.sender_type as SenderType,
     contentType: row.content_type as ContentType,
     content: row.content,
+    translatedContent: row.translated_content || undefined,
     thumbnailUrl: row.thumbnail_url || undefined,
     fileName: row.file_name || undefined,
     fileSize: row.file_size || undefined,
@@ -458,13 +460,14 @@ export async function sendMessage(input: SendMessageInput, businessId?: number):
   }
 
   const result = await db.run(
-    `INSERT INTO messages (session_id, sender_type, content_type, content, thumbnail_url, file_name, file_size, is_read, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)`,
+    `INSERT INTO messages (session_id, sender_type, content_type, content, translated_content, thumbnail_url, file_name, file_size, is_read, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
     [
       input.sessionId,
       input.senderType,
       input.contentType,
       input.content,
+      input.translatedContent || null,
       input.thumbnailUrl || null,
       input.fileName || null,
       input.fileSize || null,
@@ -508,6 +511,7 @@ export async function sendMessage(input: SendMessageInput, businessId?: number):
     senderType: input.senderType,
     contentType: input.contentType,
     content: input.content,
+    translatedContent: input.translatedContent,
     thumbnailUrl: input.thumbnailUrl,
     fileName: input.fileName,
     fileSize: input.fileSize,
