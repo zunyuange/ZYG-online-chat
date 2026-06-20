@@ -596,32 +596,36 @@ async function createAllTables(database: Database): Promise<void> {
  */
 async function runMigrations(database: Database): Promise<void> {
   // Helper to add column if it doesn't exist
-  // critical=true means the app cannot function without this column; errors will be thrown
+  // NOTE: Never throws - missing columns are logged but won't prevent app startup.
+  // Missing columns should be fixed via D1 Console (see scripts/d1-fix-critical-columns.sql).
   async function addColumnIfMissing(
     table: string,
     column: string,
-    definition: string,
-    critical: boolean = false
+    definition: string
   ): Promise<void> {
     try {
       const columns = await database.all<{ name: string }>(`PRAGMA table_info(${table})`)
       if (!columns.some(c => c.name === column)) {
         await database.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
-        console.log(`[Migration] Added column ${column} to ${table}`)
+        console.log(`[Migration] ✅ Added column ${column} to ${table}`)
       } else {
         console.log(`[Migration] Column ${column} already exists in ${table}`)
       }
     } catch (error) {
-      const msg = `[Migration] ❌ CRITICAL: Failed to add column ${column} to ${table}: ${error}`
-      console.error(msg)
-      if (critical) {
-        throw new Error(msg)
-      }
+      console.error(
+        `[Migration] ❌ Failed to add column ${column} to ${table}: ${error}`
+      )
+      console.error(
+        `[Migration] ⚠️  TABLE ${table} IS MISSING COLUMN '${column}' - this may cause SQL errors!`
+      )
+      console.error(
+        `[Migration] ⚠️  Fix via D1 Console: ALTER TABLE ${table} ADD COLUMN ${column} ${definition};`
+      )
     }
   }
 
-  // Add business_id to sessions table (多租户隔离：每个会话归属的商家主体) — CRITICAL
-  await addColumnIfMissing('sessions', 'business_id', 'INTEGER NOT NULL DEFAULT 1', true)
+  // Add business_id to sessions table (多租户隔离：每个会话归属的商家主体)
+  await addColumnIfMissing('sessions', 'business_id', 'INTEGER NOT NULL DEFAULT 1')
 
   // Add business_id index for sessions
   try {
@@ -693,11 +697,11 @@ async function runMigrations(database: Database): Promise<void> {
   // Add bd_trans_token to staff_users table (旧版翻译密钥列，保持兼容)
   await addColumnIfMissing('staff_users', 'bd_trans_token', 'TEXT')
 
-  // CRITICAL: Add missing columns that getBusinessBySlug() depends on
-  await addColumnIfMissing('staff_users', 'business_id', 'INTEGER NOT NULL DEFAULT 0', true)
-  await addColumnIfMissing('staff_users', 'enable_auto_trans', 'INTEGER NOT NULL DEFAULT 0', true)
+  // Add missing columns that getBusinessBySlug() depends on
+  await addColumnIfMissing('staff_users', 'business_id', 'INTEGER NOT NULL DEFAULT 0')
+  await addColumnIfMissing('staff_users', 'enable_auto_trans', 'INTEGER NOT NULL DEFAULT 0')
   await addColumnIfMissing('staff_users', 'bd_trans_appid', 'TEXT')
-  await addColumnIfMissing('staff_users', 'default_lang', "TEXT NOT NULL DEFAULT 'zh-CN'", true)
+  await addColumnIfMissing('staff_users', 'default_lang', "TEXT NOT NULL DEFAULT 'zh-CN'")
 
   // Fix existing staff_users data: ensure admin user has correct role and business_id
   await ensureDefaultStaffData(database)

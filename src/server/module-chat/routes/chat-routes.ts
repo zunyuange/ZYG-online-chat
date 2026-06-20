@@ -103,7 +103,10 @@ chatRoutes.post('/session', async c => {
     return c.json({ success: true, data: session })
   } catch (error) {
     console.error('Create session error:', error)
-    return c.json({ success: false, error: 'Failed to create session' }, 500)
+    const detail = error instanceof Error ? error.message : String(error)
+    const stack = error instanceof Error ? error.stack : undefined
+    console.error('Create session stack:', stack)
+    return c.json({ success: false, error: 'Failed to create session', detail, stack }, 500)
   }
 })
 
