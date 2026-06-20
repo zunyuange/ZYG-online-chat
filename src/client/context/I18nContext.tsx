@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode } from 'react';
 import { locales, type LocaleCode, type LocaleKey, supportedLocales } from '@shared/i18n';
 
 interface I18nContextType {
@@ -10,23 +10,47 @@ interface I18nContextType {
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
 
-export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<LocaleCode>('zh-CN');
-
-  useEffect(() => {
-    const saved = localStorage.getItem('chat_locale');
-    const allLocaleCodes = supportedLocales.map(l => l.code) as LocaleCode[];
-    const isValidLocale = (l: string): l is LocaleCode => allLocaleCodes.includes(l as LocaleCode);
-    if (saved && isValidLocale(saved)) {
-      setLocaleState(saved);
-    } else {
-      const browserLang = navigator.language;
-      if (browserLang.startsWith('en')) {
-        setLocaleState('en-US');
-      }
-      // other languages will just use the default 'zh-CN'
+function getInitialLocale(): LocaleCode {
+  if (typeof window === 'undefined') return 'zh-CN';
+  // 1. 优先从 localStorage 读取用户手动选择的语言
+  const saved = localStorage.getItem('chat_locale');
+  const allLocaleCodes = supportedLocales.map(l => l.code);
+  if (saved && allLocaleCodes.includes(saved)) {
+    return saved as LocaleCode;
+  }
+  // 2. 首次访问：根据浏览器语言自动匹配
+  const browserLang = navigator.language;
+  if (browserLang.startsWith('en')) return 'en-US';
+  if (browserLang.startsWith('zh')) {
+    // 根据浏览器语言细粒度匹配
+    if (browserLang.includes('Hant') || browserLang.includes('HK') || browserLang.includes('TW')) {
+      return 'tc';
     }
-  }, []);
+    return 'zh-CN';
+  }
+  if (browserLang.startsWith('ja')) return 'jp';
+  if (browserLang.startsWith('ko')) return 'kr';
+  if (browserLang.startsWith('es')) return 'es';
+  if (browserLang.startsWith('fr')) return 'fr';
+  if (browserLang.startsWith('it')) return 'it';
+  if (browserLang.startsWith('de')) return 'de';
+  if (browserLang.startsWith('pt')) return 'pt';
+  if (browserLang.startsWith('vi')) return 'vi';
+  if (browserLang.startsWith('ru')) return 'ru';
+  if (browserLang.startsWith('id')) return 'id';
+  if (browserLang.startsWith('th')) return 'th';
+  if (browserLang.startsWith('ar')) return 'ar';
+  if (browserLang.startsWith('el')) return 'el';
+  if (browserLang.startsWith('pl')) return 'pl';
+  if (browserLang.startsWith('da')) return 'da';
+  if (browserLang.startsWith('nl')) return 'nl';
+  if (browserLang.startsWith('fi')) return 'fi';
+  // 3. 默认中文
+  return 'zh-CN';
+}
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const [locale, setLocaleState] = useState<LocaleCode>(getInitialLocale);
 
   const setLocale = (newLocale: LocaleCode) => {
     setLocaleState(newLocale);
