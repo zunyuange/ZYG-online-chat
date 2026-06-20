@@ -144,6 +144,24 @@ chatRoutes.get('/translation-status', async c => {
       return c.json({ success: false, error: 'Session not found' }, 404)
     }
     const txSettings = await getTranslationSettings(session.businessId)
+    
+    // 详细诊断：告诉调用方具体缺少什么
+    let diagnoseMessage = '';
+    let diagnoseAction = '';
+    if (!txSettings) {
+      diagnoseMessage = '未找到翻译设置（商家账号可能不存在）';
+      diagnoseAction = '请确认 staff_users 表中存在该商家';
+    } else if (!txSettings.enabled) {
+      diagnoseMessage = '翻译功能未启用（enable_auto_trans = 0）';
+      diagnoseAction = '请在后台「系统设置」中打开自动翻译开关';
+    } else if (!txSettings.appid || !txSettings.secret) {
+      diagnoseMessage = '百度翻译 API 凭据未配置';
+      diagnoseAction = '请在 https://fanyi-api.baidu.com/ 注册获取 App ID 和密钥，然后在后台「系统设置」中填入';
+    } else {
+      diagnoseMessage = '翻译已正确配置，可以正常使用';
+      diagnoseAction = '';
+    }
+    
     return c.json({
       success: true,
       data: {
@@ -154,6 +172,8 @@ chatRoutes.get('/translation-status', async c => {
         defaultLang: txSettings?.defaultLang ?? 'unknown',
         sessionLang: session.lang || 'not set',
         canTranslate: !!(txSettings?.enabled && txSettings?.appid && txSettings?.secret && txSettings?.defaultLang),
+        diagnoseMessage,
+        diagnoseAction,
       }
     })
   } catch (error) {

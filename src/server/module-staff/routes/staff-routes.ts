@@ -1002,3 +1002,47 @@ staffRoutes.get('/language', async c => {
     return c.json({ success: false, error: 'Failed to get language' }, 500)
   }
 })
+
+// Get translation configuration status (for staff settings page)
+staffRoutes.get('/translation-status', async c => {
+  try {
+    const bizCtx = requireBusiness(c)
+    if (!bizCtx) return
+    
+    const txSettings = await getTranslationSettings(bizCtx.businessId)
+    
+    let diagnoseMessage = '';
+    let diagnoseAction = '';
+    if (!txSettings) {
+      diagnoseMessage = '未找到翻译设置（商家账号可能不存在）';
+      diagnoseAction = '请确认 staff_users 表中存在该商家';
+    } else if (!txSettings.enabled) {
+      diagnoseMessage = '翻译功能未启用（enable_auto_trans = 0）';
+      diagnoseAction = '请在后台「系统设置」中打开自动翻译开关';
+    } else if (!txSettings.appid || !txSettings.secret) {
+      diagnoseMessage = '百度翻译 API 凭据未配置';
+      diagnoseAction = '请在 https://fanyi-api.baidu.com/ 注册获取 App ID 和密钥，然后在后台「系统设置」中填入';
+    } else {
+      diagnoseMessage = '翻译已正确配置，可以正常使用';
+      diagnoseAction = '';
+    }
+    
+    return c.json({
+      success: true,
+      data: {
+        businessId: bizCtx.businessId,
+        enabled: txSettings?.enabled ?? false,
+        hasAppid: !!txSettings?.appid,
+        hasSecret: !!txSettings?.secret,
+        defaultLang: txSettings?.defaultLang ?? 'unknown',
+        canTranslate: !!(txSettings?.enabled && txSettings?.appid && txSettings?.secret && txSettings?.defaultLang),
+        diagnoseMessage,
+        diagnoseAction,
+      }
+    })
+  } catch (error) {
+    console.error('Staff translation status error:', error)
+    return c.json({ success: false, error: 'Failed to get translation status' }, 500)
+  }
+})
+

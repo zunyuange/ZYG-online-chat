@@ -76,6 +76,7 @@ session_id TEXT NOT NULL,
 sender_type TEXT NOT NULL, 
 content_type TEXT NOT NULL, 
 content TEXT NOT NULL, 
+translated_content TEXT, 
 thumbnail_url TEXT, 
 file_name TEXT, 
 file_size INTEGER, 
@@ -318,7 +319,9 @@ CREATE INDEX IF NOT EXISTS transfer_requests_to_staff_id_idx ON transfer_request
 INSERT OR REPLACE INTO admin_users (username, password_hash, email, name, status) VALUES ('admin', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'admin@example.com', '系统管理员', 'active');
 
 -- Initialize default staff user (business admin)
-INSERT OR REPLACE INTO staff_users (username, password_hash, email, name, role, status, business_id, business_slug, business_name) VALUES ('admin', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'admin@example.com', '系统管理员', 'admin', 'active', 0, 'default', '默认商家');
+-- enable_auto_trans=1 表示启用自动翻译功能，但需要填入真实的百度翻译 API 凭据（bd_trans_appid + bd_trans_secret）才能生效
+-- 在后台「系统设置」页面填入百度翻译 API 凭据后即可使用
+INSERT OR REPLACE INTO staff_users (username, password_hash, email, name, role, status, enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang, business_id, business_slug, business_name) VALUES ('admin', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'admin@example.com', '系统管理员', 'admin', 'active', 1, '', '', 'zh-CN', 0, 'default', '默认商家');
 
 -- Initialize default super admin role
 INSERT OR REPLACE INTO roles (name, description, permissions, is_system, status) VALUES ('超级管理员', '系统默认超级管理员，拥有所有权限', '["admin_view","admin_edit","staff_view","staff_edit","role_view","role_edit","settings"]', 1, 'active');
