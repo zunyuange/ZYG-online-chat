@@ -406,7 +406,8 @@ export async function getTranslationSettings(businessId?: number, businessSlug?:
   const db = getDb();
   
   let settings;
-  if (businessId && businessId > 0) {
+  if (businessId !== undefined && businessId > 0) {
+    // 商家/客服：按 staff_users.id 查询
     settings = await db.get<{
       enable_auto_trans: number;
       bd_trans_appid: string | null;
@@ -418,6 +419,7 @@ export async function getTranslationSettings(businessId?: number, businessSlug?:
       [businessId]
     );
   } else if (businessSlug) {
+    // 超管(businessId=0)或无 businessId：按 business_slug 查询
     settings = await db.get<{
       enable_auto_trans: number;
       bd_trans_appid: string | null;
@@ -425,10 +427,25 @@ export async function getTranslationSettings(businessId?: number, businessSlug?:
       default_lang: string;
       business_id: number;
     }>(
-      'SELECT enable_auto_trans, bd_trans_appid, COALESCE(bd_trans_secret, bd_trans_token) as bd_trans_secret, default_lang, business_id FROM staff_users WHERE business_slug = ?',
+      'SELECT enable_auto_trans, bd_trans_appid, COALESCE(bd_trans_secret, bd_trans_token) as bd_trans_secret, default_lang, business_id FROM staff_users WHERE business_slug = ? AND business_id = 0',
       [businessSlug]
     );
+  } else {
+    // businessId=0 且没有 businessSlug：尝试用 businessId=0 的 admin 账号
+    settings = await db.get<{
+      enable_auto_trans: number;
+      bd_trans_appid: string | null;
+      bd_trans_secret: string | null;
+      default_lang: string;
+      business_id: number;
+    }>(
+      'SELECT enable_auto_trans, bd_trans_appid, COALESCE(bd_trans_secret, bd_trans_token) as bd_trans_secret, default_lang, business_id FROM staff_users WHERE id = ?',
+      [businessId]
+    );
   }
+  
+  console.log('[TranslateService] getTranslationSettings: businessId=', businessId, 'businessSlug=', businessSlug,
+    'found:', !!settings);
 
   if (!settings) return null;
 

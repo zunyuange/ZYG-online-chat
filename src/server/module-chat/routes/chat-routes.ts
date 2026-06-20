@@ -370,7 +370,7 @@ chatRoutes.post('/messages', async c => {
         // - 如果答案语言 ≠ 访客语言：翻译到访客语言（访客需要理解回复内容）
         let staffTranslated: string | undefined;
         const txSettings = await getTranslationSettings(session.businessId);
-        if (txSettings?.enabled && txSettings?.appid && txSettings?.secret) {
+        if (txSettings?.enabled) {
           // 规范化语言比较：提取基础语言码（en-US → en）
           const baseLang = (lang: string) => (lang || 'en').split('-')[0].toLowerCase();
           const knowledgeBaseLang = baseLang(knowledge.lang);

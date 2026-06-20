@@ -208,12 +208,13 @@ staffRoutes.post('/messages', async c => {
     // 自动翻译：客服消息翻译为访客的语言
     let translatedContent: string | undefined;
     if (contentType === 'text') {
-      const txSettings = await getTranslationSettings(bizCtx.businessId);
-      if (txSettings?.enabled && txSettings?.appid && txSettings?.secret) {
+      const txSettings = await getTranslationSettings(bizCtx.businessId, getCtxString(c, 'businessSlug'));
+      if (txSettings?.enabled) {
         const session = await chatService.getSession(sessionId, bizCtx.businessId);
         if (session?.lang) {
           console.log('[StaffRoutes] Auto-translating staff message to visitor lang:', session.lang,
-            'businessId:', bizCtx.businessId);
+            'businessId:', bizCtx.businessId,
+            'hasBaidu:', !!(txSettings.appid && txSettings.secret));
           translatedContent = await translateText({
             text: content,
             to: session.lang,
@@ -230,11 +231,9 @@ staffRoutes.post('/messages', async c => {
           console.log('[StaffRoutes] Translation skipped: session.lang is not set (visitor language unknown)');
         }
       } else {
-        console.warn('[StaffRoutes] ⚠️ Translation NOT configured for businessId:', bizCtx.businessId,
-          '| enabled:', txSettings?.enabled,
-          '| appid:', txSettings?.appid ? 'YES' : 'NO',
-          '| secret:', txSettings?.secret ? 'YES' : 'NO');
-        console.warn('[StaffRoutes] 💡 Please configure Baidu Translate in Staff Settings');
+        console.warn('[StaffRoutes] ⚠️ Translation DISABLED for businessId:', bizCtx.businessId,
+          '| txSettings:', txSettings ? `enabled=${txSettings.enabled}` : 'NULL');
+        console.warn('[StaffRoutes] 💡 Enable auto_translate in Staff Settings (MyMemory free fallback works without Baidu API keys)');
       }
     }
 
@@ -1009,7 +1008,7 @@ staffRoutes.get('/translation-status', async c => {
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
     
-    const txSettings = await getTranslationSettings(bizCtx.businessId)
+    const txSettings = await getTranslationSettings(bizCtx.businessId, getCtxString(c, 'businessSlug'))
     
     let diagnoseMessage = '';
     let diagnoseAction = '';
@@ -1019,11 +1018,8 @@ staffRoutes.get('/translation-status', async c => {
     } else if (!txSettings.enabled) {
       diagnoseMessage = '翻译功能未启用（enable_auto_trans = 0）';
       diagnoseAction = '请在后台「系统设置」中打开自动翻译开关';
-    } else if (!txSettings.appid || !txSettings.secret) {
-      diagnoseMessage = '百度翻译 API 凭据未配置';
-      diagnoseAction = '请在 https://fanyi-api.baidu.com/ 注册获取 App ID 和密钥，然后在后台「系统设置」中填入';
     } else {
-      diagnoseMessage = '翻译已正确配置，可以正常使用';
+      diagnoseMessage = `翻译已启用 (${txSettings.appid ? '百度API已配置' : '使用MyMemory免费翻译'})`;
       diagnoseAction = '';
     }
     
@@ -1035,7 +1031,7 @@ staffRoutes.get('/translation-status', async c => {
         hasAppid: !!txSettings?.appid,
         hasSecret: !!txSettings?.secret,
         defaultLang: txSettings?.defaultLang ?? 'unknown',
-        canTranslate: !!(txSettings?.enabled && txSettings?.appid && txSettings?.secret && txSettings?.defaultLang),
+        canTranslate: !!(txSettings?.enabled && txSettings?.defaultLang),  // 移除appid/secret要求
         diagnoseMessage,
         diagnoseAction,
       }
