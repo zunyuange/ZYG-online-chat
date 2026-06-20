@@ -319,8 +319,9 @@ CREATE INDEX IF NOT EXISTS transfer_requests_to_staff_id_idx ON transfer_request
 INSERT OR REPLACE INTO admin_users (username, password_hash, email, name, status) VALUES ('admin', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'admin@example.com', '系统管理员', 'active');
 
 -- Initialize default staff user (business admin)
--- enable_auto_trans=1 表示启用自动翻译功能，但需要填入真实的百度翻译 API 凭据（bd_trans_appid + bd_trans_secret）才能生效
--- 在后台「系统设置」页面填入百度翻译 API 凭据后即可使用
+-- enable_auto_trans=1 → 默认开启自动翻译
+-- 无百度凭据时自动使用免费的 MyMemory API 后备方案
+-- 如需更高翻译质量，在后台「系统设置」填入百度翻译 API 凭据
 INSERT OR REPLACE INTO staff_users (username, password_hash, email, name, role, status, enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang, business_id, business_slug, business_name) VALUES ('admin', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'admin@example.com', '系统管理员', 'admin', 'active', 1, '', '', 'zh-CN', 0, 'default', '默认商家');
 
 -- Initialize default super admin role

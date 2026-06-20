@@ -688,6 +688,9 @@ async function runMigrations(database: Database): Promise<void> {
   // Add translated_content to messages table (自动翻译功能)
   await addColumnIfMissing('messages', 'translated_content', 'TEXT')
 
+  // Add bd_trans_secret to staff_users table (翻译密钥列 - 与旧版 bd_trans_token 对齐)
+  await addColumnIfMissing('staff_users', 'bd_trans_secret', 'TEXT')
+
   console.log('[Database] Migrations complete')
 }
 

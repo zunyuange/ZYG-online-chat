@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS staff_users (
   business_name TEXT,
   enable_auto_trans INTEGER NOT NULL DEFAULT 0,
   bd_trans_appid TEXT,
+  bd_trans_secret TEXT,
   bd_trans_token TEXT,
   bd_trans_url TEXT,
   username TEXT UNIQUE NOT NULL,

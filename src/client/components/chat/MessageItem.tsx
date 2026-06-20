@@ -227,6 +227,12 @@ export function MessageItem({ message, isOwn, t = (key: string) => key }: Messag
                 fontSize: '0.92em',
                 fontStyle: 'italic',
               }}>
+                <span style={{
+                  fontSize: '0.75em',
+                  opacity: 0.6,
+                  marginRight: '4px',
+                  textTransform: 'uppercase',
+                }}>🌐 TR</span>
                 {message.translatedContent}
               </div>
             </div>

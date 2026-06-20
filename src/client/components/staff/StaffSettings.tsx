@@ -284,6 +284,9 @@ export function StaffSettings() {
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 500 }}>
               {t('baidu_app_id')}
+              <span style={{ fontSize: '11px', color: '#999', fontWeight: 400, marginLeft: '8px' }}>
+                ({t('optional')})
+              </span>
             </label>
             <input
               type="text"
@@ -388,7 +391,14 @@ export function StaffSettings() {
       </div>
 
       {/* Tips Card */}
-      <div style={{ backgroundColor: '#fffbe6', borderRadius: '8px', padding: '20px', marginTop: '24px', borderLeft: '4px solid #faad14' }}>
+      <div style={{ backgroundColor: '#e6f7ff', borderRadius: '8px', padding: '20px', marginTop: '24px', borderLeft: '4px solid #1890ff' }}>
+        <h4 style={{ fontSize: '14px', fontWeight: 500, margin: '0 0 8px' }}>🟢 {t('free_translation_available')}</h4>
+        <p style={{ fontSize: '13px', color: '#666', margin: '0 0 12px' }}>
+          {t('free_translation_desc')}
+        </p>
+      </div>
+
+      <div style={{ backgroundColor: '#fffbe6', borderRadius: '8px', padding: '20px', marginTop: '16px', borderLeft: '4px solid #faad14' }}>
         <h4 style={{ fontSize: '14px', fontWeight: 500, margin: '0 0 8px' }}>{t('baidu_api_key_tips')}</h4>
         <ol style={{ fontSize: '13px', color: '#666', margin: 0, paddingLeft: '20px' }}>
           <li style={{ marginBottom: '8px' }}>{t('baidu_tips_step1')} <a href="https://fanyi-api.baidu.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff' }}>百度翻译开放平台</a></li>

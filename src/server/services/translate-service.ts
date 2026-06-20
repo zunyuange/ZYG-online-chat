@@ -28,6 +28,44 @@ const LOCALE_TO_BAIDU: Record<string, string> = {
   'fi': 'fin',
 };
 
+/** 我们的 locale 代码 → ISO 639-1 语言代码 (用于 MyMemory 等免费翻译 API) */
+const LOCALE_TO_ISO639: Record<string, string> = {
+  'zh-CN': 'zh-CN',
+  'zh-TW': 'zh-TW',
+  'en-US': 'en',
+  'en-GB': 'en',
+  'ja': 'ja',
+  'ko': 'ko',
+  'fr': 'fr',
+  'de': 'de',
+  'es': 'es',
+  'pt': 'pt',
+  'it': 'it',
+  'ru': 'ru',
+  'vi': 'vi',
+  'th': 'th',
+  'id': 'id',
+  'ar': 'ar',
+  'nl': 'nl',
+  'pl': 'pl',
+  'da': 'da',
+  'fi': 'fi',
+  'el': 'el',
+  'tc': 'zh-TW',
+  'jp': 'ja',
+  'kr': 'ko',
+  'cn': 'zh-CN',
+  'en': 'en',
+  'vie': 'vi',
+  'ara': 'ar',
+  'dan': 'da',
+  'fin': 'fi',
+  'cht': 'zh-TW',
+  'spa': 'es',
+  'fra': 'fr',
+  'kor': 'ko',
+};
+
 /** 旧版 lang 字段（cn/en/jp等）→ 百度语言代码 */
 const LEGACY_LANG_TO_BAIDU: Record<string, string> = {
   'cn': 'zh',
@@ -288,6 +326,69 @@ async function callBaiduTranslate(
 }
 
 /**
+ * 获取 ISO 639-1 语言代码（用于 MyMemory 等免费 API）
+ */
+function toIso639Lang(localeCode: string): string {
+  return LOCALE_TO_ISO639[localeCode] || localeCode;
+}
+
+/**
+ * 调用 MyMemory 免费翻译 API（无 API Key 限制，每天 1000 词免费）
+ * 文档: https://mymemory.translated.net/doc/spec.php
+ */
+async function callMyMemoryTranslate(
+  text: string,
+  targetLang: string,
+  sourceLang: string = 'auto'
+): Promise<string> {
+  // 源语言和目标语言相同则跳过
+  if (sourceLang === targetLang || sourceLang === targetLang.split('-')[0]) {
+    console.log('[TranslateService-MyMemory] Source and target language match, skipping');
+    return text;
+  }
+  
+  const langpair = `${sourceLang}|${targetLang}`;
+  const params = new URLSearchParams({
+    q: text,
+    langpair,
+    de: 'zyg-online-chat@example.com', // 用于免费 API 请求去重
+  });
+
+  const url = `https://api.mymemory.translated.net/get?${params.toString()}`;
+  
+  console.log(`[TranslateService-MyMemory] Calling: langpair=${langpair}, textLen=${text.length}`);
+  
+  let response: Response;
+  try {
+    response = await fetch(url);
+  } catch (fetchError) {
+    console.error('[TranslateService-MyMemory] ❌ Network error:', fetchError);
+    return text;
+  }
+
+  if (!response.ok) {
+    console.error(`[TranslateService-MyMemory] ❌ HTTP error: ${response.status}`);
+    return text;
+  }
+
+  const result: any = await response.json();
+  
+  if (result.responseStatus && result.responseStatus !== 200) {
+    console.error('[TranslateService-MyMemory] ❌ API error:', result.responseStatus, result.responseDetails);
+    return text;
+  }
+
+  if (result.responseData && result.responseData.translatedText) {
+    const translated = result.responseData.translatedText;
+    console.log(`[TranslateService-MyMemory] ✅ Translation result: "${translated.substring(0, 50)}..."`);
+    return translated;
+  }
+
+  console.warn('[TranslateService-MyMemory] ⚠️ Unexpected response:', JSON.stringify(result).substring(0, 200));
+  return text;
+}
+
+/**
  * 翻译设置返回值
  */
 export interface TranslationSettings {
@@ -313,7 +414,7 @@ export async function getTranslationSettings(businessId?: number, businessSlug?:
       default_lang: string;
       business_id: number;
     }>(
-      'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang, business_id FROM staff_users WHERE id = ?',
+      'SELECT enable_auto_trans, bd_trans_appid, COALESCE(bd_trans_secret, bd_trans_token) as bd_trans_secret, default_lang, business_id FROM staff_users WHERE id = ?',
       [businessId]
     );
   } else if (businessSlug) {
@@ -324,7 +425,7 @@ export async function getTranslationSettings(businessId?: number, businessSlug?:
       default_lang: string;
       business_id: number;
     }>(
-      'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang, business_id FROM staff_users WHERE business_slug = ?',
+      'SELECT enable_auto_trans, bd_trans_appid, COALESCE(bd_trans_secret, bd_trans_token) as bd_trans_secret, default_lang, business_id FROM staff_users WHERE business_slug = ?',
       [businessSlug]
     );
   }
@@ -343,7 +444,7 @@ export async function getTranslationSettings(businessId?: number, businessSlug?:
       bd_trans_appid: string | null;
       bd_trans_secret: string | null;
     }>(
-      'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret FROM staff_users WHERE id = ?',
+      'SELECT enable_auto_trans, bd_trans_appid, COALESCE(bd_trans_secret, bd_trans_token) as bd_trans_secret FROM staff_users WHERE id = ?',
       [settings.business_id]
     );
     if (parent) {
@@ -372,12 +473,16 @@ interface TranslateOptionsInternal extends TranslateOptions {
 
 /**
  * 自动翻译文本
- * 如果目标语言与当前文本语言相同，或文本包含HTML，或翻译未启用，则返回原文
+ * 
+ * 优先级链:
+ * 1. 百度翻译 API（需配置 appid + secret）
+ * 2. MyMemory 免费翻译（后备，无需凭据，每天 1000 词免费）
+ * 3. 返回原文（所有方案都不可用时降级）
  *
  * 【重要】如果返回原文（翻译未生效），查看服务端日志了解具体跳过的原因：
- *   - "Translation not configured" → 商家未配置百度翻译凭据
+ *   - "Translation not configured" → 商家未配置翻译设置
  *   - "Translation disabled" → enable_auto_trans = 0
- *   - "Translation failed" → 百度 API 调用异常
+ *   - "Translation failed" → API 调用异常
  */
 export async function translateText(options: TranslateOptions): Promise<string> {
   const { text, to } = options;
@@ -408,25 +513,45 @@ export async function translateText(options: TranslateOptions): Promise<string> 
     return text;
   }
 
-  if (!settings.appid || !settings.secret) {
-    console.warn('[TranslateService] ⚠️ Translation skipped: Missing bd_trans_appid or bd_trans_secret for businessId:', options.businessId);
-    return text;
+  // 【🧠 智能选择翻译提供商】
+  const hasBaidu = !!(settings.appid && settings.secret);
+  
+  if (hasBaidu) {
+    // 百度翻译（需要 API 凭据）
+    const targetBaiduLang = toBaiduLang(to);
+    console.log(`[TranslateService] 🔵 Using Baidu Translate: "${text.substring(0, 50)}..." → ${targetBaiduLang}`);
+    try {
+      const translated = await callBaiduTranslate(text, targetBaiduLang, settings.appid!, settings.secret!);
+      if (translated !== text) {
+        console.log(`[TranslateService] ✅ Baidu result: "${translated.substring(0, 50)}..."`);
+      } else {
+        console.log(`[TranslateService] ⚡ Baidu returned same text (already in target language?)`);
+      }
+      return translated;
+    } catch (error) {
+      console.error('[TranslateService] ❌ Baidu API call failed, falling back to MyMemory:', error);
+      // 百度失败后尝试 MyMemory
+      const targetIso = toIso639Lang(to);
+      return await callMyMemoryTranslate(text, targetIso);
+    }
   }
-
-  const targetBaiduLang = toBaiduLang(to);
-  console.log(`[TranslateService] Translating "${text.substring(0, 50)}..." → ${targetBaiduLang} (appid: ${settings.appid.substring(0, 4)}***)`);
-
+  
+  // 📦 免费后备：使用 MyMemory 翻译（无需 API Key）
+  const targetIso = toIso639Lang(to);
+  const sourceIso = 'auto';
+  console.log(`[TranslateService] 🟢 Using MyMemory (free fallback): "${text.substring(0, 50)}..." → ${targetIso}`);
+  
   try {
-    const translated = await callBaiduTranslate(text, targetBaiduLang, settings.appid, settings.secret);
+    const translated = await callMyMemoryTranslate(text, targetIso, sourceIso);
     if (translated !== text) {
-      console.log(`[TranslateService] ✅ Translation result: "${translated.substring(0, 50)}..."`);
+      console.log(`[TranslateService] ✅ MyMemory result: "${translated.substring(0, 50)}..."`);
     } else {
-      console.log(`[TranslateService] ⚡ Translation returned same text (already in target language?)`);
+      console.log(`[TranslateService] ⚡ MyMemory returned same text (already in target language?)`);
     }
     return translated;
   } catch (error) {
-    console.error('[TranslateService] ❌ Translation API call failed:', error);
-    return text; // 翻译异常，返回原文
+    console.error('[TranslateService] ❌ MyMemory also failed:', error);
+    return text;
   }
 }
 
