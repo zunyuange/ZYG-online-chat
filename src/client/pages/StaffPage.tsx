@@ -54,9 +54,9 @@ export function StaffPage() {
     isLoading: authLoading,
     isAuthenticated,
     requireAuth,
-    error: authError,
-    remainingAttempts,
-    login,
+    error: _authError,
+    remainingAttempts: _remainingAttempts,
+    login: _login,
   } = useAuth();
 
   const {
@@ -266,7 +266,7 @@ export function StaffPage() {
         // 固定字段的 label 通过 i18n 翻译，不再使用服务器返回的中文原文
         const fixedDefs: VisitorFieldDef[] = (result.data.fixedFields || []).map((f: any) => ({
           fieldKey: f.fieldKey,
-          label: t(`fixed_field_${f.fieldKey}`),
+          label: t(`fixed_field_${f.fieldKey}` as any),
           type: f.type,
           isFixed: true,
         }));
@@ -581,9 +581,6 @@ export function StaffPage() {
         if (result.success) {
           // Refresh sessions list to remove the closed session
           await loadSessions();
-          // Clear current session selection
-          setSelectedSessionId(null);
-          setCurrentSessionId(null);
           console.log('Session ended successfully');
         } else {
           console.error('Failed to end session:', result.error);
@@ -1228,7 +1225,7 @@ export function StaffPage() {
                 onSelect={handleSelectSession}
                 loading={loading}
                 staffList={staffList}
-                t={t}
+                t={t as any}
               />
             </div>
 
@@ -1252,7 +1249,7 @@ export function StaffPage() {
                 onTransfer={() => {}}
                 currentStaffId={userInfo?.userId}
                 staffList={staffList}
-                t={t}
+                t={t as any}
               />
             </div>
 
@@ -1499,7 +1496,7 @@ export function StaffPage() {
         isOpen={showQueueList}
         onClose={() => setShowQueueList(false)}
         onSelectSession={handleSelectSession}
-        t={t}
+        t={t as any}
       />
 
       {/* Transfer Request Notification Panel */}

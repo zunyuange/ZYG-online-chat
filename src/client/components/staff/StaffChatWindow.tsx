@@ -32,6 +32,7 @@ interface StaffChatWindowProps {
   onTopicChange?: (topic: string) => void;
   onClearMessages?: () => void;
   onEndSession?: () => void;
+  onTransfer?: () => void;
   currentStaffId?: number;
   staffList?: { id: number; name: string; username: string }[];
   t?: (key: string) => string;

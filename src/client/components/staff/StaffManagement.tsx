@@ -62,7 +62,6 @@ export function StaffManagement() {
   const handleOpenModal = (user?: StaffUser) => {
     if (user) {
       setFormData({
-        id: user.id,
         username: user.username,
         password: '',
         name: user.name || '',

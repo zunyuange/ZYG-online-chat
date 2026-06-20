@@ -53,6 +53,7 @@ interface StaffState {
   setInputMode: (mode: InputMode) => void;
   updateTopic: (sessionId: string, topic: string) => Promise<void>;
   updateTaskStatus: (sessionId: string, status: TaskStatus) => Promise<void>;
+  clearMessages: (sessionId: string) => Promise<void>;
 }
 
 // EventSource reference
@@ -201,7 +202,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
 
   // Check for new messages (used by polling)
   checkNewMessages: async () => {
-    const { sessions, currentSessionId, messages } = get();
+    const { currentSessionId, messages } = get();
 
     try {
       // Refresh sessions list
@@ -636,7 +637,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
         const newSessions = get().sessions.map((s) =>
           s.id === sessionId ? { ...s, unreadByStaff: 0, unreadByVisitor: 0 } : s
         );
-        set({ sessions: newSessions, totalUnread: get().totalUnread - get().sessions.find(s => s.id === sessionId)?.unreadByStaff });
+        set({ sessions: newSessions, totalUnread: get().totalUnread - (get().sessions.find(s => s.id === sessionId)?.unreadByStaff || 0) });
       } else {
         set({ error: result.error || 'Failed to clear messages' });
       }

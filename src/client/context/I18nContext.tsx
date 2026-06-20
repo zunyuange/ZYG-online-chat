@@ -15,8 +15,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const saved = localStorage.getItem('chat_locale');
-    const allLocaleCodes = supportedLocales.map(l => l.code);
-    const isValidLocale = (l: string): l is LocaleCode => allLocaleCodes.includes(l);
+    const allLocaleCodes = supportedLocales.map(l => l.code) as LocaleCode[];
+    const isValidLocale = (l: string): l is LocaleCode => allLocaleCodes.includes(l as LocaleCode);
     if (saved && isValidLocale(saved)) {
       setLocaleState(saved);
     } else {

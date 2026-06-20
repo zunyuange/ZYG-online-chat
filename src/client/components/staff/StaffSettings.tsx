@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Globe, Save, Check, Eye, EyeOff, Building } from 'lucide-react';
+import { Globe, Save, Eye, EyeOff, Building } from 'lucide-react';
 import { useI18n } from '@client/context/I18nContext';
 
 interface TranslationSettings {

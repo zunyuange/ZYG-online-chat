@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { I18nProvider } from '@client/context/I18nContext';
 import { useI18n } from '@client/context/I18nContext';
-import { Copy, Check, Code2, Link2, Monitor, Smartphone, Globe } from 'lucide-react';
+import { Copy, Check, Code2, Link2, Monitor, Globe } from 'lucide-react';
 
 function LanguageSwitcher() {
   const { locale, setLocale, supportedLocales } = useI18n();

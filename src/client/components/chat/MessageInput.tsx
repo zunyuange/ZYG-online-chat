@@ -273,6 +273,7 @@ export function MessageInput({
           <Smile size={isMobile ? 20 : 22} />
         </button>
         <div style={emojiPickerContainerStyle}>
+          {/* @ts-expect-error - emoji-picker is a custom element */}
           <emoji-picker ref={emojiPickerRef as React.RefObject<any>} />
         </div>
       </div>

@@ -93,6 +93,7 @@ interface ChatState {
   stopPolling: () => void;
   clearError: () => void;
   checkStaffOnline: () => Promise<void>;
+  resetSession: () => Promise<void>;
 }
 
 // EventSource reference
@@ -238,7 +239,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         const newMessages = result.data as Message[];
         // Update last message time for polling
         if (newMessages.length > 0) {
-          lastMessageTime = Math.max(lastMessageTime, newMessages[0].createdAt);
+          lastMessageTime = Math.max(lastMessageTime, newMessages[0].createdAt.getTime());
         }
         set({
           messages: before ? [...newMessages, ...messages] : newMessages,
@@ -452,7 +453,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (messages.some((m) => m.id === message.id)) return;
 
     // Update last message time
-    lastMessageTime = Math.max(lastMessageTime, message.createdAt);
+    lastMessageTime = Math.max(lastMessageTime, message.createdAt.getTime());
 
     set({
       messages: [...messages, message],

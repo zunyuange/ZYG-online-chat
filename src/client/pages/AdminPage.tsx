@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { 
-  Shield, User, Users, Settings, BarChart3, 
+  Shield, User, Users, Settings,
   UserPlus, Edit, Trash2, X, Check, Plus, 
   Home, Key, Globe
 } from 'lucide-react';
@@ -42,6 +42,7 @@ interface RoleData {
   description: string;
   permissions: string[];
   created_at: number;
+  is_system?: boolean;
 }
 
 interface StatCard {
@@ -57,7 +58,7 @@ interface UserFormData {
   email: string;
   name: string;
   role: string;
-  business_id: number;
+  business_id?: number;
 }
 
 interface RoleFormData {
@@ -599,11 +600,7 @@ export function AdminPage() {
     borderBottom: active ? '2px solid #1890ff' : '2px solid transparent',
     transition: 'all 0.2s',
     gap: '8px',
-    '&:hover': {
-      backgroundColor: 'rgba(255,255,255,0.05)',
-      color: '#fff',
-    },
-  });
+  } as React.CSSProperties);
 
   const containerStyle: React.CSSProperties = {
     flex: 1,
@@ -1375,7 +1372,7 @@ export function AdminPage() {
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 style={inputStyle}
-                placeholder={t('enter_username')}
+                placeholder={t('staff_mgmt_username_placeholder')}
               />
 
               <label style={labelStyle}>{t('password')}</label>
@@ -1384,7 +1381,7 @@ export function AdminPage() {
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 style={inputStyle}
-                placeholder={editingUser ? t('leave_empty_to_keep') : t('enter_password')}
+                placeholder={editingUser ? t('staff_mgmt_password_leave_empty') : t('staff_mgmt_password_placeholder')}
               />
 
               <label style={labelStyle}>{t('name')}</label>
@@ -1393,7 +1390,7 @@ export function AdminPage() {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 style={inputStyle}
-                placeholder={t('enter_name')}
+                placeholder={t('staff_mgmt_name_placeholder')}
               />
 
               <label style={labelStyle}>{t('email') || 'Email'}</label>

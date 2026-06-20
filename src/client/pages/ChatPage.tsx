@@ -153,9 +153,9 @@ export function ChatPage() {
         usePolling={usePolling}
         staffOnline={staffOnline}
         session={session}
-        t={t}
+        t={t as any}
         locale={locale}
-        setLocale={setLocale}
+        setLocale={setLocale as any}
         supportedLocales={supportedLocales}
         onRestart={handleRestart}
       />

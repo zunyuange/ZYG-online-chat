@@ -153,7 +153,7 @@ export function VisitorFields() {
 
   const getFieldLabel = (field: FieldDef) => {
     if (field.isFixed) {
-      return t(`fixed_field_${field.fieldKey}`);
+      return t(`fixed_field_${field.fieldKey}` as any);
     }
     return field.label;
   };
@@ -161,7 +161,7 @@ export function VisitorFields() {
   const getFieldRemark = (field: FieldDef) => {
     if (field.isFixed) {
       const remarkKey = `fixed_field_remark_${field.fieldKey}`;
-      const translated = t(remarkKey);
+      const translated = t(remarkKey as any);
       // 如果翻译键不存在（返回键名本身），回退到原始 remark
       return translated === remarkKey ? (field.remark || '-') : translated;
     }
