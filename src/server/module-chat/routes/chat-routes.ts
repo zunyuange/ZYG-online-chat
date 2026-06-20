@@ -11,6 +11,7 @@ import * as queueService from '../services/queue-service'
 import * as transferService from '../services/transfer-service'
 import * as barkService from '@server/services/bark-service'
 import { translateText, isTranslationUseful, getTranslationSettings } from '@server/services/translate-service'
+import { searchKnowledge } from '@server/module-robot/services/robot-service'
 import { verifyToken } from '@server/module-auth/services/auth-service'
 import { getDb } from '@server/shared/db'
 
@@ -161,6 +162,88 @@ chatRoutes.get('/translation-status', async c => {
   }
 })
 
+// Test translation API (actually calls Baidu Translate with a test phrase)
+chatRoutes.get('/translation-test', async c => {
+  try {
+    const sessionId = c.req.query('sessionId')
+    if (!sessionId) {
+      return c.json({ success: false, error: 'sessionId is required' }, 400)
+    }
+    const session = await chatService.getSession(sessionId)
+    if (!session) {
+      return c.json({ success: false, error: 'Session not found' }, 404)
+    }
+
+    const txSettings = await getTranslationSettings(session.businessId)
+    if (!txSettings) {
+      return c.json({ success: false, error: 'No translation settings found', details: '请确认该商家在 staff_users 表中存在' }, 400)
+    }
+    if (!txSettings.enabled) {
+      return c.json({ success: false, error: 'Translation is DISABLED', details: '请在商家设置中将 enable_auto_trans 设为 1' }, 400)
+    }
+    if (!txSettings.appid || !txSettings.secret) {
+      return c.json({
+        success: false,
+        error: 'Baidu Translate credentials MISSING',
+        details: '请在商家设置中填写 bd_trans_appid 和 bd_trans_secret',
+        hasAppid: !!txSettings.appid,
+        hasSecret: !!txSettings.secret,
+      }, 400)
+    }
+
+    // Test: translate "Hello" → Chinese, "你好" → English
+    const testText = 'Hello'
+    const targetLang = txSettings.defaultLang || 'zh-CN'
+    const startTime = Date.now()
+
+    console.log('[TranslationTest] Testing Baidu API with:', testText, '→', targetLang)
+    const translated = await translateText({
+      text: testText,
+      to: targetLang,
+      businessId: session.businessId,
+      _settings: txSettings as any,
+    } as any)
+
+    const elapsed = Date.now() - startTime
+    const success = translated !== testText
+
+    // Also test reverse direction
+    const revTestText = '你好'
+    const revTranslated = success ? await translateText({
+      text: revTestText,
+      to: 'en-US',
+      businessId: session.businessId,
+      _settings: txSettings as any,
+    } as any) : ''
+
+    return c.json({
+      success,
+      data: {
+        businessId: session.businessId,
+        defaultLang: txSettings.defaultLang,
+        sessionLang: session.lang || 'unknown',
+        apiTest: {
+          request: `"${testText}" → ${targetLang}`,
+          result: translated,
+          success: translated !== testText,
+          elapsedMs: elapsed,
+        },
+        reverseTest: success ? {
+          request: `"${revTestText}" → en-US`,
+          result: revTranslated,
+          success: revTranslated !== revTestText,
+        } : null,
+        diagnostics: success
+          ? '✅ 百度翻译 API 正常工作'
+          : `❌ 翻译失败: translateText返回了原文 "${translated}"，请检查百度翻译 API 凭据是否正确`,
+      }
+    })
+  } catch (error) {
+    console.error('Translation test error:', error)
+    return c.json({ success: false, error: String(error) }, 500)
+  }
+})
+
 // ==========================================
 // Message Routes
 // ==========================================
@@ -238,14 +321,65 @@ chatRoutes.post('/messages', async c => {
     // Broadcast to SSE clients
     await sseService.broadcastMessage(message)
 
-    // 发送 Bark 通知（获取会话信息用于显示访客名）
+    // ==========================================
+    // 机器人自动回复：搜索知识库匹配关键词
+    // ==========================================
     const session = await chatService.getSession(sessionId)
+    let autoReplyMessage: any = null;
+
+    if (contentType === 'text' && session) {
+      const visitorLang = session.lang || 'zh-CN';
+      console.log('[ChatRoutes] 🤖 Searching robot knowledge for:', content.substring(0, 50),
+        'lang:', visitorLang, 'businessId:', session.businessId);
+
+      const knowledge = await searchKnowledge(content, visitorLang);
+      if (knowledge) {
+        console.log('[ChatRoutes] ✅ Robot matched! keyword:', knowledge.keyword,
+          '| answer:', knowledge.answer.substring(0, 60));
+
+        // 翻译自动回复为访客语言
+        let staffTranslated: string | undefined;
+        const txSettings = await getTranslationSettings(session.businessId);
+        if (txSettings?.enabled && txSettings?.appid && txSettings?.secret && visitorLang) {
+          console.log('[ChatRoutes] 🤖 Translating robot reply to visitor lang:', visitorLang);
+          staffTranslated = await translateText({
+            text: knowledge.answer,
+            to: visitorLang,
+            businessId: session.businessId,
+            _settings: txSettings as any,
+          } as any);
+          if (!isTranslationUseful(knowledge.answer, staffTranslated)) {
+            staffTranslated = undefined;
+            console.log('[ChatRoutes] Robot reply translation not useful');
+          }
+        }
+
+        autoReplyMessage = await chatService.sendMessage({
+          sessionId,
+          senderType: 'staff',
+          contentType: 'text',
+          content: knowledge.answer,
+          translatedContent: staffTranslated,
+        }, session.businessId);
+
+        // Broadcast robot reply
+        await sseService.broadcastMessage(autoReplyMessage);
+        await sseService.broadcastSessionUpdate(session);
+      } else {
+        console.log('[ChatRoutes] 🤖 No robot knowledge match for:', content.substring(0, 30));
+      }
+    }
+
+    // 发送 Bark 通知（获取会话信息用于显示访客名）
     if (session) {
       console.log('[ChatRoutes] Calling barkService.notifyVisitorMessage for session:', sessionId)
       await barkService.notifyVisitorMessage(sessionId, session.visitorName, content, contentType)
     }
 
-    return c.json({ success: true, data: message })
+    return c.json({
+      success: true,
+      data: { message, autoReply: autoReplyMessage }
+    })
   } catch (error) {
     console.error('Send message error:', error)
     return c.json({ success: false, error: 'Failed to send message' }, 500)

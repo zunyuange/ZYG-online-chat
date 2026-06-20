@@ -255,13 +255,27 @@ async function callBaiduTranslate(
     sign: sign,
   });
 
-  const url = `http://api.fanyi.baidu.com/api/trans/vip/translate?${params.toString()}`;
+  const url = `https://api.fanyi.baidu.com/api/trans/vip/translate?${params.toString()}`;
   
-  const response = await fetch(url);
+  console.log(`[TranslateService] Calling Baidu API: to=${targetBaiduLang}, textLen=${text.length}`);
+  
+  let response: Response;
+  try {
+    response = await fetch(url);
+  } catch (fetchError) {
+    console.error('[TranslateService] ❌ Network error calling Baidu API:', fetchError);
+    return text;
+  }
+
+  if (!response.ok) {
+    console.error(`[TranslateService] ❌ Baidu API HTTP error: ${response.status} ${response.statusText}`);
+    return text;
+  }
+
   const result: any = await response.json();
 
   if (result.error_code) {
-    console.error('[TranslateService] Baidu API error:', result.error_code, result.error_msg);
+    console.error('[TranslateService] ❌ Baidu API error:', result.error_code, result.error_msg);
     return text; // 翻译失败，返回原文
   }
 
@@ -269,6 +283,7 @@ async function callBaiduTranslate(
     return result.trans_result[0].dst;
   }
 
+  console.warn('[TranslateService] ⚠️ Unexpected Baidu API response (no trans_result):', JSON.stringify(result).substring(0, 200));
   return text; // 降级返回原文
 }
 
