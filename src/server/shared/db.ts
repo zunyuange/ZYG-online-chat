@@ -685,6 +685,15 @@ async function runMigrations(database: Database): Promise<void> {
   // Add bd_trans_token to staff_users table (旧版翻译密钥列，保持兼容)
   await addColumnIfMissing('staff_users', 'bd_trans_token', 'TEXT')
 
+  // CRITICAL: Add missing columns that getBusinessBySlug() depends on
+  await addColumnIfMissing('staff_users', 'business_id', 'INTEGER NOT NULL DEFAULT 0')
+  await addColumnIfMissing('staff_users', 'enable_auto_trans', 'INTEGER NOT NULL DEFAULT 0')
+  await addColumnIfMissing('staff_users', 'bd_trans_appid', 'TEXT')
+  await addColumnIfMissing('staff_users', 'default_lang', "TEXT NOT NULL DEFAULT 'zh-CN'")
+
+  // Fix existing staff_users data: ensure admin user has correct role and business_id
+  await ensureDefaultStaffData(database)
+
   console.log('[Database] Migrations complete')
 }
 
@@ -754,6 +763,53 @@ async function initializeDefaultAdmin(database: Database): Promise<void> {
     console.log(
       '[Database] Default staff user created: admin/123456 (staff_users as business admin)'
     )
+  }
+}
+
+/**
+ * Ensure existing staff_users data is correct (for databases created by older schema versions).
+ * Fixes: business_id, enable_auto_trans, bd_trans_appid, default_lang, role, business_slug, business_name
+ */
+async function ensureDefaultStaffData(database: Database): Promise<void> {
+  try {
+    // Check if admin user exists but has incorrect data
+    const admin = await database.get<{
+      id: number; role: string; business_id: number | null;
+      business_slug: string | null; business_name: string | null;
+      enable_auto_trans: number; default_lang: string;
+    }>(
+      'SELECT id, role, business_id, business_slug, business_name, enable_auto_trans, default_lang FROM staff_users WHERE username = ?',
+      ['admin']
+    )
+    if (admin) {
+      const updates: string[] = []
+      const values: unknown[] = []
+      
+      // Fix business_id: must be 0 for the default business admin
+      if (admin.business_id !== 0 && admin.business_id !== null) {
+        // business_id not null, check if it needs fixing
+      }
+      // Always ensure business_id=0, business_slug='default', business_name='默认商家', role='admin'
+      updates.push('business_id = 0')
+      updates.push('business_slug = COALESCE(business_slug, \'default\')')
+      updates.push('business_name = COALESCE(business_name, \'默认商家\')')
+      updates.push('role = \'admin\'')
+      
+      // Ensure translation defaults
+      updates.push('enable_auto_trans = COALESCE(enable_auto_trans, 1)')
+      updates.push('default_lang = COALESCE(NULLIF(default_lang, \'\'), \'zh-CN\')')
+      updates.push('updated_at = ?')
+      values.push(Date.now())
+      values.push(admin.id)
+      
+      await database.run(
+        `UPDATE staff_users SET ${updates.join(', ')} WHERE id = ?`,
+        values
+      )
+      console.log('[Database] Fixed existing admin user data: business_id=0, role=admin, auto_trans enabled')
+    }
+  } catch (error) {
+    console.error('[Database] Failed to ensure default staff data:', error)
   }
 }
 
