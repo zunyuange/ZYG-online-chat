@@ -16,7 +16,7 @@ import * as chatService from '@server/module-chat/services/chat-service'
 import * as uploadService from '@server/module-chat/services/upload-service'
 import * as sseService from '@server/module-chat/services/sse-service'
 import * as queueService from '@server/module-chat/services/queue-service'
-import { translateText, isTranslationUseful } from '@server/services/translate-service'
+import { translateText, isTranslationUseful, getTranslationSettings } from '@server/services/translate-service'
 import { verifyToken } from '@server/module-auth/services/auth-service'
 import { getDb } from '@server/shared/db'
 import { visitorFieldRoutes } from './visitor-field-routes'
@@ -208,23 +208,33 @@ staffRoutes.post('/messages', async c => {
     // 自动翻译：客服消息翻译为访客的语言
     let translatedContent: string | undefined;
     if (contentType === 'text') {
-      const session = await chatService.getSession(sessionId, bizCtx.businessId);
-      if (session?.lang) {
-        console.log('[StaffRoutes] Auto-translating staff message to visitor lang:', session.lang,
-          'businessId:', bizCtx.businessId);
-        translatedContent = await translateText({
-          text: content,
-          to: session.lang,
-          businessId: bizCtx.businessId,
-        });
-        if (!isTranslationUseful(content, translatedContent)) {
-          translatedContent = undefined; // 翻译无变化，不存储
-          console.log('[StaffRoutes] Translation not useful (same as original or disabled)');
+      const txSettings = await getTranslationSettings(bizCtx.businessId);
+      if (txSettings?.enabled && txSettings?.appid && txSettings?.secret) {
+        const session = await chatService.getSession(sessionId, bizCtx.businessId);
+        if (session?.lang) {
+          console.log('[StaffRoutes] Auto-translating staff message to visitor lang:', session.lang,
+            'businessId:', bizCtx.businessId);
+          translatedContent = await translateText({
+            text: content,
+            to: session.lang,
+            businessId: bizCtx.businessId,
+            _settings: txSettings as any,
+          } as any);
+          if (!isTranslationUseful(content, translatedContent)) {
+            translatedContent = undefined; // 翻译无变化，不存储
+            console.log('[StaffRoutes] Translation not useful (same as original or same language)');
+          } else {
+            console.log('[StaffRoutes] ✅ Translation stored, length:', translatedContent.length);
+          }
         } else {
-          console.log('[StaffRoutes] Translation successful, length:', translatedContent.length);
+          console.log('[StaffRoutes] Translation skipped: session.lang is not set (visitor language unknown)');
         }
       } else {
-        console.log('[StaffRoutes] Translation skipped: session has no lang set (visitor never set a language)');
+        console.warn('[StaffRoutes] ⚠️ Translation NOT configured for businessId:', bizCtx.businessId,
+          '| enabled:', txSettings?.enabled,
+          '| appid:', txSettings?.appid ? 'YES' : 'NO',
+          '| secret:', txSettings?.secret ? 'YES' : 'NO');
+        console.warn('[StaffRoutes] 💡 Please configure Baidu Translate in Staff Settings');
       }
     }
 

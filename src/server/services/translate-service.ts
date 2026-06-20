@@ -273,10 +273,20 @@ async function callBaiduTranslate(
 }
 
 /**
+ * 翻译设置返回值
+ */
+export interface TranslationSettings {
+  enabled: boolean;
+  appid: string | null;
+  secret: string | null;
+  defaultLang: string;
+}
+
+/**
  * 获取商家的翻译设置
  * 支持多层级：下级客服继承上级商家的翻译凭据（appid/secret），但使用自己的语言偏好
  */
-async function getTranslationSettings(businessId?: number, businessSlug?: string) {
+export async function getTranslationSettings(businessId?: number, businessSlug?: string): Promise<TranslationSettings | null> {
   const db = getDb();
   
   let settings;
@@ -338,38 +348,69 @@ async function getTranslationSettings(businessId?: number, businessSlug?: string
 }
 
 /**
+ * 翻译文本选项
+ */
+interface TranslateOptionsInternal extends TranslateOptions {
+  /** 预取的翻译设置，避免 translateText 内部重复查询数据库 */
+  _settings?: TranslationSettings | null;
+}
+
+/**
  * 自动翻译文本
  * 如果目标语言与当前文本语言相同，或文本包含HTML，或翻译未启用，则返回原文
+ *
+ * 【重要】如果返回原文（翻译未生效），查看服务端日志了解具体跳过的原因：
+ *   - "Translation not configured" → 商家未配置百度翻译凭据
+ *   - "Translation disabled" → enable_auto_trans = 0
+ *   - "Translation failed" → 百度 API 调用异常
  */
 export async function translateText(options: TranslateOptions): Promise<string> {
   const { text, to } = options;
+  const opts = options as TranslateOptionsInternal;
 
   // 如果文本包含 HTML 标签，不翻译
-  if (containsHtml(text)) return text;
+  if (containsHtml(text)) {
+    console.log('[TranslateService] Skipped: text contains HTML');
+    return text;
+  }
 
   // 如果文本为空，不翻译
-  if (!text || !text.trim()) return text;
+  if (!text || !text.trim()) {
+    console.log('[TranslateService] Skipped: empty text');
+    return text;
+  }
 
-  // 获取翻译设置
-  const settings = await getTranslationSettings(options.businessId, options.businessSlug);
-  if (!settings || !settings.enabled || !settings.appid || !settings.secret) {
-    return text; // 翻译未启用或配置不完整
+  // 获取翻译设置（优先使用预取的，避免重复查询）
+  const settings = opts._settings ?? (await getTranslationSettings(options.businessId, options.businessSlug));
+
+  if (!settings) {
+    console.warn('[TranslateService] ⚠️ Translation skipped: No settings found for businessId:', options.businessId);
+    return text;
+  }
+
+  if (!settings.enabled) {
+    console.warn('[TranslateService] ⚠️ Translation skipped: enable_auto_trans is OFF for businessId:', options.businessId);
+    return text;
+  }
+
+  if (!settings.appid || !settings.secret) {
+    console.warn('[TranslateService] ⚠️ Translation skipped: Missing bd_trans_appid or bd_trans_secret for businessId:', options.businessId);
+    return text;
   }
 
   const targetBaiduLang = toBaiduLang(to);
-  // 如果目标语言与源语言代码相同，跳过（例如客服和访客都说同一种语言）
-  // 注意：这里不做"目标语言是中文就跳过"的限制，
-  // 因为翻译的核心场景正是：访客说外语 → 翻译成客服的语言（可能是中文）
+  console.log(`[TranslateService] Translating "${text.substring(0, 50)}..." → ${targetBaiduLang} (appid: ${settings.appid.substring(0, 4)}***)`);
 
   try {
-    console.log(`[TranslateService] Translating to ${targetBaiduLang}: "${text.substring(0, 50)}..."`);
     const translated = await callBaiduTranslate(text, targetBaiduLang, settings.appid, settings.secret);
     if (translated !== text) {
-      console.log(`[TranslateService] Translation result: "${translated.substring(0, 50)}..."`);
+      console.log(`[TranslateService] ✅ Translation result: "${translated.substring(0, 50)}..."`);
+    } else {
+      console.log(`[TranslateService] ⚡ Translation returned same text (already in target language?)`);
     }
     return translated;
   } catch (error) {
-    console.error('[TranslateService] Translation failed:', error);
+    console.error('[TranslateService] ❌ Translation API call failed:', error);
     return text; // 翻译异常，返回原文
   }
 }

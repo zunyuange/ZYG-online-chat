@@ -10,7 +10,7 @@ import * as sseService from '../services/sse-service'
 import * as queueService from '../services/queue-service'
 import * as transferService from '../services/transfer-service'
 import * as barkService from '@server/services/bark-service'
-import { translateText, isTranslationUseful } from '@server/services/translate-service'
+import { translateText, isTranslationUseful, getTranslationSettings } from '@server/services/translate-service'
 import { verifyToken } from '@server/module-auth/services/auth-service'
 import { getDb } from '@server/shared/db'
 
@@ -128,6 +128,40 @@ chatRoutes.put('/session/lang', async c => {
 })
 
 // ==========================================
+// Translation Status Route (调试用)
+// ==========================================
+
+// Get translation configuration status for a session's business
+chatRoutes.get('/translation-status', async c => {
+  try {
+    const sessionId = c.req.query('sessionId')
+    if (!sessionId) {
+      return c.json({ success: false, error: 'sessionId is required' }, 400)
+    }
+    const session = await chatService.getSession(sessionId)
+    if (!session) {
+      return c.json({ success: false, error: 'Session not found' }, 404)
+    }
+    const txSettings = await getTranslationSettings(session.businessId)
+    return c.json({
+      success: true,
+      data: {
+        businessId: session.businessId,
+        enabled: txSettings?.enabled ?? false,
+        hasAppid: !!txSettings?.appid,
+        hasSecret: !!txSettings?.secret,
+        defaultLang: txSettings?.defaultLang ?? 'unknown',
+        sessionLang: session.lang || 'not set',
+        canTranslate: !!(txSettings?.enabled && txSettings?.appid && txSettings?.secret && txSettings?.defaultLang),
+      }
+    })
+  } catch (error) {
+    console.error('Translation status error:', error)
+    return c.json({ success: false, error: 'Failed to get translation status' }, 500)
+  }
+})
+
+// ==========================================
 // Message Routes
 // ==========================================
 
@@ -165,25 +199,27 @@ chatRoutes.post('/messages', async c => {
     if (contentType === 'text') {
       const session = await chatService.getSession(sessionId);
       if (session) {
-        const db = getDb();
-        const businessSettings = await db.get<{ enable_auto_trans: number; default_lang: string }>(
-          'SELECT enable_auto_trans, default_lang FROM staff_users WHERE id = ?',
-          [session.businessId]
-        );
-        if (businessSettings?.enable_auto_trans === 1 && businessSettings?.default_lang) {
-          console.log('[ChatRoutes] Auto-translating visitor message to business lang:', businessSettings.default_lang);
+        const txSettings = await getTranslationSettings(session.businessId);
+        if (txSettings?.enabled && txSettings?.appid && txSettings?.secret && txSettings?.defaultLang) {
+          console.log('[ChatRoutes] Auto-translating visitor message, to:', txSettings.defaultLang,
+            'businessId:', session.businessId);
           translatedContent = await translateText({
             text: content,
-            to: businessSettings.default_lang,
+            to: txSettings.defaultLang,
             businessId: session.businessId,
-          });
+            _settings: txSettings as any,
+          } as any);
           if (!isTranslationUseful(content, translatedContent)) {
             translatedContent = undefined; // 翻译无变化，不存储
             console.log('[ChatRoutes] Translation not useful (same as original)');
           }
         } else {
-          console.log('[ChatRoutes] Translation skipped: enable_auto_trans=',
-            businessSettings?.enable_auto_trans, 'default_lang=', businessSettings?.default_lang);
+          console.warn('[ChatRoutes] ⚠️ Translation NOT configured for businessId:', session.businessId,
+            '| enabled:', txSettings?.enabled,
+            '| appid:', txSettings?.appid ? 'YES' : 'NO',
+            '| secret:', txSettings?.secret ? 'YES' : 'NO',
+            '| defaultLang:', txSettings?.defaultLang || 'NONE');
+          console.warn('[ChatRoutes] 💡 Please configure Baidu Translate in Staff Settings (bd_trans_appid + bd_trans_secret + enable_auto_trans=1)');
         }
       }
     }
