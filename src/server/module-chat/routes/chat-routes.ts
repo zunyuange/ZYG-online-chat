@@ -148,18 +148,24 @@ chatRoutes.get('/translation-status', async c => {
     // 详细诊断：告诉调用方具体缺少什么
     let diagnoseMessage = '';
     let diagnoseAction = '';
+    let translationProvider = '';
     if (!txSettings) {
       diagnoseMessage = '未找到翻译设置（商家账号可能不存在）';
       diagnoseAction = '请确认 staff_users 表中存在该商家';
     } else if (!txSettings.enabled) {
       diagnoseMessage = '翻译功能未启用（enable_auto_trans = 0）';
       diagnoseAction = '请在后台「系统设置」中打开自动翻译开关';
-    } else if (!txSettings.appid || !txSettings.secret) {
-      diagnoseMessage = '百度翻译 API 凭据未配置';
-      diagnoseAction = '请在 https://fanyi-api.baidu.com/ 注册获取 App ID 和密钥，然后在后台「系统设置」中填入';
-    } else {
-      diagnoseMessage = '翻译已正确配置，可以正常使用';
+    } else if (!txSettings.defaultLang) {
+      diagnoseMessage = '未设置默认语言（default_lang 为空）';
+      diagnoseAction = '请在后台「系统设置」中设置默认语言';
+    } else if (txSettings.appid && txSettings.secret) {
+      diagnoseMessage = '翻译已正确配置（百度翻译 API）';
       diagnoseAction = '';
+      translationProvider = 'baidu';
+    } else {
+      diagnoseMessage = '翻译已启用（使用 MyMemory 免费翻译）';
+      diagnoseAction = 'MyMemory 每天可免费翻译 1000 词，如需更多请在后台配置百度翻译 API 凭据';
+      translationProvider = 'mymemory';
     }
     
     return c.json({
@@ -171,7 +177,8 @@ chatRoutes.get('/translation-status', async c => {
         hasSecret: !!txSettings?.secret,
         defaultLang: txSettings?.defaultLang ?? 'unknown',
         sessionLang: session.lang || 'not set',
-        canTranslate: !!(txSettings?.enabled && txSettings?.appid && txSettings?.secret && txSettings?.defaultLang),
+        canTranslate: !!(txSettings?.enabled && txSettings?.defaultLang),
+        translationProvider: translationProvider || 'none',
         diagnoseMessage,
         diagnoseAction,
       }
@@ -201,17 +208,9 @@ chatRoutes.get('/translation-test', async c => {
     if (!txSettings.enabled) {
       return c.json({ success: false, error: 'Translation is DISABLED', details: '请在商家设置中将 enable_auto_trans 设为 1' }, 400)
     }
-    if (!txSettings.appid || !txSettings.secret) {
-      return c.json({
-        success: false,
-        error: 'Baidu Translate credentials MISSING',
-        details: '请在商家设置中填写 bd_trans_appid 和 bd_trans_secret',
-        hasAppid: !!txSettings.appid,
-        hasSecret: !!txSettings.secret,
-      }, 400)
-    }
 
     // Test: translate "Hello" → Chinese, "你好" → English
+    // translateText() automatically selects provider: Baidu (if credentials) or MyMemory (free fallback)
     const testText = 'Hello'
     const targetLang = txSettings.defaultLang || 'zh-CN'
     const startTime = Date.now()
@@ -303,9 +302,10 @@ chatRoutes.post('/messages', async c => {
       const session = await chatService.getSession(sessionId);
       if (session) {
         const txSettings = await getTranslationSettings(session.businessId);
-        if (txSettings?.enabled && txSettings?.appid && txSettings?.secret && txSettings?.defaultLang) {
+        if (txSettings?.enabled && txSettings?.defaultLang) {
           console.log('[ChatRoutes] Auto-translating visitor message, to:', txSettings.defaultLang,
-            'businessId:', session.businessId);
+            'businessId:', session.businessId,
+            'hasBaidu:', !!(txSettings.appid && txSettings.secret));
           translatedContent = await translateText({
             text: content,
             to: txSettings.defaultLang,
@@ -315,14 +315,13 @@ chatRoutes.post('/messages', async c => {
           if (!isTranslationUseful(content, translatedContent)) {
             translatedContent = undefined; // 翻译无变化，不存储
             console.log('[ChatRoutes] Translation not useful (same as original)');
+          } else {
+            console.log('[ChatRoutes] ✅ Visitor message translated:', translatedContent.substring(0, 60));
           }
         } else {
           console.warn('[ChatRoutes] ⚠️ Translation NOT configured for businessId:', session.businessId,
-            '| enabled:', txSettings?.enabled,
-            '| appid:', txSettings?.appid ? 'YES' : 'NO',
-            '| secret:', txSettings?.secret ? 'YES' : 'NO',
-            '| defaultLang:', txSettings?.defaultLang || 'NONE');
-          console.warn('[ChatRoutes] 💡 Please configure Baidu Translate in Staff Settings (bd_trans_appid + bd_trans_secret + enable_auto_trans=1)');
+            '| txSettings:', txSettings ? `enabled=${txSettings.enabled} defaultLang=${txSettings.defaultLang}` : 'NULL');
+          console.warn('[ChatRoutes] 💡 Enable auto_translate in Staff Settings (free MyMemory fallback works without Baidu API keys!)');
         }
       }
     }
