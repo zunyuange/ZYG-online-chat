@@ -222,6 +222,7 @@ async function callBaiduTranslate(
 
 /**
  * 获取商家的翻译设置
+ * 支持多层级：下级客服继承上级商家的翻译凭据（appid/secret），但使用自己的语言偏好
  */
 async function getTranslationSettings(businessId?: number, businessSlug?: string) {
   const db = getDb();
@@ -233,8 +234,9 @@ async function getTranslationSettings(businessId?: number, businessSlug?: string
       bd_trans_appid: string | null;
       bd_trans_secret: string | null;
       default_lang: string;
+      business_id: number;
     }>(
-      'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang FROM staff_users WHERE id = ?',
+      'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang, business_id FROM staff_users WHERE id = ?',
       [businessId]
     );
   } else if (businessSlug) {
@@ -243,17 +245,42 @@ async function getTranslationSettings(businessId?: number, businessSlug?: string
       bd_trans_appid: string | null;
       bd_trans_secret: string | null;
       default_lang: string;
+      business_id: number;
     }>(
-      'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang FROM staff_users WHERE business_slug = ?',
+      'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang, business_id FROM staff_users WHERE business_slug = ?',
       [businessSlug]
     );
   }
 
   if (!settings) return null;
+
+  // 如果当前用户没有翻译凭据（下级客服），从上级商家继承
+  let appid = settings.bd_trans_appid;
+  let secret = settings.bd_trans_secret;
+  let enabled = settings.enable_auto_trans === 1;
+
+  if ((!appid || !secret) && settings.business_id > 0) {
+    // 下级客服：从上级商家账号获取翻译凭据
+    const parent = await db.get<{
+      enable_auto_trans: number;
+      bd_trans_appid: string | null;
+      bd_trans_secret: string | null;
+    }>(
+      'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret FROM staff_users WHERE id = ?',
+      [settings.business_id]
+    );
+    if (parent) {
+      enabled = parent.enable_auto_trans === 1;
+      appid = parent.bd_trans_appid;
+      secret = parent.bd_trans_secret;
+      console.log('[TranslateService] Using parent business credentials for staff user:', businessId);
+    }
+  }
+
   return {
-    enabled: settings.enable_auto_trans === 1,
-    appid: settings.bd_trans_appid,
-    secret: settings.bd_trans_secret,
+    enabled,
+    appid,
+    secret,
     defaultLang: settings.default_lang,
   };
 }

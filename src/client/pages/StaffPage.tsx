@@ -884,7 +884,31 @@ export function StaffPage() {
           {/* Language Selector */}
           <select
             value={locale}
-            onChange={(e) => setLocale(e.target.value as any)}
+            onChange={async (e) => {
+              const newLocale = e.target.value as any;
+              // 同步保存语言偏好到数据库（用于自动翻译目标语言）
+              try {
+                const langMap: Record<string, string> = {
+                  'zh-CN': 'zh-CN', 'en-US': 'en', 'jp': 'ja', 'kr': 'ko',
+                  'es': 'es', 'fr': 'fr', 'it': 'it', 'de': 'de', 'pt': 'pt',
+                  'vi': 'vi', 'ru': 'ru', 'id': 'id', 'th': 'th', 'ar': 'ar',
+                  'el': 'el', 'pl': 'pl', 'da': 'da', 'nl': 'nl', 'fi': 'fi',
+                  'tc': 'zh-CN',
+                };
+                const defaultLang = langMap[newLocale] || newLocale;
+                await fetch('/api/staff/language', {
+                  method: 'PUT',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
+                  },
+                  body: JSON.stringify({ lang: defaultLang }),
+                });
+              } catch (err) {
+                console.error('Failed to save language preference:', err);
+              }
+              setLocale(newLocale);
+            }}
             style={{
               padding: '4px 8px',
               borderRadius: '4px',

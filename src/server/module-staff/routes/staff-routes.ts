@@ -18,6 +18,7 @@ import * as sseService from '@server/module-chat/services/sse-service'
 import * as queueService from '@server/module-chat/services/queue-service'
 import { translateText, isTranslationUseful } from '@server/services/translate-service'
 import { verifyToken } from '@server/module-auth/services/auth-service'
+import { getDb } from '@server/shared/db'
 import { visitorFieldRoutes } from './visitor-field-routes'
 
 export const staffRoutes = new Hono()
@@ -942,5 +943,46 @@ staffRoutes.put('/profile', async c => {
   } catch (error) {
     console.error('Update profile error:', error)
     return c.json({ success: false, error: 'Failed to update profile' }, 500)
+  }
+})
+
+// Update own language preference (下级客服切换语言)
+staffRoutes.put('/language', async c => {
+  try {
+    const body = await c.req.json()
+    const { lang } = body
+    if (!lang) {
+      return c.json({ success: false, error: '缺少语言参数' }, 400)
+    }
+    const userId = getCtxNumber(c, 'userId')
+    if (!userId) return c.json({ success: false, error: 'Missing user id' }, 401)
+
+    const db = getDb()
+    await db.run(
+      'UPDATE staff_users SET default_lang = ?, updated_at = ? WHERE id = ?',
+      [lang, Date.now(), userId]
+    )
+    return c.json({ success: true, data: { default_lang: lang } })
+  } catch (error) {
+    console.error('Update language error:', error)
+    return c.json({ success: false, error: 'Failed to update language' }, 500)
+  }
+})
+
+// Get own language preference
+staffRoutes.get('/language', async c => {
+  try {
+    const userId = getCtxNumber(c, 'userId')
+    if (!userId) return c.json({ success: false, error: 'Missing user id' }, 401)
+
+    const db = getDb()
+    const row = await db.get<{ default_lang: string }>(
+      'SELECT default_lang FROM staff_users WHERE id = ?',
+      [userId]
+    )
+    return c.json({ success: true, data: { default_lang: row?.default_lang || 'zh-CN' } })
+  } catch (error) {
+    console.error('Get language error:', error)
+    return c.json({ success: false, error: 'Failed to get language' }, 500)
   }
 })

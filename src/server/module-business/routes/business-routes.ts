@@ -263,19 +263,21 @@ businessRoutes.post('/settings', requireAuth, async (c) => {
 
     const db = getDb();
     
-    let query = 'UPDATE staff_users SET enable_auto_trans = ?, bd_trans_appid = ?, bd_trans_secret = ?, default_lang = ?, updated_at = ? WHERE ';
-    let params: unknown[] = [enable_auto_trans ? 1 : 0, bd_trans_appid, bd_trans_secret, default_lang, Date.now()];
+    // 判断用户角色：只有商家主账号 (admin) 才能修改翻译凭据
+    let targetId: number | undefined;
+    let isOwner = true;
     
     if (business_id !== undefined && business_id > 0) {
-      query += 'id = ?';
-      params.push(business_id);
+      targetId = business_id;
     } else if (business_slug) {
-      query += 'business_slug = ?';
-      params.push(business_slug);
+      const biz = await db.get<{ id: number, business_id: number }>(
+        'SELECT id, business_id FROM staff_users WHERE business_slug = ?',
+        [business_slug]
+      );
+      if (biz) targetId = biz.id;
     } else {
       let businessId = c.get('businessId');
       
-      // businessId 可能是 0（超级管理员使用旧 token），需要重新从 token 解析
       if (businessId === 0) {
         const authHeader = c.req.header('Authorization');
         if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -287,19 +289,15 @@ businessRoutes.post('/settings', requireAuth, async (c) => {
         }
       }
       
-      // businessId 可能是 0 或 undefined，需要用 > 0 判断
       if (businessId !== undefined && businessId > 0) {
-        query += 'id = ?';
-        params.push(businessId);
+        targetId = businessId;
       } else {
-        // 没有 business context，回退到从 token 解析
         const authHeader = c.req.header('Authorization');
         if (authHeader && authHeader.startsWith('Bearer ')) {
           const token = authHeader.substring(7);
           const result = await verifyToken(token);
           if (result.valid && result.businessId !== undefined && result.businessId > 0) {
-            query += 'id = ?';
-            params.push(result.businessId);
+            targetId = result.businessId;
           } else {
             return c.json({ success: false, error: '无法确定商家身份，请重新登录' }, 400);
           }
@@ -309,9 +307,38 @@ businessRoutes.post('/settings', requireAuth, async (c) => {
       }
     }
 
-    await db.run(query, params);
+    if (!targetId) {
+      return c.json({ success: false, error: '无法确定商家身份' }, 400);
+    }
 
-    return c.json({ success: true });
+    // 检查是否为商家主账号 (business_id=0)
+    const userInfo = await db.get<{ business_id: number }>(
+      'SELECT business_id FROM staff_users WHERE id = ?',
+      [targetId]
+    );
+    if (userInfo && userInfo.business_id > 0) {
+      isOwner = false;
+    }
+
+    if (isOwner) {
+      // 商家主账号：可以更新所有翻译设置
+      await db.run(
+        'UPDATE staff_users SET enable_auto_trans = ?, bd_trans_appid = ?, bd_trans_secret = ?, default_lang = ?, updated_at = ? WHERE id = ?',
+        [enable_auto_trans ? 1 : 0, bd_trans_appid, bd_trans_secret, default_lang, Date.now(), targetId]
+      );
+      console.log('[POST /settings] Owner updated all settings for user:', targetId);
+    } else {
+      // 下级客服：只能更新自己的语言偏好
+      if (default_lang) {
+        await db.run(
+          'UPDATE staff_users SET default_lang = ?, updated_at = ? WHERE id = ?',
+          [default_lang, Date.now(), targetId]
+        );
+        console.log('[POST /settings] Staff updated language only for user:', targetId, 'lang:', default_lang);
+      }
+    }
+
+    return c.json({ success: true, data: { isOwner } });
   } catch (error) {
     console.error('Update business settings error:', error);
     return c.json({ success: false, error: 'Failed to update settings' }, 500);
