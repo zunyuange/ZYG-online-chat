@@ -309,6 +309,7 @@ async function createAllTables(database: Database): Promise<void> {
       'enable_auto_trans INTEGER NOT NULL DEFAULT 0, ' +
       'bd_trans_appid TEXT, ' +
       'bd_trans_secret TEXT, ' +
+      'bd_trans_token TEXT, ' +
       "default_lang TEXT NOT NULL DEFAULT 'zh-CN', " +
       'username TEXT NOT NULL UNIQUE, ' +
       'password_hash TEXT NOT NULL, ' +
@@ -469,16 +470,6 @@ async function createAllTables(database: Database): Promise<void> {
       'position INTEGER DEFAULT 0, ' +
       'remind_sent INTEGER DEFAULT 0, ' +
       'evaluation_sent INTEGER DEFAULT 0, ' +
-      'created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))'
-  )
-
-  // Create visitor_blacklist table for blacklisted visitors
-  await database.exec(
-    'CREATE TABLE IF NOT EXISTS visitor_blacklist (' +
-      'id INTEGER PRIMARY KEY AUTOINCREMENT, ' +
-      'visiter_id TEXT NOT NULL UNIQUE, ' +
-      'business_id INTEGER DEFAULT 0, ' +
-      'reason TEXT, ' +
       'created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))'
   )
 
@@ -690,6 +681,9 @@ async function runMigrations(database: Database): Promise<void> {
 
   // Add bd_trans_secret to staff_users table (翻译密钥列 - 与旧版 bd_trans_token 对齐)
   await addColumnIfMissing('staff_users', 'bd_trans_secret', 'TEXT')
+
+  // Add bd_trans_token to staff_users table (旧版翻译密钥列，保持兼容)
+  await addColumnIfMissing('staff_users', 'bd_trans_token', 'TEXT')
 
   console.log('[Database] Migrations complete')
 }
