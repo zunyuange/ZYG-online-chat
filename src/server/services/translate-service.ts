@@ -265,11 +265,11 @@ async function getTranslationSettings(businessId?: number, businessSlug?: string
 export async function translateText(options: TranslateOptions): Promise<string> {
   const { text, to } = options;
 
-  // 如果目标语言是中文，不需要翻译
-  if (to === 'zh-CN' || to === 'cn') return text;
-
   // 如果文本包含 HTML 标签，不翻译
   if (containsHtml(text)) return text;
+
+  // 如果文本为空，不翻译
+  if (!text || !text.trim()) return text;
 
   // 获取翻译设置
   const settings = await getTranslationSettings(options.businessId, options.businessSlug);
@@ -278,7 +278,9 @@ export async function translateText(options: TranslateOptions): Promise<string> 
   }
 
   const targetBaiduLang = toBaiduLang(to);
-  if (targetBaiduLang === 'zh') return text; // 不翻译成中文（但保留逻辑）
+  // 如果目标语言与源语言代码相同，跳过（例如客服和访客都说同一种语言）
+  // 注意：这里不做"目标语言是中文就跳过"的限制，
+  // 因为翻译的核心场景正是：访客说外语 → 翻译成客服的语言（可能是中文）
 
   try {
     console.log(`[TranslateService] Translating to ${targetBaiduLang}: "${text.substring(0, 50)}..."`);
