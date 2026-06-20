@@ -167,21 +167,22 @@ export function ChatWindow({
   };
 
   const handleLangSelect = async (selectedLocale: string) => {
-    if (setLocale) {
-      setLocale(selectedLocale);
-    }
-    // 同步更新 session.lang 到数据库，确保客服回复时能翻译为正确的语言
+    setShowLangModal(false);
+
+    // 将 UI locale 映射为数据库 lang 字段值（BCP 47 格式）
+    const langMap: Record<string, string> = {
+      'zh-CN': 'zh-CN', 'en-US': 'en-US', 'jp': 'ja', 'kr': 'ko',
+      'es': 'es', 'fr': 'fr', 'it': 'it', 'de': 'de', 'pt': 'pt',
+      'vi': 'vi', 'ru': 'ru', 'id': 'id', 'th': 'th', 'ar': 'ar',
+      'el': 'el', 'pl': 'pl', 'da': 'da', 'nl': 'nl', 'fi': 'fi',
+      'tc': 'zh-TW',
+    };
+    const dbLang = langMap[selectedLocale] || selectedLocale;
+
+    // ★ 关键修复: 先异步更新 session.lang 到数据库，再触发页面重载
+    // 否则 reload 会中断 PUT 请求，导致数据库中的 lang 没有更新
     if (session?.id) {
       try {
-        // 将 UI locale 映射为数据库 lang 字段值（BCP 47 格式）
-        const langMap: Record<string, string> = {
-          'zh-CN': 'zh-CN', 'en-US': 'en-US', 'jp': 'ja', 'kr': 'ko',
-          'es': 'es', 'fr': 'fr', 'it': 'it', 'de': 'de', 'pt': 'pt',
-          'vi': 'vi', 'ru': 'ru', 'id': 'id', 'th': 'th', 'ar': 'ar',
-          'el': 'el', 'pl': 'pl', 'da': 'da', 'nl': 'nl', 'fi': 'fi',
-          'tc': 'zh-TW',
-        };
-        const dbLang = langMap[selectedLocale] || selectedLocale;
         await fetch('/api/chat/session/lang', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -192,7 +193,10 @@ export function ChatWindow({
         console.error('[ChatWindow] Failed to update session lang:', err);
       }
     }
-    setShowLangModal(false);
+
+    // 保存语言到 localStorage，然后重载页面应用新语言
+    localStorage.setItem('chat_locale', selectedLocale);
+    window.location.reload();
   };
 
   return (

@@ -596,24 +596,32 @@ async function createAllTables(database: Database): Promise<void> {
  */
 async function runMigrations(database: Database): Promise<void> {
   // Helper to add column if it doesn't exist
+  // critical=true means the app cannot function without this column; errors will be thrown
   async function addColumnIfMissing(
     table: string,
     column: string,
-    definition: string
+    definition: string,
+    critical: boolean = false
   ): Promise<void> {
     try {
       const columns = await database.all<{ name: string }>(`PRAGMA table_info(${table})`)
       if (!columns.some(c => c.name === column)) {
         await database.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
         console.log(`[Migration] Added column ${column} to ${table}`)
+      } else {
+        console.log(`[Migration] Column ${column} already exists in ${table}`)
       }
     } catch (error) {
-      console.error(`[Migration] Failed to add column ${column} to ${table}:`, error)
+      const msg = `[Migration] ❌ CRITICAL: Failed to add column ${column} to ${table}: ${error}`
+      console.error(msg)
+      if (critical) {
+        throw new Error(msg)
+      }
     }
   }
 
-  // Add business_id to sessions table (多租户隔离：每个会话归属的商家主体)
-  await addColumnIfMissing('sessions', 'business_id', 'INTEGER NOT NULL DEFAULT 1')
+  // Add business_id to sessions table (多租户隔离：每个会话归属的商家主体) — CRITICAL
+  await addColumnIfMissing('sessions', 'business_id', 'INTEGER NOT NULL DEFAULT 1', true)
 
   // Add business_id index for sessions
   try {
@@ -686,10 +694,10 @@ async function runMigrations(database: Database): Promise<void> {
   await addColumnIfMissing('staff_users', 'bd_trans_token', 'TEXT')
 
   // CRITICAL: Add missing columns that getBusinessBySlug() depends on
-  await addColumnIfMissing('staff_users', 'business_id', 'INTEGER NOT NULL DEFAULT 0')
-  await addColumnIfMissing('staff_users', 'enable_auto_trans', 'INTEGER NOT NULL DEFAULT 0')
+  await addColumnIfMissing('staff_users', 'business_id', 'INTEGER NOT NULL DEFAULT 0', true)
+  await addColumnIfMissing('staff_users', 'enable_auto_trans', 'INTEGER NOT NULL DEFAULT 0', true)
   await addColumnIfMissing('staff_users', 'bd_trans_appid', 'TEXT')
-  await addColumnIfMissing('staff_users', 'default_lang', "TEXT NOT NULL DEFAULT 'zh-CN'")
+  await addColumnIfMissing('staff_users', 'default_lang', "TEXT NOT NULL DEFAULT 'zh-CN'", true)
 
   // Fix existing staff_users data: ensure admin user has correct role and business_id
   await ensureDefaultStaffData(database)
