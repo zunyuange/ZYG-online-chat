@@ -382,8 +382,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const result = await response.json();
 
       if (result.success && result.data) {
-        // Message will be added via SSE/polling, but add immediately for better UX
-        get().addMessage(result.data);
+        // 服务器返回 { message, autoReply? }，分别处理
+        if (result.data.message) {
+          get().addMessage(result.data.message);
+        }
+        if (result.data.autoReply) {
+          get().addMessage(result.data.autoReply);
+        }
         set({ sending: false });
       } else {
         set({ error: result.error || 'Failed to send message', sending: false });
@@ -495,21 +500,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({ sseConnected: true });
     };
 
-    // Handle generic messages (no event type)
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'message' && data.message) {
-          get().addMessage(data.message);
-        } else if (data.type === 'session_update' && data.session) {
-          get().updateSession(data.session);
-        }
-      } catch (error) {
-        console.error('SSE parse error:', error);
-      }
-    };
-
-    // Handle specific event types
+    // Handle named 'message' events (server sends event: message)
     eventSource.addEventListener('message', (event) => {
       try {
         const data = JSON.parse(event.data);

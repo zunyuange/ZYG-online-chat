@@ -332,25 +332,52 @@ chatRoutes.post('/messages', async c => {
       console.log('[ChatRoutes] 🤖 Searching robot knowledge for:', content.substring(0, 50),
         'lang:', visitorLang, 'businessId:', session.businessId);
 
-      const knowledge = await searchKnowledge(content, visitorLang);
+      // 先用精确语言匹配，失败则用基础语言降级（en-US → en）
+      let knowledge = await searchKnowledge(content, visitorLang);
+      if (!knowledge) {
+        const baseLang = (visitorLang || '').split('-')[0];
+        if (baseLang && baseLang !== visitorLang) {
+          console.log('[ChatRoutes] 🤖 Fallback search with base lang:', baseLang);
+          knowledge = await searchKnowledge(content, baseLang);
+        }
+      }
       if (knowledge) {
         console.log('[ChatRoutes] ✅ Robot matched! keyword:', knowledge.keyword,
           '| answer:', knowledge.answer.substring(0, 60));
 
-        // 翻译自动回复为访客语言
+        // 翻译自动回复：智能选择目标语言
+        // - 如果答案语言 = 访客语言：翻译到客服默认语言（客服需要看翻译版本）
+        // - 如果答案语言 ≠ 访客语言：翻译到访客语言（访客需要理解回复内容）
         let staffTranslated: string | undefined;
         const txSettings = await getTranslationSettings(session.businessId);
-        if (txSettings?.enabled && txSettings?.appid && txSettings?.secret && visitorLang) {
-          console.log('[ChatRoutes] 🤖 Translating robot reply to visitor lang:', visitorLang);
-          staffTranslated = await translateText({
-            text: knowledge.answer,
-            to: visitorLang,
-            businessId: session.businessId,
-            _settings: txSettings as any,
-          } as any);
-          if (!isTranslationUseful(knowledge.answer, staffTranslated)) {
-            staffTranslated = undefined;
-            console.log('[ChatRoutes] Robot reply translation not useful');
+        if (txSettings?.enabled && txSettings?.appid && txSettings?.secret) {
+          // 规范化语言比较：提取基础语言码（en-US → en）
+          const baseLang = (lang: string) => (lang || 'en').split('-')[0].toLowerCase();
+          const knowledgeBaseLang = baseLang(knowledge.lang);
+          const visitorBaseLang = baseLang(visitorLang);
+          
+          const targetLang = knowledgeBaseLang === visitorBaseLang
+            ? txSettings.defaultLang    // 答案已是访客语言 → 翻译到客服默认语言
+            : visitorLang;              // 答案不是访客语言 → 翻译到访客语言
+          
+          // 只有当目标基础语言和答案基础语言不同时才翻译
+          if (targetLang && baseLang(targetLang) !== knowledgeBaseLang) {
+            console.log('[ChatRoutes] 🤖 Translating robot reply:', knowledge.answer.substring(0, 40),
+              'from', knowledgeBaseLang, '→', baseLang(targetLang), '(target:', targetLang, ')');
+            staffTranslated = await translateText({
+              text: knowledge.answer,
+              to: targetLang,
+              businessId: session.businessId,
+              _settings: txSettings as any,
+            } as any);
+            if (!isTranslationUseful(knowledge.answer, staffTranslated)) {
+              staffTranslated = undefined;
+              console.log('[ChatRoutes] Robot reply translation not useful (same as original)');
+            } else {
+              console.log('[ChatRoutes] ✅ Robot reply translated:', staffTranslated?.substring(0, 40));
+            }
+          } else {
+            console.log('[ChatRoutes] 🤖 Skipping translation: already in target language (base:', knowledgeBaseLang, ')');
           }
         }
 
