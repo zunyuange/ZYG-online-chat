@@ -3,6 +3,7 @@
  */
 
 import type { Session } from '@shared/types';
+import { useMemo } from 'react';
 import { UnreadBadge } from './UnreadBadge';
 
 interface SessionWithPreview extends Session {
@@ -22,6 +23,27 @@ interface SessionListProps {
   t?: (key: string) => string;
 }
 
+/** 头像背景色板 — 按首字符哈希取色 */
+const AVATAR_COLORS = [
+  '#ff6b6b', '#f06595', '#cc5de8', '#845ef7',
+  '#5c7cfa', '#339af0', '#22b8cf', '#20c997',
+  '#51cf66', '#94d82d', '#fcc419', '#ff922b',
+];
+
+const getAvatarColor = (name: string) => {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+};
+
+const getAvatarChar = (name: string) => {
+  // 取第一个有意义的字符（汉字/字母/数字）
+  const match = name.match(/[\u4e00-\u9fff\w]/);
+  return match ? match[0].toUpperCase() : '?';
+};
+
 export function SessionList({
   sessions,
   currentSessionId,
@@ -30,6 +52,14 @@ export function SessionList({
   staffList = [],
   t = (s: string) => s,
 }: SessionListProps) {
+  const staffMap = useMemo(() => {
+    const map: Record<number, { name: string; username: string }> = {};
+    for (const s of staffList) {
+      map[s.id] = { name: s.name, username: s.username };
+    }
+    return map;
+  }, [staffList]);
+
   const formatTime = (date: Date) => {
     const now = new Date();
     const diff = now.getTime() - new Date(date).getTime();
@@ -46,141 +76,340 @@ export function SessionList({
 
   const getLastMessagePreview = (session: SessionWithPreview) => {
     if (!session.lastMessage) return t('no_messages');
-
     const { content, contentType } = session.lastMessage;
     switch (contentType) {
       case 'image':
-        return t('image_placeholder');
+        return '🖼 ' + t('image_placeholder');
       case 'video':
-        return t('video_placeholder');
+        return '🎬 ' + t('video_placeholder');
       default:
-        return content.length > 30 ? `${content.slice(0, 30)}...` : content;
+        return content.length > 28 ? `${content.slice(0, 28)}…` : content;
     }
   };
 
   const getAssignedStaffName = (assignedStaffId: number | null) => {
-    if (!assignedStaffId || staffList.length === 0) return null;
-    const staff = staffList.find((s) => s.id === assignedStaffId);
+    if (!assignedStaffId) return null;
+    const staff = staffMap[assignedStaffId];
     return staff ? staff.name || staff.username : null;
   };
+
+  // ============ Style Definitions ============
 
   const containerStyle: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
-    backgroundColor: '#fff',
-    borderRight: '1px solid #e8e8e8',
+    backgroundColor: '#fafbfc',
+    borderRight: '1px solid #e8ecf1',
   };
 
   const headerStyle: React.CSSProperties = {
-    padding: '16px',
-    borderBottom: '1px solid #e8e8e8',
-    fontSize: '16px',
-    fontWeight: 500,
+    padding: '16px 20px',
+    borderBottom: '1px solid #e8ecf1',
+    fontSize: '15px',
+    fontWeight: 600,
+    color: '#1a1a2e',
+    letterSpacing: '0.3px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    backgroundColor: '#fff',
+  };
+
+  const headerCountBadge: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: '22px',
+    height: '22px',
+    padding: '0 6px',
+    fontSize: '12px',
+    fontWeight: 600,
+    color: '#5c7cfa',
+    backgroundColor: '#edf2ff',
+    borderRadius: '11px',
+    marginLeft: 'auto',
   };
 
   const listStyle: React.CSSProperties = {
     flex: 1,
     overflowY: 'auto',
+    padding: '8px 10px',
   };
 
-  const itemStyle = (isActive: boolean): React.CSSProperties => ({
-    padding: '12px 16px',
-    borderBottom: '1px solid #f0f0f0',
+  const itemOuterStyle = (isActive: boolean): React.CSSProperties => ({
+    position: 'relative' as const,
+    marginBottom: '4px',
+    borderRadius: '10px',
     cursor: 'pointer',
-    backgroundColor: isActive ? '#e6f7ff' : 'transparent',
-    position: 'relative',
-    transition: 'background-color 0.2s',
+    backgroundColor: isActive ? '#fff' : 'transparent',
+    boxShadow: isActive
+      ? '0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px rgba(92,124,250,0.15)'
+      : 'none',
+    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+    overflow: 'hidden',
   });
 
-  const nameStyle: React.CSSProperties = {
-    fontSize: '14px',
-    fontWeight: 500,
-    color: '#333',
-    marginBottom: '4px',
+  const activeBarStyle = (isActive: boolean): React.CSSProperties => ({
+    position: 'absolute' as const,
+    left: 0,
+    top: '10px',
+    bottom: '10px',
+    width: '3px',
+    borderRadius: '0 3px 3px 0',
+    backgroundColor: isActive ? '#5c7cfa' : 'transparent',
+    transition: 'background-color 0.3s',
+  });
+
+  const itemInnerStyle: React.CSSProperties = {
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: '12px',
+    padding: '12px 14px',
+  };
+
+  const avatarStyle = (name: string): React.CSSProperties => ({
+    flexShrink: 0,
+    width: '40px',
+    height: '40px',
+    borderRadius: '10px',
+    backgroundColor: getAvatarColor(name),
+    color: '#fff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '17px',
+    fontWeight: 700,
+    letterSpacing: '0.5px',
+    lineHeight: 1,
+  });
+
+  const contentStyle: React.CSSProperties = {
+    flex: 1,
+    minWidth: 0,
+  };
+
+  const nameRowStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '5px',
+    gap: '8px',
+  };
+
+  const visitorNameStyle: React.CSSProperties = {
+    fontSize: '14px',
+    fontWeight: 600,
+    color: '#1a1a2e',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  };
+
+  const timeStyle: React.CSSProperties = {
+    fontSize: '11px',
+    color: '#adb5bd',
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
+  };
+
+  const metaRowStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
+  };
+
+  const statusDotStyle = (status: string): React.CSSProperties => ({
+    width: '7px',
+    height: '7px',
+    borderRadius: '50%',
+    backgroundColor: status === 'active' ? '#51cf66' : '#ced4da',
+    flexShrink: 0,
+    boxShadow: status === 'active' ? '0 0 0 2px rgba(81,207,102,0.2)' : 'none',
+  });
+
+  const staffBadgeStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    padding: '2px 8px',
+    fontSize: '11px',
+    fontWeight: 500,
+    color: '#5c7cfa',
+    backgroundColor: '#edf2ff',
+    borderRadius: '6px',
+    maxWidth: '140px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  };
+
+  const businessBadgeStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '3px',
+    padding: '2px 8px',
+    fontSize: '11px',
+    fontWeight: 500,
+    color: '#722ed1',
+    backgroundColor: '#f9f0ff',
+    borderRadius: '6px',
+    maxWidth: '140px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   };
 
   const previewStyle: React.CSSProperties = {
     fontSize: '12px',
-    color: '#999',
+    color: '#868e96',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
-    paddingRight: '20px',
-  };
-
-  const timeStyle: React.CSSProperties = {
-    fontSize: '12px',
-    color: '#999',
+    marginTop: '5px',
+    lineHeight: '1.3',
   };
 
   const emptyStyle: React.CSSProperties = {
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
-    color: '#999',
-    fontSize: '14px',
+    color: '#adb5bd',
+    fontSize: '13px',
+    gap: '10px',
   };
 
   const loadingStyle: React.CSSProperties = {
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '20px',
-    color: '#999',
-    fontSize: '14px',
+    padding: '40px 20px',
+    color: '#adb5bd',
+    fontSize: '13px',
+    gap: '10px',
   };
+
+  // ============ Render ============
 
   if (loading) {
     return (
       <div style={containerStyle}>
-        <div style={headerStyle}>{t('sessions')}</div>
-        <div style={loadingStyle}>{t('loading')}</div>
+        <div style={headerStyle}>
+          {t('sessions')}
+        </div>
+        <div style={loadingStyle}>
+          <div className="session-list-spinner" style={{
+            width: '28px',
+            height: '28px',
+            border: '3px solid #e8ecf1',
+            borderTopColor: '#5c7cfa',
+            borderRadius: '50%',
+            animation: 'sessionListSpin 0.7s linear infinite',
+          }} />
+          {t('loading')}
+          <style>{`@keyframes sessionListSpin { to { transform: rotate(360deg); } }`}</style>
+        </div>
       </div>
     );
   }
 
   return (
     <div style={containerStyle}>
-      <div style={headerStyle}>{t('sessions')} ({sessions.length})</div>
+      <div style={headerStyle}>
+        {t('sessions')}
+        <span style={headerCountBadge}>{sessions.length}</span>
+      </div>
       <div style={listStyle}>
         {sessions.length === 0 ? (
-          <div style={emptyStyle}>{t('no_sessions')}</div>
+          <div style={emptyStyle}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ced4da" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            {t('no_sessions')}
+          </div>
         ) : (
           sessions.map((session) => {
+            const isActive = session.id === currentSessionId;
             const assignedStaffName = getAssignedStaffName(session.assignedStaffId || null);
+            const sessionTime = session.lastMessageAt || session.createdAt;
+
             return (
               <div
                 key={session.id}
-                style={itemStyle(session.id === currentSessionId)}
+                style={itemOuterStyle(isActive)}
                 onClick={() => onSelect(session.id)}
+                onMouseEnter={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = '#f0f4ff';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
               >
-                <div style={nameStyle}>
-                  <span>{session.visitorName}</span>
-                  <span style={timeStyle}>
-                    {session.lastMessageAt
-                      ? formatTime(session.lastMessageAt)
-                      : formatTime(session.createdAt)}
-                  </span>
-                </div>
-                {/* 商家归属标识：通过 business_slug 绑定，确保会话归属正确商家 */}
-                {session.businessName && (
-                  <div style={{ fontSize: '11px', color: '#722ed1', marginBottom: '4px' }}>
-                    🏢 {session.businessName}
+                {/* 左侧激活指示条 */}
+                <div style={activeBarStyle(isActive)} />
+
+                <div style={itemInnerStyle}>
+                  {/* 头像 */}
+                  <div style={avatarStyle(session.visitorName)}>
+                    {getAvatarChar(session.visitorName)}
                   </div>
-                )}
-                <div style={previewStyle}>
-                  {getLastMessagePreview(session)}
-                </div>
-                {assignedStaffName && (
-                  <div style={{ fontSize: '11px', color: '#1890ff', marginTop: '4px' }}>
-                    {t('staff')}: {assignedStaffName}
+
+                  {/* 内容区 */}
+                  <div style={contentStyle}>
+                    {/* 第一行：访客名 + 时间 */}
+                    <div style={nameRowStyle}>
+                      <span style={visitorNameStyle}>
+                        {session.visitorName}
+                      </span>
+                      <span style={timeStyle}>
+                        {formatTime(sessionTime)}
+                      </span>
+                    </div>
+
+                    {/* 第二行：标签 + 状态 */}
+                    <div style={metaRowStyle}>
+                      {/* 会话状态 */}
+                      <span style={statusDotStyle(session.status)} title={session.status} />
+
+                      {/* 商家归属 */}
+                      {session.businessName && (
+                        <span style={businessBadgeStyle}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                            <polyline points="9 22 9 12 15 12 15 22"/>
+                          </svg>
+                          {session.businessName}
+                        </span>
+                      )}
+
+                      {/* 客服 */}
+                      {assignedStaffName && (
+                        <span style={staffBadgeStyle}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                          </svg>
+                          {assignedStaffName}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 第三行：消息预览 */}
+                    <div style={previewStyle}>
+                      {getLastMessagePreview(session)}
+                    </div>
                   </div>
-                )}
+                </div>
+
+                {/* 未读角标 */}
                 {session.unreadByStaff > 0 && (
                   <UnreadBadge count={session.unreadByStaff} />
                 )}

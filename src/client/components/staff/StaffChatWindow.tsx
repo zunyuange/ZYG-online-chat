@@ -67,29 +67,65 @@ export function StaffChatWindow({
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f6fa',
   };
 
   const headerStyle: React.CSSProperties = {
-    padding: '12px 16px',
-    borderBottom: '1px solid #e8e8e8',
+    padding: '14px 18px',
+    borderBottom: '1px solid #e8ecf1',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     flexShrink: 0,
+    backgroundColor: '#fff',
   };
 
   const infoStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: '10px',
+    minWidth: 0,
+    flex: 1,
+  };
+
+  const headerAvatarStyle: React.CSSProperties = {
+    width: '36px',
+    height: '36px',
+    borderRadius: '10px',
+    backgroundColor: '#5c7cfa',
+    color: '#fff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '15px',
+    fontWeight: 700,
+    flexShrink: 0,
   };
 
   const statusDotStyle = (status: string): React.CSSProperties => ({
     width: '8px',
     height: '8px',
     borderRadius: '50%',
-    backgroundColor: status === 'active' ? '#52c41a' : '#999',
+    backgroundColor: status === 'active' ? '#51cf66' : '#ced4da',
+    flexShrink: 0,
+    boxShadow: status === 'active' ? '0 0 0 3px rgba(81,207,102,0.25)' : 'none',
+    animation: status === 'active' ? 'pulseGreen 2s ease-in-out infinite' : 'none',
+  });
+
+  const actionBtnStyle = (color: string): React.CSSProperties => ({
+    padding: '5px 10px',
+    backgroundColor: 'transparent',
+    border: `1px solid ${color}`,
+    borderRadius: '6px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    color: color,
+    fontSize: '12px',
+    fontWeight: 500,
+    transition: 'all 0.15s',
+    whiteSpace: 'nowrap',
   });
 
   const placeholderStyle: React.CSSProperties = {
@@ -171,29 +207,47 @@ export function StaffChatWindow({
 
   return (
     <>
+      <style>{`
+        @keyframes pulseGreen {
+          0%, 100% { box-shadow: 0 0 0 3px rgba(81,207,102,0.25); }
+          50% { box-shadow: 0 0 0 6px rgba(81,207,102,0.1); }
+        }
+      `}</style>
       <div style={containerStyle}>
         <div style={headerStyle}>
           <div style={infoStyle}>
-            <span style={statusDotStyle(session.status)}></span>
-            <span style={{ fontWeight: 500, fontSize: '15px' }}>{session.visitorName}</span>
-            <span style={{ color: '#999', fontSize: '12px' }}>
-              {new Date(session.createdAt).toLocaleString(navigator.language || 'en', {
-                month: 'numeric',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </span>
+            {/* 访客头像 */}
+            <div style={headerAvatarStyle}>
+              {(session.visitorName?.match(/[\u4e00-\u9fff\w]/) || ['?'])[0].toUpperCase()}
+            </div>
+            {/* 状态点 + 名字 + 时间 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                <span style={statusDotStyle(session.status)} />
+                <span style={{ fontWeight: 600, fontSize: '15px', color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {session.visitorName}
+                </span>
+              </div>
+              <span style={{ color: '#adb5bd', fontSize: '11px', paddingLeft: '15px' }}>
+                {new Date(session.createdAt).toLocaleString(navigator.language || 'en', {
+                  month: 'numeric',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+            </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             {session.unreadByStaff > 0 && (
               <span
                 style={{
                   backgroundColor: '#ff4d4f',
                   color: '#fff',
-                  padding: '2px 8px',
-                  borderRadius: '10px',
-                  fontSize: '12px',
+                  padding: '3px 10px',
+                  borderRadius: '12px',
+                  fontSize: '11px',
+                  fontWeight: 600,
                 }}
               >
                 {session.unreadByStaff} {t('unread')}
@@ -202,21 +256,16 @@ export function StaffChatWindow({
             {onClearMessages && messages.length > 0 && (
               <button
                 onClick={onClearMessages}
-                style={{
-                  padding: '4px 8px',
-                  backgroundColor: 'transparent',
-                  border: '1px solid #ff4d4f',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  color: '#ff4d4f',
-                  fontSize: '12px',
-                }}
+                style={actionBtnStyle('#ff6b6b')}
                 title={t('clear_messages')}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#fff5f5';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
               >
-                <Trash2 size={12} />
+                <Trash2 size={13} />
                 {t('clear')}
               </button>
             )}
@@ -226,42 +275,30 @@ export function StaffChatWindow({
                   setShowTransferModal(true);
                   loadRecentRejections();
                 }}
-                style={{
-                  padding: '4px 8px',
-                  backgroundColor: 'transparent',
-                  border: '1px solid #1890ff',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  color: '#1890ff',
-                  fontSize: '12px',
+                style={actionBtnStyle('#5c7cfa')}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f0f4ff';
                 }}
-                title={t('session_transfer')}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
               >
-                <ArrowRightLeft size={12} />
+                <ArrowRightLeft size={13} />
                 {t('transfer')}
               </button>
             )}
-            {onEndSession && session?.status === 'active' && (
+            {onEndSession && (
               <button
                 onClick={onEndSession}
-                style={{
-                  padding: '4px 8px',
-                  backgroundColor: '#ff4d4f',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  color: '#fff',
-                  fontSize: '12px',
+                style={actionBtnStyle('#ff922b')}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#fff9f0';
                 }}
-                title={t('end_session')}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
               >
-                <LogOut size={12} />
+                <LogOut size={13} />
                 {t('end')}
               </button>
             )}
