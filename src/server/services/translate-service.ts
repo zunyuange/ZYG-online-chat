@@ -347,9 +347,12 @@ async function callBaiduTranslate(
   
   let response: Response;
   try {
-    response = await fetch(url);
-  } catch (fetchError) {
-    console.error('[TranslateService] ❌ Network error calling Baidu API:', fetchError);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8秒超时
+    response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+  } catch (fetchError: any) {
+    console.error('[TranslateService] ❌ Network error calling Baidu API:', fetchError?.name || 'Unknown', fetchError?.message || '');
     return text;
   }
 
@@ -431,13 +434,17 @@ async function callGoogleTranslate(
   
   let response: Response;
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8秒超时
     response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; CloudflareWorker/1.0)',
       },
+      signal: controller.signal,
     });
-  } catch (fetchError) {
-    console.error('[TranslateService-Google] ❌ Network error:', fetchError);
+    clearTimeout(timeoutId);
+  } catch (fetchError: any) {
+    console.error('[TranslateService-Google] ❌ Network error:', fetchError?.name || 'Unknown', fetchError?.message || '');
     return text; // 返回原文，让上层调用者尝试其他方案
   }
 
@@ -500,9 +507,12 @@ async function callMyMemoryTranslate(
   
   let response: Response;
   try {
-    response = await fetch(url);
-  } catch (fetchError) {
-    console.error('[TranslateService-MyMemory] ❌ Network error:', fetchError);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8秒超时
+    response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+  } catch (fetchError: any) {
+    console.error('[TranslateService-MyMemory] ❌ Network error:', fetchError?.name || 'Unknown', fetchError?.message || '');
     return text;
   }
 
@@ -605,10 +615,12 @@ export async function getTranslationSettings(businessId?: number, businessSlug?:
       [settings.business_id]
     );
     if (parent) {
-      enabled = parent.enable_auto_trans === 1;
+      // ⚠️ 只继承翻译凭据（appid/secret），不覆盖子客服自己的 enable_auto_trans 设置
+      // 子客服可以独立决定是否启用翻译（使用免费引擎如 Google/MyMemory）
       appid = parent.bd_trans_appid;
       secret = parent.bd_trans_secret;
-      console.log('[TranslateService] Using parent business credentials for staff user:', businessId);
+      console.log('[TranslateService] Using parent business credentials for staff user:', businessId,
+        '| sub-staff enabled:', enabled, '| parent enabled:', parent.enable_auto_trans === 1);
     }
   }
 
