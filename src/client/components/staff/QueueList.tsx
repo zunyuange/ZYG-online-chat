@@ -50,7 +50,14 @@ export function QueueList({ isOpen, onClose, onSelectSession, t = (s: string) =>
   }, [isOpen]);
 
   const getStatusLabel = (status: TaskStatus): string => {
-    return TASK_STATUS_LIST.find((s) => s.status === status)?.label || status;
+    // 使用 i18n 翻译键，支持多语言切换
+    const i18nKey = `status_${status}`;
+    const translated = t(i18nKey);
+    // 如果翻译键不存在（返回键名本身），回退到 TASK_STATUS_LIST 的硬编码标签
+    if (translated === i18nKey) {
+      return TASK_STATUS_LIST.find((s) => s.status === status)?.label || status;
+    }
+    return translated;
   };
 
   const getStatusColor = (status: TaskStatus): string => {
@@ -226,7 +233,7 @@ export function QueueList({ isOpen, onClose, onSelectSession, t = (s: string) =>
                   fontWeight: 500,
                 }}
               >
-                {waitingCount} {t('queue_waiting_suffix')}
+                {waitingCount}{t('waiting_count_template')}
               </span>
             )}
           </div>
