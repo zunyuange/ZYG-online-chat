@@ -268,6 +268,8 @@ async function createAllTables(database: Database): Promise<void> {
       'content_type TEXT NOT NULL, ' +
       'content TEXT NOT NULL, ' +
       'translated_content TEXT, ' +
+      'translate_engine TEXT, ' +
+      'translated_at INTEGER, ' +
       'thumbnail_url TEXT, ' +
       'file_name TEXT, ' +
       'file_size INTEGER, ' +
@@ -685,8 +687,10 @@ async function runMigrations(database: Database): Promise<void> {
     console.error('[Migration] Failed to ensure visitor_custom_fields table:', error)
   }
 
-  // Add translated_content to messages table (自动翻译功能)
+  // Add translated_content + translate_engine + translated_at to messages table (自动翻译功能)
   await addColumnIfMissing('messages', 'translated_content', 'TEXT')
+  await addColumnIfMissing('messages', 'translate_engine', 'TEXT')
+  await addColumnIfMissing('messages', 'translated_at', 'INTEGER')
 
   // Add missing columns that getBusinessBySlug() depends on
   await addColumnIfMissing('staff_users', 'business_id', 'INTEGER NOT NULL DEFAULT 0')

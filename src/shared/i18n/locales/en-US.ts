@@ -421,7 +421,7 @@ export const enUS = {
   settings_save_success: 'Saved successfully',
   settings_save_failed: 'Save failed',
   free_translation_available: 'Free auto-translation is enabled',
-  free_translation_desc: 'The system uses Google Translate + MyMemory free translation services, no API keys required. Toggle the switch above to auto-translate messages between both sides.',
+  free_translation_desc: 'The system uses SimplyTranslate AI + Google Translate + MyMemory free translation services, no API keys required. Toggle the switch above to auto-translate messages between both sides.',
   loading_text: 'Loading...',
   business_slug_placeholder: 'Business Slug',
 

@@ -98,7 +98,7 @@ export interface Message {
   contentType: ContentType;
   content: string;
   translatedContent?: string;  // 自动翻译后的内容
-  translateEngine?: string;    // 翻译引擎: 'google' | 'mymemory'
+  translateEngine?: string;    // 翻译引擎: 'simplytranslate' | 'google' | 'mymemory'
   translatedAt?: number;       // 翻译时间戳
   thumbnailUrl?: string;
   fileName?: string;

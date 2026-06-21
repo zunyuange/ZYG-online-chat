@@ -162,9 +162,9 @@ chatRoutes.get('/translation-status', async c => {
       diagnoseMessage = '未设置默认语言（default_lang 为空）';
       diagnoseAction = '请在后台「系统设置」中设置默认语言';
     } else {
-      diagnoseMessage = '翻译已启用（使用 Google + MyMemory 免费翻译）';
+      diagnoseMessage = '翻译已启用（使用 SimplyTranslate + Google + MyMemory 免费翻译）';
       diagnoseAction = '';
-      translationProvider = 'google+mymemory';
+      translationProvider = 'simplytranslate+google+mymemory';
     }
     
     return c.json({
@@ -172,8 +172,6 @@ chatRoutes.get('/translation-status', async c => {
       data: {
         businessId: session.businessId,
         enabled: txSettings?.enabled ?? false,
-        hasAppid: !!txSettings?.appid,
-        hasSecret: !!txSettings?.secret,
         defaultLang: txSettings?.defaultLang ?? 'unknown',
         sessionLang: session.lang || 'not set',
         canTranslate: !!(txSettings?.enabled && txSettings?.defaultLang),
@@ -209,13 +207,13 @@ chatRoutes.get('/translation-test', async c => {
     }
 
     // Test: translate "Hello" → Chinese, "你好" → English
-    // translateText() uses Google Translate → MyMemory (free fallback)
+    // translateText() uses SimplyTranslate AI → Google → MyMemory (free fallback chain)
     const testText = 'Hello'
     const targetLang = txSettings.defaultLang || 'zh-CN'
     const startTime = Date.now()
 
     console.log('[TranslationTest] Testing translation with:', testText, '→', targetLang)
-    const translated = await translateText({
+    const translateResult = await translateText({
       text: testText,
       to: targetLang,
       businessId: session.businessId,
@@ -223,16 +221,22 @@ chatRoutes.get('/translation-test', async c => {
     } as any)
 
     const elapsed = Date.now() - startTime
-    const success = translated !== testText
+    const translated = translateResult.text
+    const success = translateResult.success && translated !== testText
 
     // Also test reverse direction
-    const revTestText = '你好'
-    const revTranslated = success ? await translateText({
-      text: revTestText,
-      to: 'en-US',
-      businessId: session.businessId,
-      _settings: txSettings as any,
-    } as any) : ''
+    let revTranslated: string | undefined
+    let revSuccess = false
+    if (success) {
+      const revResult = await translateText({
+        text: '你好',
+        to: 'en-US',
+        businessId: session.businessId,
+        _settings: txSettings as any,
+      } as any)
+      revTranslated = revResult.text
+      revSuccess = revResult.success && revTranslated !== '你好'
+    }
 
     return c.json({
       success,
@@ -240,20 +244,21 @@ chatRoutes.get('/translation-test', async c => {
         businessId: session.businessId,
         defaultLang: txSettings.defaultLang,
         sessionLang: session.lang || 'unknown',
+        engine: translateResult.engine || 'none',
         apiTest: {
           request: `"${testText}" → ${targetLang}`,
           result: translated,
-          success: translated !== testText,
+          success,
           elapsedMs: elapsed,
         },
         reverseTest: success ? {
-          request: `"${revTestText}" → en-US`,
-          result: revTranslated,
-          success: revTranslated !== revTestText,
+          request: '"你好" → en-US',
+          result: revTranslated || '',
+          success: revSuccess,
         } : null,
         diagnostics: success
-          ? '✅ 翻译功能正常工作'
-          : `❌ 翻译失败: translateText返回了原文 "${translated.substring(0, 30)}"，请检查网络连接或翻译设置`,
+          ? `✅ 翻译功能正常 (引擎: ${translateResult.engine})`
+          : '❌ 翻译失败: 所有翻译引擎均无法完成翻译，请检查网络连接',
       }
     })
   } catch (error) {
@@ -892,7 +897,7 @@ chatRoutes.post('/messages/:id/translate', async c => {
         '| businessId:', row.business_id);
       return c.json({
         success: false,
-        error: `翻译引擎 ${translateResult.engine || '无'} 未能转换，Google/MyMemory 免费接口无法访问或返回相同文本`,
+        error: `翻译引擎 ${translateResult.engine || '无'} 未能转换，SimplyTranslate/Google/MyMemory 免费接口无法访问或返回相同文本`,
       }, 200)
     }
 

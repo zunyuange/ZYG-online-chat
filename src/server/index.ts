@@ -143,7 +143,27 @@ const app = new Hono()
     const testWord = 'hello';
     const results: Record<string, any> = {};
 
-    // 测试 1: MyMemory（免费 API）
+    // 测试 1: SimplyTranslate AI（首选推荐）
+    try {
+      const t1 = Date.now();
+      const simpResp = await fetch('https://api.simplytranslate.ai/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: testWord, from: 'en', to: 'zh-cn' }),
+      });
+      const simpData: any = await simpResp.json();
+      const t2 = Date.now();
+      results.simplytranslate = {
+        ok: simpResp.ok,
+        status: simpResp.status,
+        latency_ms: t2 - t1,
+        translatedText: simpData?.result || null,
+      };
+    } catch (err: any) {
+      results.simplytranslate = { ok: false, error: err.message };
+    }
+
+    // 测试 2: MyMemory（免费 API）
     try {
       const t1 = Date.now();
       const myResp = await fetch(`https://api.mymemory.translated.net/get?q=${testWord}&langpair=en|zh-CN`);
@@ -160,7 +180,7 @@ const app = new Hono()
       results.mymemory = { ok: false, error: err.message };
     }
 
-    // 测试 2: 通用外网连通性
+    // 测试 3: 通用外网连通性
     try {
       const t1 = Date.now();
       const cfResp = await fetch('https://cloudflare.com/cdn-cgi/trace');

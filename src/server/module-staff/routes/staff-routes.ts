@@ -1067,7 +1067,7 @@ staffRoutes.get('/translation-status', async c => {
       diagnoseMessage = '翻译功能未启用（enable_auto_trans = 0）';
       diagnoseAction = '请在后台「系统设置」中打开自动翻译开关';
     } else {
-      diagnoseMessage = '翻译已启用（使用 Google + MyMemory 免费翻译）';
+      diagnoseMessage = '翻译已启用（使用 SimplyTranslate + Google + MyMemory 免费翻译）';
       diagnoseAction = '';
     }
     

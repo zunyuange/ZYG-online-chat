@@ -414,7 +414,7 @@ export const zhCN = {
   settings_save_success: '保存成功',
   settings_save_failed: '保存失败',
   free_translation_available: '已启用免费自动翻译',
-  free_translation_desc: '系统使用 Google Translate + MyMemory 免费翻译服务，无需任何 API 密钥。打开上方开关即可自动翻译双方消息。',
+  free_translation_desc: '系统使用 SimplyTranslate AI + Google Translate + MyMemory 免费翻译服务，无需任何 API 密钥。打开上方开关即可自动翻译双方消息。',
   loading_text: '加载中...',
   business_slug_placeholder: '商家标识',
 
