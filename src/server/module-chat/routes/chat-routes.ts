@@ -299,34 +299,43 @@ chatRoutes.post('/messages', async c => {
       return c.json({ success: false, error: 'Missing required fields' }, 400)
     }
 
-    // 自动翻译：访客消息翻译为访客的界面语言(session.lang)，让客服看到访客视角的译文
+    // 自动翻译：访客消息翻译为客服默认语言，让访客看到发送内容的译文
     let translatedContent: string | undefined;
+    let translateEngine: string | undefined;
     if (contentType === 'text') {
       const session = await chatService.getSession(sessionId);
       if (session) {
         const txSettings = await getTranslationSettings(session.businessId);
-        // 翻译目标：优先使用访客界面语言(lang)，如果没有则用客服默认语言
-        const targetLang = session.lang || txSettings?.defaultLang;
+        // 翻译目标：客服默认语言（访客需要知道自己发的消息在客服那里显示什么）
+        const targetLang = txSettings?.defaultLang;
         if (txSettings?.enabled && targetLang) {
-          console.log('[ChatRoutes] 🈂️ Auto-translating visitor message',
-            '| source:', (content as string).substring(0, 30),
-            '| to:', targetLang,
-            '| sessionLang:', session.lang,
-            '| staffDefaultLang:', txSettings.defaultLang,
-            '| businessId:', session.businessId,
-            '| hasBaidu:', !!(txSettings.appid && txSettings.secret));
-          const translateResult = await translateText({
-            text: content,
-            to: targetLang,
-            businessId: session.businessId,
-            _settings: txSettings as any,
-          } as any);
-          if (!translateResult.success || !isTranslationUseful(content, translateResult.text)) {
-            translatedContent = undefined; // 翻译无变化，不存储
-            console.log('[ChatRoutes] Translation not useful (same as original), engine:', translateResult.engine || 'none');
+          // 当且仅当访客语言与客服默认语言不同时才翻译
+          const visitorBaseLang = (session.lang || '').split('-')[0].toLowerCase();
+          const staffBaseLang = (targetLang || '').split('-')[0].toLowerCase();
+          if (visitorBaseLang && staffBaseLang && visitorBaseLang !== staffBaseLang) {
+            console.log('[ChatRoutes] 🈂️ Auto-translating visitor message to staff lang',
+              '| source:', (content as string).substring(0, 30),
+              '| visitorLang:', session.lang, `(${visitorBaseLang})`,
+              '| staffLang:', targetLang, `(${staffBaseLang})`,
+              '| businessId:', session.businessId,
+              '| hasBaidu:', !!(txSettings.appid && txSettings.secret));
+            const translateResult = await translateText({
+              text: content,
+              to: targetLang,
+              businessId: session.businessId,
+              _settings: txSettings as any,
+            } as any);
+            if (!translateResult.success || !isTranslationUseful(content, translateResult.text)) {
+              translatedContent = undefined;
+              console.log('[ChatRoutes] Translation not useful (same as original), engine:', translateResult.engine || 'none');
+            } else {
+              translatedContent = translateResult.text;
+              translateEngine = translateResult.engine;
+              console.log(`[ChatRoutes] ✅ Visitor message translated to staff lang via ${translateResult.engine}:`, translatedContent.substring(0, 60));
+            }
           } else {
-            translatedContent = translateResult.text;
-            console.log(`[ChatRoutes] ✅ Visitor message translated via ${translateResult.engine}:`, translatedContent.substring(0, 60));
+            console.log('[ChatRoutes] 🈂️ Skipping translation: visitor and staff share same base language',
+              '| visitor:', visitorBaseLang, '| staff:', staffBaseLang);
           }
         } else {
           console.warn('[ChatRoutes] ⚠️ Translation NOT configured for businessId:', session.businessId,
@@ -342,6 +351,7 @@ chatRoutes.post('/messages', async c => {
       contentType,
       content,
       translatedContent,
+      translateEngine,
       thumbnailUrl,
       fileName,
       fileSize,
