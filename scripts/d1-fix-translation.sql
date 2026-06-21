@@ -8,8 +8,10 @@
 --     只需执行第1步+第4步启用翻译开关即可
 -- ==========================================
 
--- ===== 第1步：修复 — 添加 translated_content 列（如缺失，忽略报错） =====
+-- ===== 第1步：修复 — 添加翻译相关列（如缺失，忽略报错） =====
 ALTER TABLE messages ADD COLUMN translated_content TEXT;
+ALTER TABLE messages ADD COLUMN translate_engine TEXT;
+ALTER TABLE messages ADD COLUMN translated_at INTEGER;
 
 -- ===== 第2步：诊断 — 检查 messages 表结构 =====
 PRAGMA table_info(messages);
@@ -55,10 +57,12 @@ SELECT
   id,
   session_id,
   sender_type,
-  content,
-  translated_content,
+  content_type,
+  CASE WHEN length(content) > 30 THEN substr(content, 1, 30) || '…' ELSE content END AS content,
+  CASE WHEN length(translated_content) > 30 THEN substr(translated_content, 1, 30) || '…' WHEN translated_content IS NOT NULL THEN translated_content ELSE NULL END AS translated,
+  translate_engine,
   CASE 
-    WHEN translated_content IS NOT NULL AND translated_content != '' THEN '✅ 有翻译'
+    WHEN translated_content IS NOT NULL AND translated_content != '' THEN '✅ 有翻译 (' || COALESCE(translate_engine, 'unknown') || ')'
     WHEN content_type = 'text' THEN '⚠️ 无翻译（需要发新消息触发）'
     ELSE '-'
   END AS translation_status,

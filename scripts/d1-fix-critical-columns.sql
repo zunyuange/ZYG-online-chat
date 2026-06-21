@@ -95,6 +95,18 @@ CREATE INDEX IF NOT EXISTS staff_users_business_slug_idx ON staff_users(business
 -- ===== 第8步：修复 messages 表 — 添加 translated_content 列 =====
 ALTER TABLE messages ADD COLUMN translated_content TEXT;
 
+-- ===== 第8.1步：修复 messages 表 — 添加翻译追踪字段 =====
+ALTER TABLE messages ADD COLUMN translate_engine TEXT;
+ALTER TABLE messages ADD COLUMN translated_at INTEGER;
+
+-- ===== 第8.2步：回填已有翻译数据的引擎（可选） =====
+UPDATE messages 
+SET translate_engine = 'mymemory',
+    translated_at = created_at
+WHERE translated_content IS NOT NULL 
+  AND translated_content != '' 
+  AND translate_engine IS NULL;
+
 -- ===== 第9步：最终验证 =====
 SELECT '=== final verification ===' AS check;
 

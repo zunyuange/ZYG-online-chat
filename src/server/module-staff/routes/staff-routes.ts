@@ -217,6 +217,7 @@ staffRoutes.post('/messages', async c => {
 
     // 自动翻译：客服消息翻译为访客的语言
     let translatedContent: string | undefined;
+    let translateEngine: string | undefined;
     if (contentType === 'text') {
       const txSettings = await getTranslationSettings(bizCtx.businessId, getCtxString(c, 'businessSlug'));
       if (txSettings?.enabled) {
@@ -225,17 +226,19 @@ staffRoutes.post('/messages', async c => {
           console.log('[StaffRoutes] Auto-translating staff message to visitor lang:', session.lang,
             'businessId:', bizCtx.businessId,
             'hasBaidu:', !!(txSettings.appid && txSettings.secret));
-          translatedContent = await translateText({
+          const translateResult = await translateText({
             text: content,
             to: session.lang,
             businessId: bizCtx.businessId,
             _settings: txSettings as any,
           } as any);
-          if (!isTranslationUseful(content, translatedContent)) {
-            translatedContent = undefined; // 翻译无变化，不存储
-            console.log('[StaffRoutes] Translation not useful (same as original or same language)');
+          if (!translateResult.success || !isTranslationUseful(content, translateResult.text)) {
+            translatedContent = undefined;
+            console.log('[StaffRoutes] Translation not useful (same as original or same language), engine:', translateResult.engine || 'none');
           } else {
-            console.log('[StaffRoutes] ✅ Translation stored, length:', translatedContent.length);
+            translatedContent = translateResult.text;
+            translateEngine = translateResult.engine;
+            console.log(`[StaffRoutes] ✅ Translation stored via ${translateResult.engine}, length:`, translatedContent.length);
           }
         } else {
           console.log('[StaffRoutes] Translation skipped: session.lang is not set (visitor language unknown)');
@@ -254,6 +257,7 @@ staffRoutes.post('/messages', async c => {
         contentType,
         content,
         translatedContent,
+        translateEngine,
         thumbnailUrl,
         fileName,
         fileSize,

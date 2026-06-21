@@ -33,7 +33,7 @@ interface StaffChatWindowProps {
   /** Current target language for translation */
   translateLang?: string;
   /** Callback when a message is manually translated */
-  onTranslated?: (messageId: number, translatedContent: string) => void;
+  onTranslated?: (messageId: number, translatedContent: string, translateEngine?: string) => void;
 }
 
 export function StaffChatWindow({

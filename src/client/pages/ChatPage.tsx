@@ -41,11 +41,11 @@ export function ChatPage() {
   }, [initSession, checkStaffOnline]);
 
   // Manual translation callback: updates local message state
-  const handleTranslated = useCallback((messageId: number, translatedContent: string) => {
+  const handleTranslated = useCallback((messageId: number, translatedContent: string, translateEngine?: string) => {
     const store = useChatStore;
     const state = store.getState();
     const updatedMessages = state.messages.map((m) =>
-      m.id === messageId ? { ...m, translatedContent } : m
+      m.id === messageId ? { ...m, translatedContent, translateEngine } : m
     );
     store.setState({ messages: updatedMessages });
   }, []);

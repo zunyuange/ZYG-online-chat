@@ -623,7 +623,7 @@ export function StaffPage() {
   };
 
   // Manual translation callback for staff: update message in store
-  const handleTranslated = useCallback((messageId: number, translatedContent: string) => {
+  const handleTranslated = useCallback((messageId: number, translatedContent: string, translateEngine?: string) => {
     const store = useStaffStore;
     const state = store.getState();
     const messagesMap = new Map(state.messages);
@@ -631,7 +631,7 @@ export function StaffPage() {
     if (sessionMessages) {
       messagesMap.set(
         currentSessionId!,
-        sessionMessages.map((m) => (m.id === messageId ? { ...m, translatedContent } : m))
+        sessionMessages.map((m) => (m.id === messageId ? { ...m, translatedContent, translateEngine } : m))
       );
       store.setState({ messages: messagesMap });
     }

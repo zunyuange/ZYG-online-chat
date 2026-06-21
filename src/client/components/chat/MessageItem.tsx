@@ -15,7 +15,7 @@ interface MessageItemProps {
   /** 是否显示翻译按钮（仅非己方消息且无翻译时显示） */
   showTranslate?: boolean;
   /** 翻译完成回调，更新父组件消息列表 */
-  onTranslated?: (messageId: number, translatedContent: string) => void;
+  onTranslated?: (messageId: number, translatedContent: string, translateEngine?: string) => void;
 }
 
 export function MessageItem({
@@ -93,8 +93,9 @@ export function MessageItem({
       const result = await response.json();
       if (result.success && result.data) {
         const tc = result.data.translatedContent;
+        const te = result.data.translateEngine;
         setLocalTranslated(tc);
-        onTranslated?.(message.id, tc);
+        onTranslated?.(message.id, tc, te);
       } else {
         const errMsg = result.error || '翻译失败';
         setTranslateError(errMsg);
@@ -111,6 +112,8 @@ export function MessageItem({
 
   // 使用本地或 props 中的翻译内容
   const effectiveTranslated = localTranslated || message.translatedContent;
+  // 使用的翻译引擎
+  const translateEngine = message.translateEngine || '';
   // 是否显示翻译按钮：文本消息 + 尚无翻译 + 非己方消息 + 有目标语言
   const canTranslate = showTranslate && isTextMessage && !effectiveTranslated && !!currentLang && !isOwn;
 
@@ -289,7 +292,7 @@ export function MessageItem({
                   opacity: 0.6,
                   marginRight: '4px',
                   textTransform: 'uppercase',
-                }}>🌐 TR</span>
+                }}>🌐 TR{translateEngine ? ` (${translateEngine})` : ''}</span>
                 {effectiveTranslated}
               </div>
             </div>

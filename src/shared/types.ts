@@ -98,6 +98,8 @@ export interface Message {
   contentType: ContentType;
   content: string;
   translatedContent?: string;  // 自动翻译后的内容
+  translateEngine?: string;    // 翻译引擎: 'baidu' | 'google' | 'mymemory'
+  translatedAt?: number;       // 翻译时间戳
   thumbnailUrl?: string;
   fileName?: string;
   fileSize?: number;
@@ -129,6 +131,7 @@ export interface SendMessageInput {
   contentType: ContentType;
   content: string;
   translatedContent?: string;
+  translateEngine?: string;
   thumbnailUrl?: string;
   fileName?: string;
   fileSize?: number;

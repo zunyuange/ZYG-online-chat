@@ -36,7 +36,7 @@ interface ChatWindowProps {
   /** Show manual translate button on messages */
   showTranslate?: boolean;
   /** Callback when a message is manually translated */
-  onTranslated?: (messageId: number, translatedContent: string) => void;
+  onTranslated?: (messageId: number, translatedContent: string, translateEngine?: string) => void;
 }
 
 export function ChatWindow({

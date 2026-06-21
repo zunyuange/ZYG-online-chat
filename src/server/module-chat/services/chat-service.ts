@@ -80,6 +80,8 @@ interface MessageRow {
   content_type: string
   content: string
   translated_content: string | null
+  translate_engine: string | null
+  translated_at: number | null
   thumbnail_url: string | null
   file_name: string | null
   file_size: number | null
@@ -132,6 +134,8 @@ function mapRowToMessage(row: MessageRow): Message {
     contentType: row.content_type as ContentType,
     content: row.content,
     translatedContent: row.translated_content || undefined,
+    translateEngine: row.translate_engine || undefined,
+    translatedAt: row.translated_at || undefined,
     thumbnailUrl: row.thumbnail_url || undefined,
     fileName: row.file_name || undefined,
     fileSize: row.file_size || undefined,
@@ -460,14 +464,16 @@ export async function sendMessage(input: SendMessageInput, businessId?: number):
   }
 
   const result = await db.run(
-    `INSERT INTO messages (session_id, sender_type, content_type, content, translated_content, thumbnail_url, file_name, file_size, is_read, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
+    `INSERT INTO messages (session_id, sender_type, content_type, content, translated_content, translate_engine, translated_at, thumbnail_url, file_name, file_size, is_read, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
     [
       input.sessionId,
       input.senderType,
       input.contentType,
       input.content,
       input.translatedContent || null,
+      input.translateEngine || null,
+      input.translatedContent ? now : null,
       input.thumbnailUrl || null,
       input.fileName || null,
       input.fileSize || null,
@@ -512,6 +518,8 @@ export async function sendMessage(input: SendMessageInput, businessId?: number):
     contentType: input.contentType,
     content: input.content,
     translatedContent: input.translatedContent,
+    translateEngine: input.translateEngine,
+    translatedAt: input.translatedContent ? now : undefined,
     thumbnailUrl: input.thumbnailUrl,
     fileName: input.fileName,
     fileSize: input.fileSize,

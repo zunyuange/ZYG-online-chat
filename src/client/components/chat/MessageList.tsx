@@ -18,7 +18,7 @@ interface MessageListProps {
   /** 是否显示翻译按钮 */
   showTranslate?: boolean;
   /** 翻译完成回调 */
-  onTranslated?: (messageId: number, translatedContent: string) => void;
+  onTranslated?: (messageId: number, translatedContent: string, translateEngine?: string) => void;
 }
 
 export function MessageList({

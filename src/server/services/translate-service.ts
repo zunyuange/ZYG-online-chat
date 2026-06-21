@@ -641,20 +641,26 @@ interface TranslateOptionsInternal extends TranslateOptions {
  *   - "Translation disabled" → enable_auto_trans = 0
  *   - "Translation failed" → API 调用异常
  */
-export async function translateText(options: TranslateOptions): Promise<string> {
+export async function translateText(options: TranslateOptions): Promise<TranslateResult> {
   const { text, to } = options;
   const opts = options as TranslateOptionsInternal;
+
+  const makeResult = (engine: string): TranslateResult => ({
+    text,
+    engine,
+    success: false,
+  });
 
   // 如果文本包含 HTML 标签，不翻译
   if (containsHtml(text)) {
     console.log('[TranslateService] Skipped: text contains HTML');
-    return text;
+    return makeResult('');
   }
 
   // 如果文本为空，不翻译
   if (!text || !text.trim()) {
     console.log('[TranslateService] Skipped: empty text');
-    return text;
+    return makeResult('');
   }
 
   // 获取翻译设置（优先使用预取的，避免重复查询）
@@ -662,12 +668,12 @@ export async function translateText(options: TranslateOptions): Promise<string> 
 
   if (!settings) {
     console.warn('[TranslateService] ⚠️ Translation skipped: No settings found for businessId:', options.businessId);
-    return text;
+    return makeResult('');
   }
 
   if (!settings.enabled) {
     console.warn('[TranslateService] ⚠️ Translation skipped: enable_auto_trans is OFF for businessId:', options.businessId);
-    return text;
+    return makeResult('');
   }
 
   // 【🧠 智能选择翻译提供商 - 优先级链】
@@ -684,9 +690,8 @@ export async function translateText(options: TranslateOptions): Promise<string> 
       const translated = await callBaiduTranslate(text, targetBaiduLang, settings.appid!, settings.secret!);
       if (translated !== text) {
         console.log(`[TranslateService] ✅ Baidu result: "${translated.substring(0, 50)}..."`);
-        return translated;
+        return { text: translated, engine: 'baidu', success: true };
       }
-      // 百度返回原文，回退到 Google
       console.log('[TranslateService] ⚡ Baidu returned same text, falling back to Google...');
     } catch (error) {
       console.error('[TranslateService] ❌ Baidu failed, falling back to Google:', error);
@@ -699,9 +704,8 @@ export async function translateText(options: TranslateOptions): Promise<string> 
     const translated = await callGoogleTranslate(text, targetGoogle, 'auto');
     if (translated !== text) {
       console.log(`[TranslateService] ✅ Google result: "${translated.substring(0, 50)}..."`);
-      return translated;
+      return { text: translated, engine: 'google', success: true };
     }
-    // Google 也返回原文，回退到 MyMemory
     console.log('[TranslateService] ⚡ Google returned same text, falling back to MyMemory...');
   } catch (error) {
     console.error('[TranslateService] ❌ Google failed, falling back to MyMemory:', error);
@@ -714,14 +718,15 @@ export async function translateText(options: TranslateOptions): Promise<string> 
     const translated = await callMyMemoryTranslate(text, targetIso, 'auto');
     if (translated !== text) {
       console.log(`[TranslateService] ✅ MyMemory result: "${translated.substring(0, 50)}..."`);
-    } else {
-      console.log('[TranslateService] ⚡ MyMemory returned same text - ALL engines failed');
+      return { text: translated, engine: 'mymemory', success: true };
     }
-    return translated;
+    console.log('[TranslateService] ⚡ MyMemory returned same text - ALL engines failed');
   } catch (error) {
     console.error('[TranslateService] ❌ ALL translation engines failed:', error);
-    return text;
   }
+  
+  // 所有引擎都失败
+  return makeResult('');
 }
 
 /**

@@ -315,17 +315,18 @@ chatRoutes.post('/messages', async c => {
             '| staffDefaultLang:', txSettings.defaultLang,
             '| businessId:', session.businessId,
             '| hasBaidu:', !!(txSettings.appid && txSettings.secret));
-          translatedContent = await translateText({
+          const translateResult = await translateText({
             text: content,
             to: targetLang,
             businessId: session.businessId,
             _settings: txSettings as any,
           } as any);
-          if (!isTranslationUseful(content, translatedContent)) {
+          if (!translateResult.success || !isTranslationUseful(content, translateResult.text)) {
             translatedContent = undefined; // 翻译无变化，不存储
-            console.log('[ChatRoutes] Translation not useful (same as original)');
+            console.log('[ChatRoutes] Translation not useful (same as original), engine:', translateResult.engine || 'none');
           } else {
-            console.log('[ChatRoutes] ✅ Visitor message translated:', translatedContent.substring(0, 60));
+            translatedContent = translateResult.text;
+            console.log(`[ChatRoutes] ✅ Visitor message translated via ${translateResult.engine}:`, translatedContent.substring(0, 60));
           }
         } else {
           console.warn('[ChatRoutes] ⚠️ Translation NOT configured for businessId:', session.businessId,
@@ -392,17 +393,18 @@ chatRoutes.post('/messages', async c => {
           if (targetLang && baseLang(targetLang) !== knowledgeBaseLang) {
             console.log('[ChatRoutes] 🤖 Translating robot reply:', knowledge.answer.substring(0, 40),
               'from', knowledgeBaseLang, '→', baseLang(targetLang), '(target:', targetLang, ')');
-            staffTranslated = await translateText({
+            const robotTranslateResult = await translateText({
               text: knowledge.answer,
               to: targetLang,
               businessId: session.businessId,
               _settings: txSettings as any,
             } as any);
-            if (!isTranslationUseful(knowledge.answer, staffTranslated)) {
+            if (!robotTranslateResult.success || !isTranslationUseful(knowledge.answer, robotTranslateResult.text)) {
               staffTranslated = undefined;
-              console.log('[ChatRoutes] Robot reply translation not useful (same as original)');
+              console.log('[ChatRoutes] Robot reply translation not useful (same as original), engine:', robotTranslateResult.engine || 'none');
             } else {
-              console.log('[ChatRoutes] ✅ Robot reply translated:', staffTranslated?.substring(0, 40));
+              staffTranslated = robotTranslateResult.text;
+              console.log(`[ChatRoutes] ✅ Robot reply translated via ${robotTranslateResult.engine}:`, staffTranslated?.substring(0, 40));
             }
           } else {
             console.log('[ChatRoutes] 🤖 Skipping translation: already in target language (base:', knowledgeBaseLang, ')');
@@ -836,7 +838,7 @@ chatRoutes.post('/messages/:id/translate', async c => {
       '| to:', to,
       '| businessId:', row.business_id)
 
-    const translatedText = await translateText({
+    const translateResult = await translateText({
       text: row.content,
       to,
       businessId: row.business_id,
@@ -844,8 +846,8 @@ chatRoutes.post('/messages/:id/translate', async c => {
     } as any)
 
     // 5. 检查翻译是否有意义（翻译结果与原文不同才算成功）
-    if (!isTranslationUseful(row.content, translatedText)) {
-      console.log('[ChatRoutes] Manual translation not useful (same as original), targetLang:', to)
+    if (!translateResult.success || !isTranslationUseful(row.content, translateResult.text)) {
+      console.log('[ChatRoutes] Manual translation not useful (same as original), targetLang:', to, 'engine:', translateResult.engine || 'none')
       // 分析源语言以给出更准确的错误提示
       const detected = detectSourceLanguage(row.content)
       const targetBase = to.split('-')[0]
@@ -853,7 +855,7 @@ chatRoutes.post('/messages/:id/translate', async c => {
       if (detected === to || detected === targetBase) {
         sourceHint = '（原文语言与翻译目标语言一致）'
       } else {
-        sourceHint = '（翻译服务未能转换，请检查翻译引擎配置）'
+        sourceHint = `（翻译引擎 ${translateResult.engine || '无'} 未能转换，请检查翻译引擎配置）`
       }
       return c.json({
         success: false,
@@ -861,20 +863,21 @@ chatRoutes.post('/messages/:id/translate', async c => {
       }, 200)
     }
 
-    // 6. 更新 DB 中的 translated_content
+    // 6. 更新 DB 中的 translated_content + translate_engine
     const now = Date.now()
     await db.run(
-      'UPDATE messages SET translated_content = ?, updated_at = ? WHERE id = ?',
-      [translatedText, now, messageId]
+      'UPDATE messages SET translated_content = ?, translate_engine = ?, translated_at = ? WHERE id = ?',
+      [translateResult.text, translateResult.engine, now, messageId]
     )
 
-    console.log('[ChatRoutes] ✅ Manual translate stored:', translatedText.substring(0, 60))
+    console.log(`[ChatRoutes] ✅ Manual translate stored via ${translateResult.engine}:`, translateResult.text.substring(0, 60))
 
     return c.json({
       success: true,
       data: {
         id: messageId,
-        translatedContent: translatedText,
+        translatedContent: translateResult.text,
+        translateEngine: translateResult.engine,
       },
     })
   } catch (error) {
