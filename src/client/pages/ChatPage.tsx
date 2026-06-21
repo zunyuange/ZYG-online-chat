@@ -114,6 +114,13 @@ export function ChatPage() {
   // 标题优先级：已分配客服名称 > 商家名称 > 站点名称 > 默认名称
   const chatTitle = session?.assignedStaffName || session?.businessName || siteName || t('service_title');
 
+  // 同步浏览器标签页标题
+  useEffect(() => {
+    if (chatTitle) {
+      document.title = chatTitle;
+    }
+  }, [chatTitle]);
+
   if (!session && loading) {
     return (
       <div style={pageStyle}>

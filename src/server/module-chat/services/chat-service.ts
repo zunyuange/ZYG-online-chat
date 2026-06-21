@@ -280,10 +280,26 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
           [input.sessionId]
         )
         if (updatedRow) {
-          return mapRowToSession(updatedRow, business || undefined)
+          let staffName: string | undefined
+          if (updatedRow.assigned_staff_id) {
+            const staff = await db.get<{ name: string }>(
+              'SELECT name FROM staff_users WHERE id = ?',
+              [updatedRow.assigned_staff_id]
+            )
+            staffName = staff?.name
+          }
+          return mapRowToSession(updatedRow, business || undefined, staffName)
         }
       }
-      return mapRowToSession(row, business || undefined)
+      let staffName: string | undefined
+      if (row.assigned_staff_id) {
+        const staff = await db.get<{ name: string }>(
+          'SELECT name FROM staff_users WHERE id = ?',
+          [row.assigned_staff_id]
+        )
+        staffName = staff?.name
+      }
+      return mapRowToSession(row, business || undefined, staffName)
     }
   }
 

@@ -379,19 +379,8 @@ export function SessionList({
                       {/* 会话状态 */}
                       <span style={statusDotStyle(session.status)} title={session.status} />
 
-                      {/* 商家归属 */}
-                      {session.businessName && (
-                        <span style={businessBadgeStyle}>
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                            <polyline points="9 22 9 12 15 12 15 22"/>
-                          </svg>
-                          {session.businessName}
-                        </span>
-                      )}
-
-                      {/* 客服 */}
-                      {assignedStaffName && (
+                      {/* 当前分配客服（优先显示），无分配时显示商家名称 */}
+                      {assignedStaffName ? (
                         <span style={staffBadgeStyle}>
                           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -399,7 +388,15 @@ export function SessionList({
                           </svg>
                           {assignedStaffName}
                         </span>
-                      )}
+                      ) : session.businessName ? (
+                        <span style={businessBadgeStyle}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                            <polyline points="9 22 9 12 15 12 15 22"/>
+                          </svg>
+                          {session.businessName}
+                        </span>
+                      ) : null}
                     </div>
 
                     {/* 第三行：消息预览 */}
