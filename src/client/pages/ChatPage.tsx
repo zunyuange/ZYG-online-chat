@@ -111,8 +111,8 @@ export function ChatPage() {
     color: '#999',
   };
 
-  // Use business name if available, otherwise fall back to siteName or default
-  const chatTitle = session?.businessName || siteName || t('service_title');
+  // 标题优先级：已分配客服名称 > 商家名称 > 站点名称 > 默认名称
+  const chatTitle = session?.assignedStaffName || session?.businessName || siteName || t('service_title');
 
   if (!session && loading) {
     return (

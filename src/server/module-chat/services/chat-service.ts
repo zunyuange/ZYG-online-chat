@@ -89,7 +89,7 @@ interface MessageRow {
   created_at: number
 }
 
-function mapRowToSession(row: SessionRow, business?: BusinessRow): Session {
+function mapRowToSession(row: SessionRow, business?: BusinessRow, staffName?: string): Session {
   return {
     id: row.id,
     visitorName: row.visitor_name,
@@ -101,7 +101,7 @@ function mapRowToSession(row: SessionRow, business?: BusinessRow): Session {
     unreadByVisitor: row.unread_by_visitor || 0,
     unreadByStaff: row.unread_by_staff || 0,
     assignedStaffId: row.assigned_staff_id || undefined,
-    assignedStaffName: undefined,
+    assignedStaffName: staffName || undefined,
     topic: row.topic || undefined,
     taskStatus: (row.task_status as TaskStatus) || 'requirement_discussion',
     taskStatusUpdatedAt: row.task_status_updated_at
@@ -356,7 +356,16 @@ export async function getSession(sessionId: string, businessId?: number): Promis
     'SELECT id, business_slug, business_name FROM staff_users WHERE id = ?',
     [row.business_id]
   )
-  return mapRowToSession(row, business || undefined)
+  // Get assigned staff name
+  let staffName: string | undefined
+  if (row.assigned_staff_id) {
+    const staff = await db.get<{ name: string }>(
+      'SELECT name FROM staff_users WHERE id = ?',
+      [row.assigned_staff_id]
+    )
+    staffName = staff?.name
+  }
+  return mapRowToSession(row, business || undefined, staffName)
 }
 
 /**
@@ -414,7 +423,20 @@ export async function listSessions(
     }
   }
 
-  return rows.map(row => mapRowToSession(row, businessMap.get(row.business_id)))
+  // Get staff names for assigned sessions
+  const staffNameMap = new Map<number, string>()
+  const assignedStaffIds = [...new Set(rows.map(r => r.assigned_staff_id).filter(Boolean))] as number[]
+  for (const sid of assignedStaffIds) {
+    const staff = await db.get<{ name: string }>(
+      'SELECT name FROM staff_users WHERE id = ?',
+      [sid]
+    )
+    if (staff) {
+      staffNameMap.set(sid, staff.name)
+    }
+  }
+
+  return rows.map(row => mapRowToSession(row, businessMap.get(row.business_id), row.assigned_staff_id ? staffNameMap.get(row.assigned_staff_id) : undefined))
 }
 
 /**

@@ -310,7 +310,8 @@ chatRoutes.post('/messages', async c => {
         // 如果没有分配客服则回退到主体商家默认语言
         let targetLang = txSettings?.defaultLang;
         let staffName = '主体商家默认';
-        const assignedStaffId = (session as any).assigned_staff_id || (session as any).service_id;
+        // session 已通过 mapRowToSession 映射，字段名是 camelCase，不是 snake_case
+        const assignedStaffId = session.assignedStaffId;
         if (assignedStaffId && assignedStaffId > 0) {
           try {
             const db = getDb();

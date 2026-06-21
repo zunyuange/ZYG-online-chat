@@ -740,13 +740,15 @@ export async function transferSession(
     }
 
     // Update session with new staff (多租户隔离：带 business_id 条件)
+    // 同时更新 service_id 和 assigned_staff_id，确保翻译等功能能正确识别当前客服
     if (businessId && businessId !== 0) {
       await db.run(
-        'UPDATE sessions SET service_id = ?, updated_at = ? WHERE id = ? AND business_id = ?',
-        [targetStaffId, now, sessionId, businessId]
+        'UPDATE sessions SET service_id = ?, assigned_staff_id = ?, updated_at = ? WHERE id = ? AND business_id = ?',
+        [targetStaffId, targetStaffId, now, sessionId, businessId]
       )
     } else {
-      await db.run('UPDATE sessions SET service_id = ?, updated_at = ? WHERE id = ?', [
+      await db.run('UPDATE sessions SET service_id = ?, assigned_staff_id = ?, updated_at = ? WHERE id = ?', [
+        targetStaffId,
         targetStaffId,
         now,
         sessionId,

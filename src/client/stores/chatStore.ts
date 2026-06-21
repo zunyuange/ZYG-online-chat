@@ -295,9 +295,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
           return;
         }
 
-        // Update session if there are any changes
+        // Update session if there are any changes (including staff assignment)
         if (updatedSession.status !== session.status || 
-            updatedSession.unreadByVisitor !== session.unreadByVisitor) {
+            updatedSession.unreadByVisitor !== session.unreadByVisitor ||
+            updatedSession.assignedStaffId !== session.assignedStaffId) {
           console.log('[ChatStore] Updating session state');
           set({ session: updatedSession });
         }
