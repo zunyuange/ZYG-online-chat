@@ -66,6 +66,44 @@ const LOCALE_TO_ISO639: Record<string, string> = {
   'kor': 'ko',
 };
 
+/** 我们的 locale 代码 → Google Translate 语言代码（标准 BCP 47） */
+const LOCALE_TO_GOOGLE: Record<string, string> = {
+  'zh-CN': 'zh-CN',
+  'zh-TW': 'zh-TW',
+  'en-US': 'en',
+  'en-GB': 'en',
+  'ja': 'ja',
+  'jp': 'ja',
+  'ko': 'ko',
+  'kr': 'ko',
+  'fr': 'fr',
+  'de': 'de',
+  'es': 'es',
+  'pt': 'pt',
+  'it': 'it',
+  'ru': 'ru',
+  'vi': 'vi',
+  'th': 'th',
+  'id': 'id',
+  'ar': 'ar',
+  'nl': 'nl',
+  'pl': 'pl',
+  'da': 'da',
+  'fi': 'fi',
+  'el': 'el',
+  'tc': 'zh-TW',
+  'cn': 'zh-CN',
+  'en': 'en',
+  'vie': 'vi',
+  'ara': 'ar',
+  'dan': 'da',
+  'fin': 'fi',
+  'cht': 'zh-TW',
+  'spa': 'es',
+  'fra': 'fr',
+  'kor': 'ko',
+};
+
 /** 旧版 lang 字段（cn/en/jp等）→ 百度语言代码 */
 const LEGACY_LANG_TO_BAIDU: Record<string, string> = {
   'cn': 'zh',
@@ -154,6 +192,16 @@ export interface TranslateOptions {
   to: string; // 目标语言（我们的 locale 代码）
   businessId?: number;
   businessSlug?: string;
+}
+
+/** 翻译结果详情 */
+export interface TranslateResult {
+  /** 翻译后的文本（失败时返回原文） */
+  text: string;
+  /** 成功的翻译引擎名称（如 'baidu' | 'google' | 'mymemory'）；失败时为空字符串 */
+  engine: string;
+  /** 翻译是否成功（结果与原文不同） */
+  success: boolean;
 }
 
 /**
@@ -333,6 +381,13 @@ function toIso639Lang(localeCode: string): string {
 }
 
 /**
+ * 获取 Google Translate 语言代码
+ */
+function toGoogleLang(localeCode: string): string {
+  return LOCALE_TO_GOOGLE[localeCode] || localeCode;
+}
+
+/**
  * 简单的语言检测：根据文本字符特征判断源语言
  * 用于 MyMemory API（不支持 'auto' 源语言）
  */
@@ -356,6 +411,59 @@ export function detectSourceLanguage(text: string): string {
     return 'zh-CN';
   }
   return 'en';
+}
+
+/**
+ * 调用 Google Translate API（非官方免费接口，无需 API Key）
+ * Cloudflare Worker 上非常稳定可靠
+ */
+async function callGoogleTranslate(
+  text: string,
+  targetLang: string,
+  sourceLang: string = 'auto'
+): Promise<string> {
+  const src = sourceLang === 'auto' ? '' : sourceLang;
+  const encoded = encodeURIComponent(text);
+  // Google 非官方接口: client=gtx 无需密钥
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${src || 'auto'}&tl=${targetLang}&dt=t&q=${encoded}`;
+  
+  console.log(`[TranslateService-Google] Calling: ${src || 'auto'}→${targetLang}, textLen=${text.length}`);
+  
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; CloudflareWorker/1.0)',
+      },
+    });
+  } catch (fetchError) {
+    console.error('[TranslateService-Google] ❌ Network error:', fetchError);
+    return text; // 返回原文，让上层调用者尝试其他方案
+  }
+
+  if (!response.ok) {
+    console.error(`[TranslateService-Google] ❌ HTTP error: ${response.status}`);
+    return text;
+  }
+
+  try {
+    const result: any = await response.json();
+    // Google 返回格式: [[["translated text","original",null,null,1]],null,"en"]
+    if (Array.isArray(result) && result[0] && Array.isArray(result[0])) {
+      const translated = result[0]
+        .filter((item: any) => Array.isArray(item) && item[0])
+        .map((item: any[]) => item[0])
+        .join('');
+      if (translated && translated.trim() !== text.trim()) {
+        console.log(`[TranslateService-Google] ✅ Result: "${translated.substring(0, 50)}..."`);
+        return translated;
+      }
+    }
+    console.warn('[TranslateService-Google] ⚠️ Unexpected response:', JSON.stringify(result).substring(0, 200));
+  } catch (parseError) {
+    console.error('[TranslateService-Google] ❌ JSON parse error:', parseError);
+  }
+  return text; // 返回原文，让上层回退到下一个引擎
 }
 
 /**
@@ -562,44 +670,56 @@ export async function translateText(options: TranslateOptions): Promise<string> 
     return text;
   }
 
-  // 【🧠 智能选择翻译提供商】
+  // 【🧠 智能选择翻译提供商 - 优先级链】
+  // 1. 百度翻译（需凭据）→ 2. Google Translate（免费稳定）→ 3. MyMemory（免费后备）
   const hasBaidu = !!(settings.appid && settings.secret);
+  const targetGoogle = toGoogleLang(to);
+  const targetIso = toIso639Lang(to);
   
   if (hasBaidu) {
-    // 百度翻译（需要 API 凭据）
+    // 🔵 百度翻译（需要 API 凭据）
     const targetBaiduLang = toBaiduLang(to);
     console.log(`[TranslateService] 🔵 Using Baidu Translate: "${text.substring(0, 50)}..." → ${targetBaiduLang}`);
     try {
       const translated = await callBaiduTranslate(text, targetBaiduLang, settings.appid!, settings.secret!);
       if (translated !== text) {
         console.log(`[TranslateService] ✅ Baidu result: "${translated.substring(0, 50)}..."`);
-      } else {
-        console.log(`[TranslateService] ⚡ Baidu returned same text (already in target language?)`);
+        return translated;
       }
-      return translated;
+      // 百度返回原文，回退到 Google
+      console.log('[TranslateService] ⚡ Baidu returned same text, falling back to Google...');
     } catch (error) {
-      console.error('[TranslateService] ❌ Baidu API call failed, falling back to MyMemory:', error);
-      // 百度失败后尝试 MyMemory
-      const targetIso = toIso639Lang(to);
-      return await callMyMemoryTranslate(text, targetIso);
+      console.error('[TranslateService] ❌ Baidu failed, falling back to Google:', error);
     }
   }
   
-  // 📦 免费后备：使用 MyMemory 翻译（无需 API Key）
-  const targetIso = toIso639Lang(to);
-  const sourceIso = 'auto';
-  console.log(`[TranslateService] 🟢 Using MyMemory (free fallback): "${text.substring(0, 50)}..." → ${targetIso}`);
+  // 🔴 Google Translate（非官方免费接口，CF Worker 上非常稳定）
+  console.log(`[TranslateService] 🔴 Using Google Translate: "${text.substring(0, 50)}..." → ${targetGoogle}`);
+  try {
+    const translated = await callGoogleTranslate(text, targetGoogle, 'auto');
+    if (translated !== text) {
+      console.log(`[TranslateService] ✅ Google result: "${translated.substring(0, 50)}..."`);
+      return translated;
+    }
+    // Google 也返回原文，回退到 MyMemory
+    console.log('[TranslateService] ⚡ Google returned same text, falling back to MyMemory...');
+  } catch (error) {
+    console.error('[TranslateService] ❌ Google failed, falling back to MyMemory:', error);
+  }
+  
+  // 🟢 MyMemory 免费后备
+  console.log(`[TranslateService] 🟢 Using MyMemory (last resort): "${text.substring(0, 50)}..." → ${targetIso}`);
   
   try {
-    const translated = await callMyMemoryTranslate(text, targetIso, sourceIso);
+    const translated = await callMyMemoryTranslate(text, targetIso, 'auto');
     if (translated !== text) {
       console.log(`[TranslateService] ✅ MyMemory result: "${translated.substring(0, 50)}..."`);
     } else {
-      console.log(`[TranslateService] ⚡ MyMemory returned same text (already in target language?)`);
+      console.log('[TranslateService] ⚡ MyMemory returned same text - ALL engines failed');
     }
     return translated;
   } catch (error) {
-    console.error('[TranslateService] ❌ MyMemory also failed:', error);
+    console.error('[TranslateService] ❌ ALL translation engines failed:', error);
     return text;
   }
 }
