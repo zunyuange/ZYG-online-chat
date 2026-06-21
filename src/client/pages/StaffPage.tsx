@@ -1045,13 +1045,15 @@ export function StaffPage() {
             <span>{t('staff_nav_management')}</span>
           </div>
         )}
-        <div
-          onClick={() => setCurrentPage('visitorFields')}
-          style={navTabItemStyle(currentPage === 'visitorFields')}
-        >
-          <ListChecks size={16} />
-          <span>{t('staff_nav_visitor_fields')}</span>
-        </div>
+        {userInfo?.role === 'admin' && (
+          <div
+            onClick={() => setCurrentPage('visitorFields')}
+            style={navTabItemStyle(currentPage === 'visitorFields')}
+          >
+            <ListChecks size={16} />
+            <span>{t('staff_nav_visitor_fields')}</span>
+          </div>
+        )}
         <div
           onClick={() => setCurrentPage('code')}
           style={navTabItemStyle(currentPage === 'code')}
