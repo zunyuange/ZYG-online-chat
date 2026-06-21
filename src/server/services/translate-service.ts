@@ -595,17 +595,17 @@ export async function getTranslationSettings(businessId?: number, businessSlug?:
   }
   
   console.log('[TranslateService] getTranslationSettings: businessId=', businessId, 'businessSlug=', businessSlug,
-    'found:', !!settings);
+    'found:', !!settings, '| raw enabled:', settings?.enable_auto_trans);
 
   if (!settings) return null;
 
-  // 如果当前用户没有翻译凭据（下级客服），从上级商家继承
   let appid = settings.bd_trans_appid;
   let secret = settings.bd_trans_secret;
   let enabled = settings.enable_auto_trans === 1;
 
-  if ((!appid || !secret) && settings.business_id > 0) {
-    // 下级客服：从上级商家账号获取翻译凭据
+  // 下级客服（business_id > 0）：从上级商家继承设置
+  // 关键：即使子客服没有配置自己的凭据，也需要查询上级来判断全局翻译开关
+  if (settings.business_id > 0) {
     const parent = await db.get<{
       enable_auto_trans: number;
       bd_trans_appid: string | null;
@@ -615,12 +615,22 @@ export async function getTranslationSettings(businessId?: number, businessSlug?:
       [settings.business_id]
     );
     if (parent) {
-      // ⚠️ 只继承翻译凭据（appid/secret），不覆盖子客服自己的 enable_auto_trans 设置
-      // 子客服可以独立决定是否启用翻译（使用免费引擎如 Google/MyMemory）
-      appid = parent.bd_trans_appid;
-      secret = parent.bd_trans_secret;
-      console.log('[TranslateService] Using parent business credentials for staff user:', businessId,
-        '| sub-staff enabled:', enabled, '| parent enabled:', parent.enable_auto_trans === 1);
+      // 继承翻译凭据（如果子客服没有配置自己的）
+      if (!appid || !secret) {
+        appid = parent.bd_trans_appid;
+        secret = parent.bd_trans_secret;
+      }
+      // 【核心修复】如果子客服没有显式启用翻译（enable_auto_trans=0），
+      // 但上级商家启用了全局翻译（enable_auto_trans=1），则继承上级的启用状态。
+      // 这样上级开启翻译后，所有下级客服自动生效，无需每个客服单独配置。
+      if (!enabled && parent.enable_auto_trans === 1) {
+        enabled = true;
+      }
+      console.log('[TranslateService] Parent inheritance for staff', businessId,
+        '| final enabled:', enabled,
+        '| has credentials:', !!(appid && secret),
+        '| sub-staff enabled:', settings.enable_auto_trans === 1,
+        '| parent enabled:', parent.enable_auto_trans === 1);
     }
   }
 
@@ -679,12 +689,16 @@ export async function translateText(options: TranslateOptions): Promise<Translat
   const settings = opts._settings ?? (await getTranslationSettings(options.businessId, options.businessSlug));
 
   if (!settings) {
-    console.warn('[TranslateService] ⚠️ Translation skipped: No settings found for businessId:', options.businessId);
+    console.warn('[TranslateService] ⚠️ Translation skipped: No settings found for businessId:', options.businessId,
+      '| businessSlug:', options.businessSlug);
     return makeResult('');
   }
 
   if (!settings.enabled) {
-    console.warn('[TranslateService] ⚠️ Translation skipped: enable_auto_trans is OFF for businessId:', options.businessId);
+    console.warn('[TranslateService] ⚠️ Translation skipped: enable_auto_trans is OFF',
+      '| businessId:', options.businessId,
+      '| hasBaidu:', !!(settings.appid && settings.secret),
+      '| defaultLang:', settings.defaultLang);
     return makeResult('');
   }
 
@@ -737,7 +751,13 @@ export async function translateText(options: TranslateOptions): Promise<Translat
     console.error('[TranslateService] ❌ ALL translation engines failed:', error);
   }
   
-  // 所有引擎都失败
+  // 所有引擎都失败：记录详细信息以便诊断
+  console.error('[TranslateService] 🚫 TRANSLATION FAILURE SUMMARY:',
+    '| businessId:', options.businessId,
+    '| to:', to,
+    '| textLen:', text.length,
+    '| hasBaidu:', hasBaidu,
+    '| text:', text.substring(0, 60));
   return makeResult('');
 }
 

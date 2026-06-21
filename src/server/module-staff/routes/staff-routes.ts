@@ -227,6 +227,10 @@ staffRoutes.post('/messages', async c => {
     let translateEngine: string | undefined;
     if (contentType === 'text') {
       const txSettings = await getTranslationSettings(bizCtx.businessId, getCtxString(c, 'businessSlug'));
+      console.log('[StaffRoutes] 🔍 Translation check | staffId:', bizCtx.businessId,
+        '| txSettings:', txSettings ? `enabled=${txSettings.enabled} defaultLang=${txSettings.defaultLang} hasBaidu=${!!(txSettings.appid&&txSettings.secret)}` : 'NULL',
+        '| session.lang:', session?.lang || 'NULL',
+        '| session.businessId:', session?.businessId);
       if (txSettings?.enabled && session?.lang) {
         // 语言相同时跳过翻译（避免浪费 API 配额）
         const visitorBaseLang = (session.lang || '').split('-')[0].toLowerCase();
@@ -248,7 +252,12 @@ staffRoutes.post('/messages', async c => {
           } as any);
           if (!translateResult.success || !isTranslationUseful(content, translateResult.text)) {
             translatedContent = undefined;
-            console.log('[StaffRoutes] Translation not useful (same as original or same language), engine:', translateResult.engine || 'none');
+            console.log('[StaffRoutes] ❌ Translation failed or not useful',
+              '| engine:', translateResult.engine || 'none',
+              '| success:', translateResult.success,
+              '| textLen:', translateResult.text?.length || 0,
+              '| contentLen:', content.length,
+              '| sameAsOriginal:', content.trim() === (translateResult.text || '').trim());
           } else {
             translatedContent = translateResult.text;
             translateEngine = translateResult.engine;
