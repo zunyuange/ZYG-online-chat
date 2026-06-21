@@ -27,13 +27,23 @@ export const staffRoutes = new Hono()
 staffRoutes.route('/visitor-fields', visitorFieldRoutes)
 
 async function requireAuth(c: any, next: any) {
-  const authHeader = c.req.header('Authorization')
+  // Support both Authorization header AND ?token= query parameter (for EventSource SSE)
+  let token: string | null = null
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  const authHeader = c.req.header('Authorization')
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7)
+  }
+
+  // Fallback: query parameter token (for SSE/EventSource which can't set headers)
+  if (!token) {
+    token = c.req.query('token') || null
+  }
+
+  if (!token) {
     return c.json({ success: false, error: '未提供认证令牌' }, 401)
   }
 
-  const token = authHeader.substring(7)
   const result = await verifyToken(token)
 
   if (!result.valid) {

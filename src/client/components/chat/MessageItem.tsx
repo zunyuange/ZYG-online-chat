@@ -77,9 +77,15 @@ export function MessageItem({
     if (!currentLang || translating) return;
     setTranslating(true);
     try {
+      // 如果页面存在 staff_token（客服端），携带认证头
+      const token = localStorage.getItem('staff_token');
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(`/api/chat/messages/${message.id}/translate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ to: currentLang }),
       });
       const result = await response.json();

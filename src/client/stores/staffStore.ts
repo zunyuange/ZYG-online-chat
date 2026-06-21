@@ -468,7 +468,8 @@ export const useStaffStore = create<StaffState>((set, get) => ({
     // Always start polling as backup (Workers SSE may not broadcast correctly)
     get().startPolling();
 
-    eventSource = new EventSource('/api/staff/sse');
+    const token = localStorage.getItem('staff_token');
+    eventSource = new EventSource(`/api/staff/sse${token ? `?token=${token}` : ''}`);
 
     eventSource.onopen = () => {
       set({ sseConnected: true });
