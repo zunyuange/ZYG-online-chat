@@ -13,6 +13,12 @@ interface MessageListProps {
   isOwn: (message: Message) => boolean;
   onLoadMore: () => void;
   t?: (key: string) => string;
+  /** 当前界面语言，用于翻译目标 */
+  currentLang?: string;
+  /** 是否显示翻译按钮 */
+  showTranslate?: boolean;
+  /** 翻译完成回调 */
+  onTranslated?: (messageId: number, translatedContent: string) => void;
 }
 
 export function MessageList({
@@ -22,6 +28,9 @@ export function MessageList({
   isOwn,
   onLoadMore,
   t = (key: string) => key,
+  currentLang,
+  showTranslate = false,
+  onTranslated,
 }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollHeightRef = useRef(0);
@@ -160,6 +169,9 @@ export function MessageList({
           message={message}
           isOwn={isOwn(message)}
           t={t}
+          currentLang={currentLang}
+          showTranslate={showTranslate}
+          onTranslated={onTranslated}
         />
       ))}
       {loading && messages.length === 0 && (

@@ -28,6 +28,12 @@ interface StaffChatWindowProps {
   currentStaffId?: number;
   staffList?: { id: number; name: string; username: string }[];
   t?: (key: string) => string;
+  /** Show manual translate button on messages */
+  showTranslate?: boolean;
+  /** Current target language for translation */
+  translateLang?: string;
+  /** Callback when a message is manually translated */
+  onTranslated?: (messageId: number, translatedContent: string) => void;
 }
 
 export function StaffChatWindow({
@@ -48,6 +54,9 @@ export function StaffChatWindow({
   currentStaffId,
   staffList = [],
   t = (key: string) => key,
+  showTranslate = false,
+  translateLang,
+  onTranslated,
 }: StaffChatWindowProps) {
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
@@ -254,6 +263,9 @@ export function StaffChatWindow({
           isOwn={(message) => message.senderType === 'staff'}
           onLoadMore={onLoadMore}
           t={t}
+          currentLang={translateLang}
+          showTranslate={showTranslate}
+          onTranslated={onTranslated}
         />
 
         {/* Input */}

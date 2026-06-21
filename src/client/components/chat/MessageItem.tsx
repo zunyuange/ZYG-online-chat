@@ -3,17 +3,32 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { Image, Video, FileText, Download } from 'lucide-react';
+import { Image, Video, FileText, Download, Languages } from 'lucide-react';
 import type { Message } from '@shared/types';
 
 interface MessageItemProps {
   message: Message;
   isOwn: boolean;
   t?: (key: string) => string;
+  /** 当前界面语言，用于翻译目标 */
+  currentLang?: string;
+  /** 是否显示翻译按钮（仅非己方消息且无翻译时显示） */
+  showTranslate?: boolean;
+  /** 翻译完成回调，更新父组件消息列表 */
+  onTranslated?: (messageId: number, translatedContent: string) => void;
 }
 
-export function MessageItem({ message, isOwn, t = (key: string) => key }: MessageItemProps) {
+export function MessageItem({
+  message,
+  isOwn,
+  t = (key: string) => key,
+  currentLang,
+  showTranslate = false,
+  onTranslated,
+}: MessageItemProps) {
   const [expandedMedia, setExpandedMedia] = useState<Record<string, boolean>>({});
+  const [translating, setTranslating] = useState(false);
+  const [localTranslated, setLocalTranslated] = useState<string | undefined>(message.translatedContent);
 
   const formattedTime = new Date(message.createdAt).toLocaleTimeString(navigator.language || 'en', {
     hour: '2-digit',
@@ -56,6 +71,36 @@ export function MessageItem({ message, isOwn, t = (key: string) => key }: Messag
       [messageId]: !prev[messageId],
     }));
   }, []);
+
+  // 手动翻译处理
+  const handleTranslate = useCallback(async () => {
+    if (!currentLang || translating) return;
+    setTranslating(true);
+    try {
+      const response = await fetch(`/api/chat/messages/${message.id}/translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: currentLang }),
+      });
+      const result = await response.json();
+      if (result.success && result.data) {
+        const tc = result.data.translatedContent;
+        setLocalTranslated(tc);
+        onTranslated?.(message.id, tc);
+      } else {
+        console.warn('[MessageItem] Translate failed:', result.error);
+      }
+    } catch (err) {
+      console.error('[MessageItem] Translate error:', err);
+    } finally {
+      setTranslating(false);
+    }
+  }, [message.id, currentLang, translating, onTranslated]);
+
+  // 使用本地或 props 中的翻译内容
+  const effectiveTranslated = localTranslated || message.translatedContent;
+  // 是否显示翻译按钮：文本消息 + 尚无翻译 + 非己方消息 + 有目标语言
+  const canTranslate = showTranslate && isTextMessage && !effectiveTranslated && !!currentLang;
 
   const placeholderStyle: React.CSSProperties = {
     width: '180px',
@@ -215,7 +260,7 @@ export function MessageItem({ message, isOwn, t = (key: string) => key }: Messag
 
       default:
         // 文本消息：如果有翻译内容，同时显示原文和翻译
-        if (message.translatedContent && message.contentType === 'text') {
+        if (effectiveTranslated && message.contentType === 'text') {
           return (
             <div>
               <div>{message.content}</div>
@@ -233,7 +278,7 @@ export function MessageItem({ message, isOwn, t = (key: string) => key }: Messag
                   marginRight: '4px',
                   textTransform: 'uppercase',
                 }}>🌐 TR</span>
-                {message.translatedContent}
+                {effectiveTranslated}
               </div>
             </div>
           );
@@ -253,6 +298,25 @@ export function MessageItem({ message, isOwn, t = (key: string) => key }: Messag
           <span style={{ color: message.isRead ? '#52c41a' : '#999' }}>
             {message.isRead ? t('read') : t('unread')}
           </span>
+        )}
+        {canTranslate && (
+          <button
+            onClick={handleTranslate}
+            disabled={translating}
+            title={t('click_to_translate') || 'Translate'}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: translating ? 'default' : 'pointer',
+              padding: '2px',
+              display: 'flex',
+              alignItems: 'center',
+              opacity: translating ? 0.5 : 0.7,
+              transition: 'opacity 0.2s',
+            }}
+          >
+            <Languages size={14} />
+          </button>
         )}
       </div>
     </div>

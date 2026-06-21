@@ -790,6 +790,92 @@ chatRoutes.post('/messages/:id/delete', requireAuth, async c => {
 })
 
 // ==========================================
+// Manual Translate Message Route (手动翻译单条消息)
+// 用法: POST /api/chat/messages/:id/translate  body: { to: 'en-US' }
+// ==========================================
+
+chatRoutes.post('/messages/:id/translate', async c => {
+  try {
+    const messageId = parseInt(c.req.param('id'), 10)
+    const body = await c.req.json()
+    const { to } = body as { to?: string }
+
+    if (!to) {
+      return c.json({ success: false, error: 'Target language (to) is required' }, 400)
+    }
+
+    // 1. 从 DB 获取消息
+    const db = getDb()
+    const row = await db.get(
+      'SELECT m.*, s.business_id FROM messages m JOIN sessions s ON m.session_id = s.id WHERE m.id = ?',
+      [messageId]
+    ) as any
+
+    if (!row) {
+      return c.json({ success: false, error: '消息不存在' }, 404)
+    }
+
+    // 2. 只翻译文本消息
+    if (row.content_type !== 'text') {
+      return c.json({ success: false, error: '仅文本消息支持翻译' }, 400)
+    }
+
+    // 3. 获取翻译设置
+    const txSettings = await getTranslationSettings(row.business_id)
+
+    if (!txSettings?.enabled) {
+      return c.json({
+        success: false,
+        error: '翻译功能未启用，请在客服设置中开启自动翻译',
+      }, 400)
+    }
+
+    // 4. 执行翻译
+    console.log('[ChatRoutes] 🈂️ Manual translate | messageId:', messageId,
+      '| content:', (row.content as string).substring(0, 40),
+      '| to:', to,
+      '| businessId:', row.business_id)
+
+    const translatedText = await translateText({
+      text: row.content,
+      to,
+      businessId: row.business_id,
+      _settings: txSettings as any,
+    } as any)
+
+    // 5. 检查翻译是否有意义
+    if (!isTranslationUseful(row.content, translatedText)) {
+      console.log('[ChatRoutes] Manual translation not useful (same as original)')
+      return c.json({
+        success: false,
+        error: '翻译结果与原文相同，可能语言已一致',
+      }, 200)
+    }
+
+    // 6. 更新 DB 中的 translated_content
+    const now = Date.now()
+    await db.run(
+      'UPDATE messages SET translated_content = ?, updated_at = ? WHERE id = ?',
+      [translatedText, now, messageId]
+    )
+
+    console.log('[ChatRoutes] ✅ Manual translate stored:', translatedText.substring(0, 60))
+
+    return c.json({
+      success: true,
+      data: {
+        id: messageId,
+        translatedContent: translatedText,
+      },
+    })
+  } catch (error) {
+    console.error('[ChatRoutes] Manual translate error:', error)
+    const errorMessage = error instanceof Error ? error.message : '翻译失败'
+    return c.json({ success: false, error: errorMessage }, 500)
+  }
+})
+
+// ==========================================
 // Statistics Route
 // ==========================================
 

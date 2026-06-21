@@ -2,7 +2,7 @@
  * Chat Page - User/Visitor chat interface
  */
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import type { ContentType } from '@shared/types';
 import { useChatStore } from '@client/stores/chatStore';
 import { ChatWindow } from '@client/components/chat/ChatWindow';
@@ -40,7 +40,15 @@ export function ChatPage() {
     checkStaffOnline();
   }, [initSession, checkStaffOnline]);
 
-  // Mark as read when window gets focus
+  // Manual translation callback: updates local message state
+  const handleTranslated = useCallback((messageId: number, translatedContent: string) => {
+    const store = useChatStore;
+    const state = store.getState();
+    const updatedMessages = state.messages.map((m) =>
+      m.id === messageId ? { ...m, translatedContent } : m
+    );
+    store.setState({ messages: updatedMessages });
+  }, []);
   useEffect(() => {
     const handleFocus = () => {
       if (session && session.unreadByVisitor > 0) {
@@ -158,6 +166,8 @@ export function ChatPage() {
         setLocale={setLocale as any}
         supportedLocales={supportedLocales}
         onRestart={handleRestart}
+        showTranslate={true}
+        onTranslated={handleTranslated}
       />
 
       {/* PWA Install Prompt */}

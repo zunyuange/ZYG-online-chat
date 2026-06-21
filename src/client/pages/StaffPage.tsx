@@ -622,6 +622,21 @@ export function StaffPage() {
     uploadFile(file);
   };
 
+  // Manual translation callback for staff: update message in store
+  const handleTranslated = useCallback((messageId: number, translatedContent: string) => {
+    const store = useStaffStore;
+    const state = store.getState();
+    const messagesMap = new Map(state.messages);
+    const sessionMessages = messagesMap.get(currentSessionId || '');
+    if (sessionMessages) {
+      messagesMap.set(
+        currentSessionId!,
+        sessionMessages.map((m) => (m.id === messageId ? { ...m, translatedContent } : m))
+      );
+      store.setState({ messages: messagesMap });
+    }
+  }, [currentSessionId]);
+
   const handleTopicChange = (topic: string) => {
     if (currentSessionId) {
       updateTopic(currentSessionId, topic);
@@ -1279,6 +1294,9 @@ export function StaffPage() {
                 currentStaffId={userInfo?.userId}
                 staffList={staffList}
                 t={t as any}
+                showTranslate={true}
+                translateLang={locale}
+                onTranslated={handleTranslated}
               />
             </div>
 

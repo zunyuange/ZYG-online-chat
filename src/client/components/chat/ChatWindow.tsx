@@ -33,6 +33,10 @@ interface ChatWindowProps {
   setLocale?: (locale: string) => void;
   supportedLocales?: LocaleOption[];
   onRestart?: () => void;
+  /** Show manual translate button on messages */
+  showTranslate?: boolean;
+  /** Callback when a message is manually translated */
+  onTranslated?: (messageId: number, translatedContent: string) => void;
 }
 
 export function ChatWindow({
@@ -55,6 +59,8 @@ export function ChatWindow({
   setLocale,
   supportedLocales = [],
   onRestart,
+  showTranslate = false,
+  onTranslated,
 }: ChatWindowProps) {
   const [showLangModal, setShowLangModal] = useState(false);
 
@@ -273,6 +279,9 @@ export function ChatWindow({
         isOwn={isOwn}
         onLoadMore={onLoadMore}
         t={t}
+        currentLang={locale}
+        showTranslate={showTranslate}
+        onTranslated={onTranslated}
       />
 
       {/* Session ended notice */}
