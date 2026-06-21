@@ -223,31 +223,42 @@ staffRoutes.post('/messages', async c => {
     }
 
     // 自动翻译：客服消息翻译为访客的语言
+    // ⚠️ 关键：使用 session.businessId（主体商家管理员ID）而非 bizCtx.businessId（当前客服ID）
+    // 下级客服可能自己没有配置翻译，但上级商家已全局启用 → 需查询上级设置
     let translatedContent: string | undefined;
     let translateEngine: string | undefined;
     if (contentType === 'text') {
-      const txSettings = await getTranslationSettings(bizCtx.businessId, getCtxString(c, 'businessSlug'));
-      console.log('[StaffRoutes] 🔍 Translation check | staffId:', bizCtx.businessId,
+      const txBusinessId = session?.businessId || bizCtx.businessId;
+      const txSettings = await getTranslationSettings(txBusinessId, getCtxString(c, 'businessSlug'));
+      console.log('[StaffRoutes] 🔍 Translation check',
+        '| staffId:', bizCtx.businessId,
+        '| queriedBusinessId:', txBusinessId,
         '| txSettings:', txSettings ? `enabled=${txSettings.enabled} defaultLang=${txSettings.defaultLang} hasBaidu=${!!(txSettings.appid&&txSettings.secret)}` : 'NULL',
         '| session.lang:', session?.lang || 'NULL',
         '| session.businessId:', session?.businessId);
-      if (txSettings?.enabled && session?.lang) {
+
+      // 翻译目标语言：优先使用 session.lang（访客浏览器语言），空则回退到默认
+      const targetLang = session?.lang || txSettings?.defaultLang || 'zh-CN';
+
+      if (txSettings?.enabled && targetLang) {
         // 语言相同时跳过翻译（避免浪费 API 配额）
-        const visitorBaseLang = (session.lang || '').split('-')[0].toLowerCase();
+        const visitorBaseLang = (targetLang || '').split('-')[0].toLowerCase();
         const staffLang = txSettings.defaultLang || 'zh-CN';
         const staffBaseLang = (staffLang || '').split('-')[0].toLowerCase();
         if (visitorBaseLang && staffBaseLang && visitorBaseLang === staffBaseLang) {
           console.log('[StaffRoutes] ⏭️ Skipping translation: staff and visitor share same base language',
             '| visitor:', visitorBaseLang, '| staff:', staffBaseLang);
         } else {
-          console.log('[StaffRoutes] 🈂️ Auto-translating staff message to visitor lang:', session.lang,
+          const langSource = session?.lang ? 'session.lang' : 'settings.defaultLang (fallback)';
+          console.log('[StaffRoutes] 🈂️ Auto-translating staff message to visitor lang:', targetLang,
+            '| langSource:', langSource,
             '| visitorBase:', visitorBaseLang, '| staffBase:', staffBaseLang,
             '| staffId:', bizCtx.businessId,
             '| hasBaidu:', !!(txSettings.appid && txSettings.secret));
           const translateResult = await translateText({
             text: content,
-            to: session.lang,
-            businessId: bizCtx.businessId,
+            to: targetLang,
+            businessId: txBusinessId,
             _settings: txSettings as any,
           } as any);
           if (!translateResult.success || !isTranslationUseful(content, translateResult.text)) {
@@ -257,6 +268,7 @@ staffRoutes.post('/messages', async c => {
               '| success:', translateResult.success,
               '| textLen:', translateResult.text?.length || 0,
               '| contentLen:', content.length,
+              '| targetLang:', targetLang,
               '| sameAsOriginal:', content.trim() === (translateResult.text || '').trim());
           } else {
             translatedContent = translateResult.text;
@@ -264,12 +276,14 @@ staffRoutes.post('/messages', async c => {
             console.log(`[StaffRoutes] ✅ Translation stored via ${translateResult.engine}, length:`, translatedContent.length);
           }
         }
-      } else if (txSettings?.enabled) {
-        console.log('[StaffRoutes] Translation skipped: session.lang is not set (visitor language unknown)');
-      } else {
-        console.warn('[StaffRoutes] ⚠️ Translation DISABLED for staffId:', bizCtx.businessId,
+      } else if (!txSettings?.enabled) {
+        console.warn('[StaffRoutes] ⚠️ Translation DISABLED',
+          '| queriedBusinessId:', txBusinessId,
+          '| staffId:', bizCtx.businessId,
           '| txSettings:', txSettings ? `enabled=${txSettings.enabled} defaultLang=${txSettings.defaultLang}` : 'NULL');
         console.warn('[StaffRoutes] 💡 Enable auto_translate in Staff Settings (MyMemory free fallback works without Baidu API keys!)');
+      } else {
+        console.log('[StaffRoutes] Translation skipped: no target language available (session.lang is null, no defaultLang)');
       }
     }
 
