@@ -2,7 +2,7 @@
  * Message Item Component - Single message bubble
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Image, Video, FileText, Download, Languages } from 'lucide-react';
 import type { Message } from '@shared/types';
 
