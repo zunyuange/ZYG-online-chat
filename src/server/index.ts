@@ -138,6 +138,51 @@ const app = new Hono()
   .get('/health', (c) => {
     return c.json({ status: 'ok', timestamp: new Date().toISOString() });
   })
+  // 🔧 翻译 API 连通性诊断端点
+  .get('/api/debug/translate-test', async (c) => {
+    const testWord = 'hello';
+    const results: Record<string, any> = {};
+
+    // 测试 1: MyMemory（免费 API）
+    try {
+      const t1 = Date.now();
+      const myResp = await fetch(`https://api.mymemory.translated.net/get?q=${testWord}&langpair=en|zh-CN`);
+      const myData: any = await myResp.json();
+      const t2 = Date.now();
+      results.mymemory = {
+        ok: myResp.ok,
+        status: myResp.status,
+        latency_ms: t2 - t1,
+        translatedText: myData?.responseData?.translatedText || null,
+        error: myData?.responseDetails || null,
+      };
+    } catch (err: any) {
+      results.mymemory = { ok: false, error: err.message };
+    }
+
+    // 测试 2: 百度翻译
+    if (process.env.BAIDU_APPID && process.env.BAIDU_SECRET) {
+      // 直接从环境变量测试（如果配置了的话）
+      results.baidu = { note: '未配置环境变量，请通过数据库查询' };
+    }
+    
+    // 测试 3: 通用外网连通性
+    try {
+      const t1 = Date.now();
+      const cfResp = await fetch('https://cloudflare.com/cdn-cgi/trace');
+      const cfText = await cfResp.text();
+      const t2 = Date.now();
+      results.cloudflare_connectivity = {
+        ok: cfResp.ok,
+        latency_ms: t2 - t1,
+        colo: cfText.match(/colo=(\S+)/)?.[1] || 'unknown',
+      };
+    } catch (err: any) {
+      results.cloudflare_connectivity = { ok: false, error: err.message };
+    }
+
+    return c.json({ success: true, data: results });
+  })
   // Root endpoint
   .get('/', (c) => {
     return c.html(`
