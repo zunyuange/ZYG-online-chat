@@ -160,13 +160,7 @@ const app = new Hono()
       results.mymemory = { ok: false, error: err.message };
     }
 
-    // 测试 2: 百度翻译
-    if (process.env.BAIDU_APPID && process.env.BAIDU_SECRET) {
-      // 直接从环境变量测试（如果配置了的话）
-      results.baidu = { note: '未配置环境变量，请通过数据库查询' };
-    }
-    
-    // 测试 3: 通用外网连通性
+    // 测试 2: 通用外网连通性
     try {
       const t1 = Date.now();
       const cfResp = await fetch('https://cloudflare.com/cdn-cgi/trace');

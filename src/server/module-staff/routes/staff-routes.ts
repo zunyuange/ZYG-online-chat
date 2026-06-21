@@ -233,7 +233,7 @@ staffRoutes.post('/messages', async c => {
       console.log('[StaffRoutes] 🔍 Translation check',
         '| staffId:', bizCtx.businessId,
         '| queriedBusinessId:', txBusinessId,
-        '| txSettings:', txSettings ? `enabled=${txSettings.enabled} defaultLang=${txSettings.defaultLang} hasBaidu=${!!(txSettings.appid&&txSettings.secret)}` : 'NULL',
+        '| txSettings:', txSettings ? `enabled=${txSettings.enabled} defaultLang=${txSettings.defaultLang}` : 'NULL',
         '| session.lang:', session?.lang || 'NULL',
         '| session.businessId:', session?.businessId);
 
@@ -253,8 +253,7 @@ staffRoutes.post('/messages', async c => {
           console.log('[StaffRoutes] 🈂️ Auto-translating staff message to visitor lang:', targetLang,
             '| langSource:', langSource,
             '| visitorBase:', visitorBaseLang, '| staffBase:', staffBaseLang,
-            '| staffId:', bizCtx.businessId,
-            '| hasBaidu:', !!(txSettings.appid && txSettings.secret));
+            '| staffId:', bizCtx.businessId);
           const translateResult = await translateText({
             text: content,
             to: targetLang,
@@ -281,7 +280,7 @@ staffRoutes.post('/messages', async c => {
           '| queriedBusinessId:', txBusinessId,
           '| staffId:', bizCtx.businessId,
           '| txSettings:', txSettings ? `enabled=${txSettings.enabled} defaultLang=${txSettings.defaultLang}` : 'NULL');
-        console.warn('[StaffRoutes] 💡 Enable auto_translate in Staff Settings (MyMemory free fallback works without Baidu API keys!)');
+        console.warn('[StaffRoutes] 💡 Enable auto_translate in Staff Settings');
       } else {
         console.log('[StaffRoutes] Translation skipped: no target language available (session.lang is null, no defaultLang)');
       }
@@ -1068,7 +1067,7 @@ staffRoutes.get('/translation-status', async c => {
       diagnoseMessage = '翻译功能未启用（enable_auto_trans = 0）';
       diagnoseAction = '请在后台「系统设置」中打开自动翻译开关';
     } else {
-      diagnoseMessage = `翻译已启用 (${txSettings.appid ? '百度API已配置' : '使用MyMemory免费翻译'})`;
+      diagnoseMessage = '翻译已启用（使用 Google + MyMemory 免费翻译）';
       diagnoseAction = '';
     }
     
@@ -1077,8 +1076,6 @@ staffRoutes.get('/translation-status', async c => {
       data: {
         businessId: bizCtx.businessId,
         enabled: txSettings?.enabled ?? false,
-        hasAppid: !!txSettings?.appid,
-        hasSecret: !!txSettings?.secret,
         defaultLang: txSettings?.defaultLang ?? 'unknown',
         canTranslate: !!(txSettings?.enabled && txSettings?.defaultLang),  // 移除appid/secret要求
         diagnoseMessage,

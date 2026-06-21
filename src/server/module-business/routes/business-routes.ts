@@ -156,7 +156,7 @@ businessRoutes.get('/settings', async (c) => {
     let settings;
     if (slug) {
       settings = await db.get(
-        'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang FROM staff_users WHERE business_slug = ?',
+        'SELECT enable_auto_trans, default_lang FROM staff_users WHERE business_slug = ?',
         [slug]
       );
     } else {
@@ -177,7 +177,7 @@ businessRoutes.get('/settings', async (c) => {
       
       if (businessId !== undefined && businessId > 0) {
         settings = await db.get(
-          'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang FROM staff_users WHERE id = ?',
+          'SELECT enable_auto_trans, default_lang FROM staff_users WHERE id = ?',
           [businessId]
         );
       }
@@ -185,7 +185,7 @@ businessRoutes.get('/settings', async (c) => {
       // 兜底
       if (!settings) {
         settings = await db.get(
-          'SELECT enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang FROM staff_users WHERE business_slug = "default"'
+          'SELECT enable_auto_trans, default_lang FROM staff_users WHERE business_slug = "default"'
         );
       }
     }
@@ -196,8 +196,6 @@ businessRoutes.get('/settings', async (c) => {
 
     return c.json({ success: true, data: {
       enable_auto_trans: settings.enable_auto_trans === 1,
-      bd_trans_appid: settings.bd_trans_appid || '',
-      bd_trans_secret: settings.bd_trans_secret || '',
       default_lang: settings.default_lang || 'zh-CN',
     }});
   } catch (error) {
@@ -259,13 +257,11 @@ businessRoutes.post('/info', requireAuth, async (c) => {
 businessRoutes.post('/settings', requireAuth, async (c) => {
   try {
     const body = await c.req.json();
-    const { enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang, business_id, business_slug } = body;
+    const { enable_auto_trans, default_lang, business_id, business_slug } = body;
 
     const db = getDb();
     
-    // 判断用户角色：只有商家主账号 (admin) 才能修改翻译凭据
     let targetId: number | undefined;
-    let isOwner = true;
     
     if (business_id !== undefined && business_id > 0) {
       targetId = business_id;
@@ -311,34 +307,13 @@ businessRoutes.post('/settings', requireAuth, async (c) => {
       return c.json({ success: false, error: '无法确定商家身份' }, 400);
     }
 
-    // 检查是否为商家主账号 (business_id=0)
-    const userInfo = await db.get<{ business_id: number }>(
-      'SELECT business_id FROM staff_users WHERE id = ?',
-      [targetId]
+    await db.run(
+      'UPDATE staff_users SET enable_auto_trans = ?, default_lang = ?, updated_at = ? WHERE id = ?',
+      [enable_auto_trans ? 1 : 0, default_lang, Date.now(), targetId]
     );
-    if (userInfo && userInfo.business_id > 0) {
-      isOwner = false;
-    }
+    console.log('[POST /settings] Updated settings for user:', targetId);
 
-    if (isOwner) {
-      // 商家主账号：可以更新所有翻译设置
-      await db.run(
-        'UPDATE staff_users SET enable_auto_trans = ?, bd_trans_appid = ?, bd_trans_secret = ?, default_lang = ?, updated_at = ? WHERE id = ?',
-        [enable_auto_trans ? 1 : 0, bd_trans_appid, bd_trans_secret, default_lang, Date.now(), targetId]
-      );
-      console.log('[POST /settings] Owner updated all settings for user:', targetId);
-    } else {
-      // 下级客服：只能更新自己的语言偏好
-      if (default_lang) {
-        await db.run(
-          'UPDATE staff_users SET default_lang = ?, updated_at = ? WHERE id = ?',
-          [default_lang, Date.now(), targetId]
-        );
-        console.log('[POST /settings] Staff updated language only for user:', targetId, 'lang:', default_lang);
-      }
-    }
-
-    return c.json({ success: true, data: { isOwner } });
+    return c.json({ success: true });
   } catch (error) {
     console.error('Update business settings error:', error);
     return c.json({ success: false, error: 'Failed to update settings' }, 500);

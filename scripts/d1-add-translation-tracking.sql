@@ -4,7 +4,7 @@
 -- 在 D1 Studio → Console 中按顺序执行
 --
 -- 新增字段:
---   messages.translate_engine  TEXT    — 翻译引擎名称 (baidu/google/mymemory)
+--   messages.translate_engine  TEXT    — 翻译引擎名称 (google/mymemory)
 --   messages.translated_at     INTEGER — 翻译时间戳 (毫秒)
 -- ==========================================
 

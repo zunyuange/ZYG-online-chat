@@ -307,9 +307,6 @@ async function createAllTables(database: Database): Promise<void> {
       'business_slug TEXT UNIQUE, ' +
       'business_name TEXT, ' +
       'enable_auto_trans INTEGER NOT NULL DEFAULT 0, ' +
-      'bd_trans_appid TEXT, ' +
-      'bd_trans_secret TEXT, ' +
-      'bd_trans_token TEXT, ' +
       "default_lang TEXT NOT NULL DEFAULT 'zh-CN', " +
       'username TEXT NOT NULL UNIQUE, ' +
       'password_hash TEXT NOT NULL, ' +
@@ -691,16 +688,9 @@ async function runMigrations(database: Database): Promise<void> {
   // Add translated_content to messages table (自动翻译功能)
   await addColumnIfMissing('messages', 'translated_content', 'TEXT')
 
-  // Add bd_trans_secret to staff_users table (翻译密钥列 - 与旧版 bd_trans_token 对齐)
-  await addColumnIfMissing('staff_users', 'bd_trans_secret', 'TEXT')
-
-  // Add bd_trans_token to staff_users table (旧版翻译密钥列，保持兼容)
-  await addColumnIfMissing('staff_users', 'bd_trans_token', 'TEXT')
-
   // Add missing columns that getBusinessBySlug() depends on
   await addColumnIfMissing('staff_users', 'business_id', 'INTEGER NOT NULL DEFAULT 0')
   await addColumnIfMissing('staff_users', 'enable_auto_trans', 'INTEGER NOT NULL DEFAULT 0')
-  await addColumnIfMissing('staff_users', 'bd_trans_appid', 'TEXT')
   await addColumnIfMissing('staff_users', 'default_lang', "TEXT NOT NULL DEFAULT 'zh-CN'")
 
   // Fix existing staff_users data: ensure admin user has correct role and business_id
@@ -780,7 +770,7 @@ async function initializeDefaultAdmin(database: Database): Promise<void> {
 
 /**
  * Ensure existing staff_users data is correct (for databases created by older schema versions).
- * Fixes: business_id, enable_auto_trans, bd_trans_appid, default_lang, role, business_slug, business_name
+ * Fixes: business_id, enable_auto_trans, default_lang, role, business_slug, business_name
  */
 async function ensureDefaultStaffData(database: Database): Promise<void> {
   try {

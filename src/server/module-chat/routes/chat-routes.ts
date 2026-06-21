@@ -161,14 +161,10 @@ chatRoutes.get('/translation-status', async c => {
     } else if (!txSettings.defaultLang) {
       diagnoseMessage = '未设置默认语言（default_lang 为空）';
       diagnoseAction = '请在后台「系统设置」中设置默认语言';
-    } else if (txSettings.appid && txSettings.secret) {
-      diagnoseMessage = '翻译已正确配置（百度翻译 API）';
-      diagnoseAction = '';
-      translationProvider = 'baidu';
     } else {
-      diagnoseMessage = '翻译已启用（使用 MyMemory 免费翻译）';
-      diagnoseAction = 'MyMemory 每天可免费翻译 1000 词，如需更多请在后台配置百度翻译 API 凭据';
-      translationProvider = 'mymemory';
+      diagnoseMessage = '翻译已启用（使用 Google + MyMemory 免费翻译）';
+      diagnoseAction = '';
+      translationProvider = 'google+mymemory';
     }
     
     return c.json({
@@ -192,7 +188,7 @@ chatRoutes.get('/translation-status', async c => {
   }
 })
 
-// Test translation API (actually calls Baidu Translate with a test phrase)
+// Test translation API (calls free Google + MyMemory translation with a test phrase)
 chatRoutes.get('/translation-test', async c => {
   try {
     const sessionId = c.req.query('sessionId')
@@ -213,7 +209,7 @@ chatRoutes.get('/translation-test', async c => {
     }
 
     // Test: translate "Hello" → Chinese, "你好" → English
-    // translateText() automatically selects provider: Baidu (if credentials) or MyMemory (free fallback)
+    // translateText() uses Google Translate → MyMemory (free fallback)
     const testText = 'Hello'
     const targetLang = txSettings.defaultLang || 'zh-CN'
     const startTime = Date.now()
@@ -339,7 +335,7 @@ chatRoutes.post('/messages', async c => {
               '| staffLang:', targetLang, `(${staffBaseLang})`,
               '| assignedStaffId:', assignedStaffId,
               '| businessId:', session.businessId,
-              '| hasBaidu:', !!(txSettings.appid && txSettings.secret));
+        );
             const translateResult = await translateText({
               text: content,
               to: targetLang,
@@ -362,7 +358,7 @@ chatRoutes.post('/messages', async c => {
         } else {
           console.warn('[ChatRoutes] ⚠️ Translation NOT configured for businessId:', session.businessId,
             '| txSettings:', txSettings ? `enabled=${txSettings.enabled} defaultLang=${txSettings.defaultLang}` : 'NULL');
-          console.warn('[ChatRoutes] 💡 Enable auto_translate in Staff Settings (free MyMemory fallback works without Baidu API keys!)');
+          console.warn('[ChatRoutes] 💡 Enable auto_translate in Staff Settings');
         }
       }
     }
@@ -882,8 +878,7 @@ chatRoutes.post('/messages/:id/translate', async c => {
       '| content:', (row.content as string).substring(0, 40),
       '| detected:', detectedSource,
       '| to:', to,
-      '| businessId:', row.business_id,
-      '| hasBaidu:', !!(txSettings.appid && txSettings.secret))
+      '| businessId:', row.business_id)
 
     const translateResult = await translateText({
       text: row.content,
@@ -901,7 +896,7 @@ chatRoutes.post('/messages/:id/translate', async c => {
         '| businessId:', row.business_id);
       return c.json({
         success: false,
-        error: `翻译引擎 ${translateResult.engine || '无'} 未能转换，请检查以下项目：1) 百度翻译 API 凭据是否正确 2) Google/MyMemory 免费接口是否可用（需要外网访问）`,
+        error: `翻译引擎 ${translateResult.engine || '无'} 未能转换，Google/MyMemory 免费接口无法访问或返回相同文本`,
       }, 200)
     }
 

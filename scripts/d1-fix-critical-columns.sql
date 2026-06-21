@@ -10,7 +10,7 @@
 --   - 切换语言后页面崩溃
 --   
 -- 根本原因: staff_users 和 sessions 表缺少关键列
---   staff_users: business_id, enable_auto_trans, bd_trans_appid, default_lang
+--   staff_users: business_id, enable_auto_trans, default_lang
 --   sessions: business_id
 -- ==========================================
 
@@ -25,25 +25,16 @@ ALTER TABLE staff_users ADD COLUMN business_id INTEGER NOT NULL DEFAULT 0;
 -- 2.2 添加 enable_auto_trans（翻译开关）
 ALTER TABLE staff_users ADD COLUMN enable_auto_trans INTEGER NOT NULL DEFAULT 0;
 
--- 2.3 添加 bd_trans_appid（百度翻译 AppID，可选）
-ALTER TABLE staff_users ADD COLUMN bd_trans_appid TEXT;
-
--- 2.4 添加 bd_trans_secret（百度翻译密钥，可选）
-ALTER TABLE staff_users ADD COLUMN bd_trans_secret TEXT;
-
--- 2.5 添加 bd_trans_token（旧版翻译密钥，兼容）
-ALTER TABLE staff_users ADD COLUMN bd_trans_token TEXT;
-
--- 2.6 添加 default_lang（默认语言，翻译方向依赖）
+-- 2.3 添加 default_lang（默认语言，翻译方向依赖）
 ALTER TABLE staff_users ADD COLUMN default_lang TEXT NOT NULL DEFAULT 'zh-CN';
 
--- 2.7 添加 last_active（客服最后活跃时间，可选）
+-- 2.4 添加 last_active（客服最后活跃时间，可选）
 ALTER TABLE staff_users ADD COLUMN last_active INTEGER;
 
--- 2.8 添加 business_slug（如果缺失）
+-- 2.5 添加 business_slug（如果缺失）
 ALTER TABLE staff_users ADD COLUMN business_slug TEXT;
 
--- 2.9 添加 business_name（如果缺失）
+-- 2.6 添加 business_name（如果缺失）
 ALTER TABLE staff_users ADD COLUMN business_name TEXT;
 
 -- ===== 第3步：诊断 — 查看 sessions 表结构 =====
@@ -67,8 +58,8 @@ SELECT id, username, business_id, business_slug, business_name, role, enable_aut
 FROM staff_users WHERE username = 'admin';
 
 -- 5.1 如果 admin 用户不存在则创建
-INSERT OR IGNORE INTO staff_users (username, password_hash, email, name, role, status, enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang, business_id, business_slug, business_name)
-VALUES ('admin', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'admin@example.com', '系统管理员', 'admin', 'active', 1, '', '', 'zh-CN', 0, 'default', '默认商家');
+INSERT OR IGNORE INTO staff_users (username, password_hash, email, name, role, status, enable_auto_trans, default_lang, business_id, business_slug, business_name)
+VALUES ('admin', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'admin@example.com', '系统管理员', 'admin', 'active', 1, 'zh-CN', 0, 'default', '默认商家');
 
 -- 5.2 如果 admin 用户存在但数据不完整，修复之
 UPDATE staff_users 
@@ -101,7 +92,7 @@ ALTER TABLE messages ADD COLUMN translated_at INTEGER;
 
 -- ===== 第8.2步：回填已有翻译数据的引擎（可选） =====
 UPDATE messages 
-SET translate_engine = 'mymemory',
+SET translate_engine = 'google',
     translated_at = created_at
 WHERE translated_content IS NOT NULL 
   AND translated_content != '' 

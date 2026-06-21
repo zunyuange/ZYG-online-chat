@@ -98,8 +98,6 @@ business_id INTEGER NOT NULL DEFAULT 0,
 business_slug TEXT UNIQUE, 
 business_name TEXT, 
 enable_auto_trans INTEGER NOT NULL DEFAULT 0, 
-bd_trans_appid TEXT, 
-bd_trans_secret TEXT, 
 default_lang TEXT NOT NULL DEFAULT 'zh-CN', 
 username TEXT NOT NULL UNIQUE, 
 password_hash TEXT NOT NULL, 
@@ -319,10 +317,8 @@ CREATE INDEX IF NOT EXISTS transfer_requests_to_staff_id_idx ON transfer_request
 INSERT OR REPLACE INTO admin_users (username, password_hash, email, name, status) VALUES ('admin', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'admin@example.com', '系统管理员', 'active');
 
 -- Initialize default staff user (business admin)
--- enable_auto_trans=1 → 默认开启自动翻译
--- 无百度凭据时自动使用免费的 MyMemory API 后备方案
--- 如需更高翻译质量，在后台「系统设置」填入百度翻译 API 凭据
-INSERT OR REPLACE INTO staff_users (username, password_hash, email, name, role, status, enable_auto_trans, bd_trans_appid, bd_trans_secret, default_lang, business_id, business_slug, business_name) VALUES ('admin', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'admin@example.com', '系统管理员', 'admin', 'active', 1, '', '', 'zh-CN', 0, 'default', '默认商家');
+-- enable_auto_trans=1 → 默认开启自动翻译（Google + MyMemory 免费引擎）
+INSERT OR REPLACE INTO staff_users (username, password_hash, email, name, role, status, enable_auto_trans, default_lang, business_id, business_slug, business_name) VALUES ('admin', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'admin@example.com', '系统管理员', 'admin', 'active', 1, 'zh-CN', 0, 'default', '默认商家');
 
 -- Initialize default super admin role
 INSERT OR REPLACE INTO roles (name, description, permissions, is_system, status) VALUES ('超级管理员', '系统默认超级管理员，拥有所有权限', '["admin_view","admin_edit","staff_view","staff_edit","role_view","role_edit","settings"]', 1, 'active');

@@ -3,8 +3,7 @@
 -- 数据库 ID: 91fad6d8-e535-4bc0-95fc-2b69c32c7d22
 -- 在 D1 Studio 中按顺序执行所有语句
 -- 
--- 🆕 v2: 已内置 MyMemory 免费翻译后备方案
---     无需百度翻译 API 凭据也能自动翻译！
+-- 🆕 v3: 使用 Google + MyMemory 免费翻译（无需任何 API 凭据）
 --     只需执行第1步+第4步启用翻译开关即可
 -- ==========================================
 
@@ -24,33 +23,20 @@ SELECT
   business_name,
   role,
   enable_auto_trans,
-  CASE WHEN bd_trans_appid IS NOT NULL AND bd_trans_appid != '' THEN '✅ Baidu' ELSE '❌ 未配置' END AS baidu_appid,
-  CASE WHEN bd_trans_secret IS NOT NULL AND bd_trans_secret != '' THEN '✅ Baidu' ELSE '❌ 未配置' END AS baidu_secret,
   default_lang,
   CASE WHEN enable_auto_trans = 1 THEN 
-    CASE WHEN bd_trans_appid IS NOT NULL AND bd_trans_appid != '' AND bd_trans_secret IS NOT NULL AND bd_trans_secret != '' 
-      THEN '🔵 百度翻译' 
-      ELSE '🟢 MyMemory 免费'
-    END
-    ELSE '⭕ 翻译已关闭'
+    '🟢 Google + MyMemory 免费翻译'
+  ELSE '⭕ 翻译已关闭'
   END AS translate_provider
 FROM staff_users
 ORDER BY id;
 
 -- ===== 第4步：修复 — 启用所有商家的翻译开关（enable_auto_trans = 1） =====
--- 启用后即默认使用 MyMemory 免费翻译，无需额外配置
+-- 启用后即默认使用 Google + MyMemory 免费翻译，无需额外配置
 UPDATE staff_users 
 SET enable_auto_trans = 1,
     updated_at = unixepoch() * 1000
 WHERE enable_auto_trans = 0;
-
--- ===== 第4.1步（可选）：配置百度翻译 API 凭据以获得更高质量的翻译 =====
--- 注册地址: https://fanyi-api.baidu.com/
--- UPDATE staff_users 
--- SET bd_trans_appid = 'YOUR_APPID', 
---     bd_trans_secret = 'YOUR_SECRET',
---     updated_at = unixepoch() * 1000
--- WHERE id = 1;
 
 -- ===== 第5步：诊断 — 检查近期消息的翻译内容 =====
 SELECT 
@@ -96,8 +82,4 @@ SELECT '✅ 翻译功能修复完成' AS result,
     THEN '翻译开关 ✅'
     ELSE '翻译开关 ❌（请重新执行第4步）' 
   END AS trans_switch,
-  CASE 
-    WHEN (SELECT COUNT(*) FROM staff_users WHERE bd_trans_appid IS NOT NULL AND bd_trans_appid != '' AND bd_trans_secret IS NOT NULL AND bd_trans_secret != '') > 0 
-    THEN '🔵 百度翻译已配置'
-    ELSE '🟢 MyMemory 免费翻译（无需凭据）'
-  END AS provider;
+  '🟢 Google + MyMemory 免费翻译（无需凭据）' AS provider;
