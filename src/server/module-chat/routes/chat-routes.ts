@@ -10,7 +10,7 @@ import * as sseService from '../services/sse-service'
 import * as queueService from '../services/queue-service'
 import * as transferService from '../services/transfer-service'
 import * as barkService from '@server/services/bark-service'
-import { translateText, isTranslationUseful, getTranslationSettings } from '@server/services/translate-service'
+import { translateText, isTranslationUseful, getTranslationSettings, detectSourceLanguage } from '@server/services/translate-service'
 import { searchKnowledge } from '@server/module-robot/services/robot-service'
 import { verifyToken } from '@server/module-auth/services/auth-service'
 import { getDb } from '@server/shared/db'
@@ -843,12 +843,21 @@ chatRoutes.post('/messages/:id/translate', async c => {
       _settings: txSettings as any,
     } as any)
 
-    // 5. 检查翻译是否有意义
+    // 5. 检查翻译是否有意义（翻译结果与原文不同才算成功）
     if (!isTranslationUseful(row.content, translatedText)) {
-      console.log('[ChatRoutes] Manual translation not useful (same as original)')
+      console.log('[ChatRoutes] Manual translation not useful (same as original), targetLang:', to)
+      // 分析源语言以给出更准确的错误提示
+      const detected = detectSourceLanguage(row.content)
+      const targetBase = to.split('-')[0]
+      let sourceHint = ''
+      if (detected === to || detected === targetBase) {
+        sourceHint = '（原文语言与翻译目标语言一致）'
+      } else {
+        sourceHint = '（翻译服务未能转换，请检查翻译引擎配置）'
+      }
       return c.json({
         success: false,
-        error: '翻译结果与原文相同，可能语言已一致',
+        error: `翻译结果与原文相同${sourceHint}`,
       }, 200)
     }
 

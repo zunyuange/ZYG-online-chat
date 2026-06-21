@@ -28,6 +28,7 @@ export function MessageItem({
 }: MessageItemProps) {
   const [expandedMedia, setExpandedMedia] = useState<Record<string, boolean>>({});
   const [translating, setTranslating] = useState(false);
+  const [translateError, setTranslateError] = useState<string>('');
   const [localTranslated, setLocalTranslated] = useState<string | undefined>(message.translatedContent);
 
   const formattedTime = new Date(message.createdAt).toLocaleTimeString(navigator.language || 'en', {
@@ -76,6 +77,7 @@ export function MessageItem({
   const handleTranslate = useCallback(async () => {
     if (!currentLang || translating) return;
     setTranslating(true);
+    setTranslateError('');
     try {
       // 如果页面存在 staff_token（客服端），携带认证头
       const token = localStorage.getItem('staff_token');
@@ -94,9 +96,13 @@ export function MessageItem({
         setLocalTranslated(tc);
         onTranslated?.(message.id, tc);
       } else {
-        console.warn('[MessageItem] Translate failed:', result.error);
+        const errMsg = result.error || '翻译失败';
+        setTranslateError(errMsg);
+        console.warn('[MessageItem] Translate failed:', errMsg);
       }
     } catch (err) {
+      const errMsg = err instanceof Error ? err.message : '网络错误';
+      setTranslateError(errMsg);
       console.error('[MessageItem] Translate error:', err);
     } finally {
       setTranslating(false);
@@ -106,7 +112,7 @@ export function MessageItem({
   // 使用本地或 props 中的翻译内容
   const effectiveTranslated = localTranslated || message.translatedContent;
   // 是否显示翻译按钮：文本消息 + 尚无翻译 + 非己方消息 + 有目标语言
-  const canTranslate = showTranslate && isTextMessage && !effectiveTranslated && !!currentLang;
+  const canTranslate = showTranslate && isTextMessage && !effectiveTranslated && !!currentLang && !isOwn;
 
   const placeholderStyle: React.CSSProperties = {
     width: '180px',
@@ -323,6 +329,17 @@ export function MessageItem({
           >
             <Languages size={14} />
           </button>
+        )}
+        {translateError && (
+          <span style={{
+            fontSize: '11px',
+            color: '#ff4d4f',
+            maxWidth: '200px',
+            wordBreak: 'break-all',
+            cursor: 'default',
+          }} title={translateError}>
+            ⚠ {translateError.length > 20 ? translateError.substring(0, 20) + '…' : translateError}
+          </span>
         )}
       </div>
     </div>

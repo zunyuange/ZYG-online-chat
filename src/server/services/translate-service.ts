@@ -336,7 +336,7 @@ function toIso639Lang(localeCode: string): string {
  * 简单的语言检测：根据文本字符特征判断源语言
  * 用于 MyMemory API（不支持 'auto' 源语言）
  */
-function detectSourceLanguage(text: string): string {
+export function detectSourceLanguage(text: string): string {
   // 统计各类字符
   let cjkCount = 0;
   let asciiCount = 0;
