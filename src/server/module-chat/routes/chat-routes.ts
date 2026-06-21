@@ -854,21 +854,36 @@ chatRoutes.post('/messages/:id/translate', async c => {
       return c.json({ success: false, error: '仅文本消息支持翻译' }, 400)
     }
 
-    // 3. 获取翻译设置
+    // 3. 检测原文语言，相同语言跳过翻译（避免浪费 API 配额）
+    const detectedSource = detectSourceLanguage(row.content);
+    const targetBase = to.split('-')[0];
+    const sourceBase = detectedSource.split('-')[0];
+    if (sourceBase === targetBase || detectedSource === to) {
+      console.log('[ChatRoutes] ⏭️ Manual translate skipped: source and target language match',
+        '| detected:', detectedSource, '| to:', to);
+      return c.json({
+        success: false,
+        error: '原文语言与翻译目标语言一致，无需翻译',
+      }, 200);
+    }
+
+    // 4. 获取翻译设置
     const txSettings = await getTranslationSettings(row.business_id)
 
     if (!txSettings?.enabled) {
       return c.json({
         success: false,
-        error: '翻译功能未启用，请在客服设置中开启自动翻译',
+        error: '翻译功能未启用，请在客服设置中开启自动翻译开关',
       }, 400)
     }
 
-    // 4. 执行翻译
+    // 5. 执行翻译
     console.log('[ChatRoutes] 🈂️ Manual translate | messageId:', messageId,
       '| content:', (row.content as string).substring(0, 40),
+      '| detected:', detectedSource,
       '| to:', to,
-      '| businessId:', row.business_id)
+      '| businessId:', row.business_id,
+      '| hasBaidu:', !!(txSettings.appid && txSettings.secret))
 
     const translateResult = await translateText({
       text: row.content,
@@ -877,25 +892,20 @@ chatRoutes.post('/messages/:id/translate', async c => {
       _settings: txSettings as any,
     } as any)
 
-    // 5. 检查翻译是否有意义（翻译结果与原文不同才算成功）
+    // 6. 检查翻译是否有意义（翻译结果与原文不同才算成功）
     if (!translateResult.success || !isTranslationUseful(row.content, translateResult.text)) {
-      console.log('[ChatRoutes] Manual translation not useful (same as original), targetLang:', to, 'engine:', translateResult.engine || 'none')
-      // 分析源语言以给出更准确的错误提示
-      const detected = detectSourceLanguage(row.content)
-      const targetBase = to.split('-')[0]
-      let sourceHint = ''
-      if (detected === to || detected === targetBase) {
-        sourceHint = '（原文语言与翻译目标语言一致）'
-      } else {
-        sourceHint = `（翻译引擎 ${translateResult.engine || '无'} 未能转换，请检查翻译引擎配置）`
-      }
+      console.log('[ChatRoutes] Manual translation not useful',
+        '| targetLang:', to,
+        '| detected:', detectedSource,
+        '| engine:', translateResult.engine || 'none',
+        '| businessId:', row.business_id);
       return c.json({
         success: false,
-        error: `翻译结果与原文相同${sourceHint}`,
+        error: `翻译引擎 ${translateResult.engine || '无'} 未能转换，请检查以下项目：1) 百度翻译 API 凭据是否正确 2) Google/MyMemory 免费接口是否可用（需要外网访问）`,
       }, 200)
     }
 
-    // 6. 更新 DB 中的 translated_content + translate_engine
+    // 7. 更新 DB 中的 translated_content + translate_engine
     const now = Date.now()
     await db.run(
       'UPDATE messages SET translated_content = ?, translate_engine = ?, translated_at = ? WHERE id = ?',

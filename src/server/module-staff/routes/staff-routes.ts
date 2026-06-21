@@ -215,17 +215,31 @@ staffRoutes.post('/messages', async c => {
     const bizCtx = requireBusiness(c)
     if (!bizCtx) return
 
+    // 获取 session（不带 businessId 过滤，因为 sessions.business_id 存的是主体商家管理员ID）
+    // 翻译和消息发送都需要 session 信息
+    const session = await chatService.getSession(sessionId);
+    if (!session) {
+      return c.json({ success: false, error: 'Session not found' }, 404)
+    }
+
     // 自动翻译：客服消息翻译为访客的语言
     let translatedContent: string | undefined;
     let translateEngine: string | undefined;
     if (contentType === 'text') {
       const txSettings = await getTranslationSettings(bizCtx.businessId, getCtxString(c, 'businessSlug'));
-      if (txSettings?.enabled) {
-        const session = await chatService.getSession(sessionId, bizCtx.businessId);
-        if (session?.lang) {
-          console.log('[StaffRoutes] Auto-translating staff message to visitor lang:', session.lang,
-            'businessId:', bizCtx.businessId,
-            'hasBaidu:', !!(txSettings.appid && txSettings.secret));
+      if (txSettings?.enabled && session?.lang) {
+        // 语言相同时跳过翻译（避免浪费 API 配额）
+        const visitorBaseLang = (session.lang || '').split('-')[0].toLowerCase();
+        const staffLang = txSettings.defaultLang || 'zh-CN';
+        const staffBaseLang = (staffLang || '').split('-')[0].toLowerCase();
+        if (visitorBaseLang && staffBaseLang && visitorBaseLang === staffBaseLang) {
+          console.log('[StaffRoutes] ⏭️ Skipping translation: staff and visitor share same base language',
+            '| visitor:', visitorBaseLang, '| staff:', staffBaseLang);
+        } else {
+          console.log('[StaffRoutes] 🈂️ Auto-translating staff message to visitor lang:', session.lang,
+            '| visitorBase:', visitorBaseLang, '| staffBase:', staffBaseLang,
+            '| staffId:', bizCtx.businessId,
+            '| hasBaidu:', !!(txSettings.appid && txSettings.secret));
           const translateResult = await translateText({
             text: content,
             to: session.lang,
@@ -240,16 +254,17 @@ staffRoutes.post('/messages', async c => {
             translateEngine = translateResult.engine;
             console.log(`[StaffRoutes] ✅ Translation stored via ${translateResult.engine}, length:`, translatedContent.length);
           }
-        } else {
-          console.log('[StaffRoutes] Translation skipped: session.lang is not set (visitor language unknown)');
         }
+      } else if (txSettings?.enabled) {
+        console.log('[StaffRoutes] Translation skipped: session.lang is not set (visitor language unknown)');
       } else {
-        console.warn('[StaffRoutes] ⚠️ Translation DISABLED for businessId:', bizCtx.businessId,
-          '| txSettings:', txSettings ? `enabled=${txSettings.enabled}` : 'NULL');
-        console.warn('[StaffRoutes] 💡 Enable auto_translate in Staff Settings (MyMemory free fallback works without Baidu API keys)');
+        console.warn('[StaffRoutes] ⚠️ Translation DISABLED for staffId:', bizCtx.businessId,
+          '| txSettings:', txSettings ? `enabled=${txSettings.enabled} defaultLang=${txSettings.defaultLang}` : 'NULL');
+        console.warn('[StaffRoutes] 💡 Enable auto_translate in Staff Settings (MyMemory free fallback works without Baidu API keys!)');
       }
     }
 
+    // 使用 session 的实际 businessId（主体商家管理员ID），而非当前客服自己的 staff_users.id
     const message = await staffService.sendMessage(
       {
         sessionId,
@@ -262,17 +277,14 @@ staffRoutes.post('/messages', async c => {
         fileName,
         fileSize,
       },
-      bizCtx.businessId
+      session.businessId
     )
 
     // Broadcast to SSE clients
     await sseService.broadcastMessage(message)
 
     // Broadcast session update to staff
-    const session = await chatService.getSession(sessionId, bizCtx.businessId)
-    if (session) {
-      await sseService.broadcastSessionUpdate(session)
-    }
+    await sseService.broadcastSessionUpdate(session)
 
     return c.json({ success: true, data: message })
   } catch (error) {
