@@ -373,6 +373,10 @@ export async function getTranslationSettings(businessId?: number, businessSlug?:
       'SELECT enable_auto_trans, default_lang, business_id FROM staff_users WHERE id = ?',
       [businessId]
     );
+    
+    console.log('[TranslateService] getTranslationSettings: businessId=', businessId, 
+      'first query result:', settings ? JSON.stringify(settings) : 'NULL');
+    
     // 如果没找到，尝试按 business_id 查询商家主账号
     if (!settings) {
       settings = await db.get<{
@@ -383,6 +387,9 @@ export async function getTranslationSettings(businessId?: number, businessSlug?:
         'SELECT enable_auto_trans, default_lang, business_id FROM staff_users WHERE id = ? AND business_id = 0',
         [businessId]
       );
+      
+      console.log('[TranslateService] getTranslationSettings: businessId=', businessId, 
+        'second query result:', settings ? JSON.stringify(settings) : 'NULL');
     }
   } else if (businessSlug) {
     settings = await db.get<{
