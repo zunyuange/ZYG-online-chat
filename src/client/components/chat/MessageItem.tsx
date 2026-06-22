@@ -2,7 +2,7 @@
  * Message Item Component - Single message bubble
  */
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Image, Video, FileText, Download, Languages } from 'lucide-react';
 import type { Message } from '@shared/types';
 
@@ -94,6 +94,11 @@ export function MessageItem({
       if (result.success && result.data) {
         const tc = result.data.translatedContent;
         const te = result.data.translateEngine;
+        // same_language：文本已是目标语言，无需翻译，仅给信息提示
+        if (te === 'same_language') {
+          setTranslateError(result.info || '文本已是目标语言，无需翻译');
+          return;
+        }
         setLocalTranslated(tc);
         onTranslated?.(message.id, tc, te);
       } else {

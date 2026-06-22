@@ -109,27 +109,61 @@ function toSimplyLang(localeCode: string): string {
 }
 
 /**
- * 简单的语言检测：根据文本字符特征判断源语言
- * 用于 MyMemory API（不支持 'auto' 源语言）
+ * 详细的文本语言检测：区分中文、日文、韩文、英文等
+ * 用于决定是否需要跳过翻译（目标语言相同时节省 API 配额）
  */
 export function detectSourceLanguage(text: string): string {
-  let cjkCount = 0;
+  let chineseCount = 0;   // CJK 统一表意文字（中文+日文汉字）
+  let hiraganaCount = 0;  // 平假名（日语特有）
+  let katakanaCount = 0;  // 片假名（日语特有）
+  let koreanCount = 0;    // 韩文谚文
   let asciiCount = 0;
   for (const char of text) {
     const code = char.charCodeAt(0);
-    if ((code >= 0x4E00 && code <= 0x9FFF) ||  // CJK 统一表意文字
-        (code >= 0x3040 && code <= 0x309F) ||  // 平假名
-        (code >= 0x30A0 && code <= 0x30FF) ||  // 片假名
-        (code >= 0xAC00 && code <= 0xD7AF)) {   // 韩文
-      cjkCount++;
+    if (code >= 0x4E00 && code <= 0x9FFF) {
+      chineseCount++;
+    } else if (code >= 0x3040 && code <= 0x309F) {
+      hiraganaCount++;
+    } else if (code >= 0x30A0 && code <= 0x30FF) {
+      katakanaCount++;
+    } else if (code >= 0xAC00 && code <= 0xD7AF) {
+      koreanCount++;
     } else if (code < 128) {
       asciiCount++;
     }
   }
-  if (cjkCount > asciiCount && cjkCount > 0) {
-    return 'zh-CN';
-  }
+  const total = chineseCount + hiraganaCount + katakanaCount + koreanCount + asciiCount;
+  if (total === 0) return 'unknown';
+  
+  // 韩文：谚文字符占主导
+  if (koreanCount > 0 && koreanCount >= total * 0.5) return 'ko';
+  // 日语：假名占主导
+  if ((hiraganaCount + katakanaCount) > 0 && (hiraganaCount + katakanaCount) >= total * 0.5) return 'ja';
+  // 中文：CJK 汉字占主导
+  if (chineseCount > asciiCount && chineseCount > 0) return 'zh-CN';
+  // 英文/拉丁语系
   return 'en';
+}
+
+/**
+ * 快速判断文本是否已经（很可能）是目标语言，无需翻译
+ * 两个用途：
+ * 1. 访客输入中文 → 客服也是中文 → 跳过翻译（节省配额）
+ * 2. 访客输入韩文 → 客服是中文 → 仍需翻译（继续走引擎链）
+ */
+export function isLikelyAlreadyInTargetLang(text: string, targetLang: string): boolean {
+  const targetBase = (targetLang || '').split('-')[0].toLowerCase();
+  if (!targetBase) return false;
+  
+  const detected = detectSourceLanguage(text);
+  // detected 可能是 'zh-CN', 'en', 'ko', 'ja', 'unknown'
+  const detectedBase = (detected || 'unknown').split('-')[0].toLowerCase();
+  
+  if (detectedBase === targetBase) {
+    console.log(`[TranslateService] 🔍 Text likely already in target language: detected=${detected}, target=${targetLang}`);
+    return true;
+  }
+  return false;
 }
 
 // ==========================================
@@ -422,6 +456,14 @@ export async function translateText(options: TranslateOptions): Promise<Translat
   if (!settings.enabled) {
     console.warn('[TranslateService] ⚠️ Translation disabled | businessId:', options.businessId);
     return makeResult('');
+  }
+
+  // ==========================================
+  // 🔍 早期语言检测：如果文本已经大概率是目标语言，直接跳过翻译（节省费率）
+  // ==========================================
+  if (isLikelyAlreadyInTargetLang(text, to)) {
+    console.log(`[TranslateService] ⏭️ Text already in target language (${to}), skipping all engines to save quota | text: "${text.substring(0, 50)}"`);
+    return { text, engine: 'same_language', success: false };
   }
 
   // 语言代码映射

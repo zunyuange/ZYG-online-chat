@@ -260,7 +260,11 @@ staffRoutes.post('/messages', async c => {
             businessId: txBusinessId,
             _settings: txSettings as any,
           } as any);
-          if (!translateResult.success || !isTranslationUseful(content, translateResult.text)) {
+          if (translateResult.engine === 'same_language') {
+            translatedContent = undefined;
+            console.log('[StaffRoutes] ⏭️ Auto-translate skipped: text already in target language',
+              '| target:', targetLang, '| text:', (content as string).substring(0, 30));
+          } else if (!translateResult.success || !isTranslationUseful(content, translateResult.text)) {
             translatedContent = undefined;
             console.log('[StaffRoutes] ❌ Translation failed or not useful',
               '| engine:', translateResult.engine || 'none',

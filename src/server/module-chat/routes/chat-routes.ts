@@ -346,7 +346,10 @@ chatRoutes.post('/messages', async c => {
               businessId: session.businessId,
               _settings: txSettings as any,
             } as any);
-            if (!translateResult.success || !isTranslationUseful(content, translateResult.text)) {
+            if (translateResult.engine === 'same_language') {
+              console.log('[ChatRoutes] ⏭️ Auto-translate skipped: text already in target language',
+                '| target:', targetLang, '| text:', (content as string).substring(0, 30));
+            } else if (!translateResult.success || !isTranslationUseful(content, translateResult.text)) {
               console.log('[ChatRoutes] ❌ Translation not useful (same as original), engine:', translateResult.engine || 'none');
             } else {
               translatedContent = translateResult.text;
@@ -428,7 +431,10 @@ chatRoutes.post('/messages', async c => {
               businessId: session.businessId,
               _settings: txSettings as any,
             } as any);
-            if (!robotTranslateResult.success || !isTranslationUseful(knowledge.answer, robotTranslateResult.text)) {
+            if (robotTranslateResult.engine === 'same_language') {
+              staffTranslated = undefined;
+              console.log('[ChatRoutes] ⏭️ Robot reply translation skipped: already in target language');
+            } else if (!robotTranslateResult.success || !isTranslationUseful(knowledge.answer, robotTranslateResult.text)) {
               staffTranslated = undefined;
               console.log('[ChatRoutes] Robot reply translation not useful (same as original), engine:', robotTranslateResult.engine || 'none');
             } else {
@@ -895,9 +901,23 @@ chatRoutes.post('/messages/:id/translate', async c => {
         '| detected:', detectedSource,
         '| engine:', translateResult.engine || 'none',
         '| businessId:', row.business_id);
+      
+      // 如果是因为文本已经是目标语言（same_language），给友好提示
+      if (translateResult.engine === 'same_language') {
+        return c.json({
+          success: true,
+          data: {
+            id: messageId,
+            translatedContent: row.content,
+            translateEngine: 'same_language',
+          },
+          info: '文本已经是目标语言，无需翻译',
+        }, 200)
+      }
+      
       return c.json({
         success: false,
-        error: `翻译引擎 ${translateResult.engine || '无'} 未能转换，SimplyTranslate/Google/MyMemory 免费接口无法访问或返回相同文本`,
+        error: `翻译引擎 ${translateResult.engine || '无'} 未能转换，可能文本已是目标语言，或免费接口暂时无法访问`,
       }, 200)
     }
 
