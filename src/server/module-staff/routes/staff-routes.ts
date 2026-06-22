@@ -234,18 +234,22 @@ staffRoutes.post('/messages', async c => {
       const txBusinessId = session?.businessId || bizCtx.businessId;
       const txSettings = await getTranslationSettings(txBusinessId, getCtxString(c, 'businessSlug'));
 
+      // 如果没找到翻译设置，使用默认启用翻译的配置
+      const effectiveSettings = txSettings || { enabled: true, defaultLang: 'zh-CN' };
+      
       // 翻译目标语言：优先使用 session.lang（访客浏览器语言），空则回退到默认
-      const targetLang = session?.lang || txSettings?.defaultLang || 'zh-CN';
+      const targetLang = session?.lang || effectiveSettings.defaultLang || 'zh-CN';
 
       console.log('[StaffRoutes] 🔍 Translation check',
         '| staffId:', bizCtx.businessId,
         '| queriedBusinessId:', txBusinessId,
         '| txSettings:', txSettings ? `enabled=${txSettings.enabled} defaultLang=${txSettings.defaultLang}` : 'NULL',
+        '| effectiveSettings:', `enabled=${effectiveSettings.enabled} defaultLang=${effectiveSettings.defaultLang}`,
         '| session.lang:', session?.lang || 'NULL',
         '| targetLang:', targetLang,
         '| session.businessId:', session?.businessId);
 
-      if (txSettings?.enabled && targetLang) {
+      if (effectiveSettings.enabled && targetLang) {
         const staffDetectedLang = detectSourceLanguage(content as string);
         const langSource = session?.lang ? 'session.lang' : 'settings.defaultLang (fallback)';
         console.log('[StaffRoutes] 🈂️ Auto-translating staff message to visitor lang:', targetLang,
@@ -256,7 +260,7 @@ staffRoutes.post('/messages', async c => {
           text: content,
           to: targetLang,
           businessId: txBusinessId,
-          _settings: txSettings as any,
+          _settings: effectiveSettings as any,
         } as any);
         if (translateResult.engine === 'same_language') {
           translatedContent = undefined;
