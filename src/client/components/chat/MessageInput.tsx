@@ -244,16 +244,16 @@ export function MessageInput({
             title={t('chat_mode_title')}
           >
             <MessageSquare size={isMobile ? 14 : 16} />
-            {!isMobile && inputMode === 'chat' && t('chat_mode_chat')}
+            {!isMobile && inputMode === 'chat' && t('chat_mode')}
           </button>
           <button
             type="button"
             style={modeIconStyle(inputMode === 'topic')}
             onClick={() => onModeChange('topic')}
-            title={t('topic_mode_title')}
+            title={t('notice_mode_title')}
           >
             <Pin size={isMobile ? 14 : 16} />
-            {!isMobile && inputMode === 'topic' && t('topic_mode_topic')}
+            {!isMobile && inputMode === 'topic' && t('notice_mode')}
           </button>
         </div>
       )}

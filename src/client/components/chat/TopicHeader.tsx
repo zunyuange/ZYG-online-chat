@@ -141,7 +141,7 @@ export function TopicHeader({
             onClick={handleClick}
             title={session.topic || undefined}
           >
-            {session.topic || t('topic_no_notice')}
+            {session.topic || t('notice_no_notice')}
           </span>
         )}
       </div>

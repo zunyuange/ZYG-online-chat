@@ -352,7 +352,18 @@ export async function getTranslationSettings(businessId?: number, businessSlug?:
   const db = getDb();
 
   let settings;
-  if (businessId !== undefined && businessId > 0) {
+  
+  // 系统管理员 (businessId = 0) 或未指定商家时，使用默认商家设置
+  if (businessId === 0 || (businessId === undefined && !businessSlug)) {
+    settings = await db.get<{
+      enable_auto_trans: number;
+      default_lang: string;
+      business_id: number;
+    }>(
+      'SELECT enable_auto_trans, default_lang, business_id FROM staff_users WHERE business_slug = ? AND business_id = 0',
+      ['default']
+    );
+  } else if (businessId !== undefined && businessId > 0) {
     settings = await db.get<{
       enable_auto_trans: number;
       default_lang: string;
@@ -371,20 +382,28 @@ export async function getTranslationSettings(businessId?: number, businessSlug?:
       [businessSlug]
     );
   } else {
+    // 兜底：查询默认商家设置
     settings = await db.get<{
       enable_auto_trans: number;
       default_lang: string;
       business_id: number;
     }>(
-      'SELECT enable_auto_trans, default_lang, business_id FROM staff_users WHERE id = ?',
-      [businessId]
+      'SELECT enable_auto_trans, default_lang, business_id FROM staff_users WHERE business_slug = ? AND business_id = 0',
+      ['default']
     );
   }
 
   console.log('[TranslateService] getTranslationSettings: businessId=', businessId, 'businessSlug=', businessSlug,
     'found:', !!settings, '| raw enabled:', settings?.enable_auto_trans);
 
-  if (!settings) return null;
+  if (!settings) {
+    // 如果找不到设置，返回默认启用翻译的配置
+    console.warn('[TranslateService] No settings found, using default (enabled=true, zh-CN)');
+    return {
+      enabled: true,
+      defaultLang: 'zh-CN',
+    };
+  }
 
   let enabled = settings.enable_auto_trans === 1;
 
