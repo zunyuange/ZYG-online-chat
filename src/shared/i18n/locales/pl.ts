@@ -334,6 +334,8 @@ export default {
   auto_translate_desc: 'Po włączeniu wiadomości gości będą automatycznie tłumaczone na język personelu',
   settings_save_success: 'Zapisano pomyślnie',
   settings_save_failed: 'Zapis nie powiódł się',
+  free_translation_available: 'Darmowe automatyczne tłumaczenie włączone',
+  free_translation_desc: 'System korzysta z bezpłatnych usług tłumaczeniowych: SimplyTranslate AI + Google Translate + MyMemory, bez potrzeby kluczy API. Włącz przełącznik powyżej, aby automatycznie tłumaczyć wiadomości między obiema stronami.',
   loading_text: 'Ładowanie...',
   business_slug_placeholder: 'Slug firmy',
   online_service: 'Usługa online', avatar: 'Avatar', language: 'Język',

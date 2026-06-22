@@ -334,6 +334,8 @@ export default {
   auto_translate_desc: 'Kun käytössä, vierailijoiden viestit käännetään automaattisesti henkilökunnan kielelle',
   settings_save_success: 'Tallennettu onnistuneesti',
   settings_save_failed: 'Tallennus epäonnistui',
+  free_translation_available: 'Ilmainen automaattinen käännös on käytössä',
+  free_translation_desc: 'Järjestelmä käyttää ilmaisia käännös palveluita: SimplyTranslate AI + Google Translate + MyMemory, ilman API-avaimia. Ota käyttöön yllä oleva kytkin automaattisesti kääntääksesi viestejä molempien osapuolten välillä.',
   loading_text: 'Ladataan...',
   business_slug_placeholder: 'Yrityksen tunniste',
   online_service: 'Verkkopalvelu', avatar: 'Avatar', language: 'Kieli',

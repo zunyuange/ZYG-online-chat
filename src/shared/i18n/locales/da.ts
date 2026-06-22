@@ -334,6 +334,8 @@ export default {
   auto_translate_desc: 'Når aktiveret, oversættes besøgendes beskeder automatisk til medarbejdersprog',
   settings_save_success: 'Gemt',
   settings_save_failed: 'Gem fejlede',
+  free_translation_available: 'Gratis automatisk oversættelse aktiveret',
+  free_translation_desc: 'Systemet bruger gratis oversættelsestjenester: SimplyTranslate AI + Google Translate + MyMemory, uden behov for API-nøgler. Aktiver skifteren ovenfor for automatisk at oversætte beskeder mellem begge parter.',
   loading_text: 'Indlæser...',
   business_slug_placeholder: 'Virksomheds-slug',
   online_service: 'Online service', avatar: 'Avatar', language: 'Sprog',

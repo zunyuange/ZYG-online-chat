@@ -334,6 +334,8 @@ export default {
   auto_translate_desc: 'عند التفعيل، ستتم ترجمة رسائل الزوار تلقائيًا إلى لغة الموظف',
   settings_save_success: 'تم الحفظ بنجاح',
   settings_save_failed: 'فشل الحفظ',
+  free_translation_available: 'الترجمة التلقائية المجانية مفعلة',
+  free_translation_desc: 'يستخدم النظام خدمات الترجمة المجانية: SimplyTranslate AI + Google Translate + MyMemory، لا حاجة لمفاتيح API. قم بتفعيل المفتاح أعلاه لترجمة الرسائل تلقائيًا بين الطرفين.',
   loading_text: 'جارٍ التحميل...',
   business_slug_placeholder: 'معرف الشركة',
   online_service: 'خدمة عبر الإنترنت', avatar: 'الصورة الرمزية', language: 'اللغة',

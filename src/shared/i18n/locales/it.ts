@@ -384,6 +384,8 @@ export default {
   auto_translate_desc: 'Se abilitato, i messaggi dei visitatori verranno tradotti automaticamente nella lingua del personale',
   settings_save_success: 'Salvato con successo',
   settings_save_failed: 'Salvataggio fallito',
+  free_translation_available: 'Traduzione automatica gratuita abilitata',
+  free_translation_desc: 'Il sistema utilizza servizi di traduzione gratuiti: SimplyTranslate AI + Google Translate + MyMemory, senza necessità di chiavi API. Attiva l\'interruttore sopra per tradurre automaticamente i messaggi tra entrambe le parti.',
   loading_text: 'Caricamento in corso...',
   business_slug_placeholder: 'Slug aziendale',
   online_service: 'Servizio online',

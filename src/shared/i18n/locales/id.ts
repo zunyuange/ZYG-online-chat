@@ -334,6 +334,8 @@ export default {
   auto_translate_desc: 'Saat diaktifkan, pesan pengunjung akan diterjemahkan otomatis ke bahasa staf',
   settings_save_success: 'Berhasil disimpan',
   settings_save_failed: 'Gagal menyimpan',
+  free_translation_available: 'Terjemahan otomatis gratis diaktifkan',
+  free_translation_desc: 'Sistem menggunakan layanan terjemahan gratis: SimplyTranslate AI + Google Translate + MyMemory, tidak memerlukan kunci API. Aktifkan sakelar di atas untuk menerjemahkan pesan secara otomatis antara kedua belah pihak.',
   loading_text: 'Memuat...',
   business_slug_placeholder: 'Slug Bisnis',
   online_service: 'Layanan Online', avatar: 'Avatar', language: 'Bahasa',

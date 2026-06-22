@@ -334,6 +334,8 @@ export default {
   auto_translate_desc: 'Όταν ενεργοποιηθεί, τα μηνύματα επισκεπτών θα μεταφράζονται αυτόματα στη γλώσσα του προσωπικού',
   settings_save_success: 'Αποθηκεύτηκε με επιτυχία',
   settings_save_failed: 'Η αποθήκευση απέτυχε',
+  free_translation_available: 'Η δωρεάν αυτόματη μετάφραση ενεργοποιήθηκε',
+  free_translation_desc: 'Το σύστημα χρησιμοποιεί δωρεάν υπηρεσίες μετάφρασης: SimplyTranslate AI + Google Translate + MyMemory, χωρίς ανάγκη API κλειδιών. Ενεργοποιήστε το διακόπτη παραπάνω για να μεταφράσετε αυτόματα τα μηνύματα μεταξύ των δύο μερών.',
   loading_text: 'Φόρτωση...',
   business_slug_placeholder: 'Αναγνωριστικό επιχείρησης',
   online_service: 'Διαδικτυακή υπηρεσία', avatar: 'Avatar', language: 'Γλώσσα',

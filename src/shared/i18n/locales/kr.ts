@@ -388,6 +388,8 @@ export default {
   auto_translate_desc: '활성화하면 방문자 메시지가 상담원 언어로 자동 번역됩니다',
   settings_save_success: '저장되었습니다',
   settings_save_failed: '저장 실패',
+  free_translation_available: '무료 자동 번역이 활성화되었습니다',
+  free_translation_desc: '시스템은 SimplyTranslate AI + Google Translate + MyMemory 무료 번역 서비스를 사용하며 API 키가 필요하지 않습니다. 위 스위치를 켜면 양측 메시지가 자동으로 번역됩니다.',
   loading_text: '로딩 중...',
   business_slug_placeholder: '비즈니스 슬러그',
   online_service: '온라인 서비스',

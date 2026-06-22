@@ -334,6 +334,8 @@ export default {
   auto_translate_desc: 'Indien ingeschakeld worden bezoekersberichten automatisch vertaald naar de taal van de medewerker',
   settings_save_success: 'Succesvol opgeslagen',
   settings_save_failed: 'Opslaan mislukt',
+  free_translation_available: 'Gratis automatische vertaling ingeschakeld',
+  free_translation_desc: 'Het systeem maakt gebruik van gratis vertaaldiensten: SimplyTranslate AI + Google Translate + MyMemory, zonder API-sleutels nodig. Activeer de schakelaar hierboven om berichten automatisch tussen beide partijen te vertalen.',
   loading_text: 'Laden...',
   business_slug_placeholder: 'Bedrijfsslug',
   online_service: 'Online service', avatar: 'Avatar', language: 'Taal',

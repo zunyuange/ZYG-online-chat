@@ -393,6 +393,8 @@ export default {
   auto_translate_desc: 'Wenn aktiviert, werden Besuchernachrichten automatisch in die Mitarbeitersprache übersetzt',
   settings_save_success: 'Erfolgreich gespeichert',
   settings_save_failed: 'Speichern fehlgeschlagen',
+  free_translation_available: 'Kostenlose automatische Übersetzung aktiviert',
+  free_translation_desc: 'Das System nutzt kostenlose Übersetzungsdienste: SimplyTranslate AI + Google Translate + MyMemory, ohne API-Schlüssel erforderlich. Schalten Sie den oberen Schalter ein, um Nachrichten zwischen beiden Seiten automatisch zu übersetzen.',
   loading_text: 'Wird geladen...',
   business_slug_placeholder: 'Geschäfts-Slug',
   online_service: 'Online-Service',

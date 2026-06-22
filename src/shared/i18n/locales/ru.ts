@@ -331,6 +331,8 @@ export default {
   auto_translate_desc: 'При включении сообщения посетителей будут автоматически переводиться на язык сотрудников',
   settings_save_success: 'Успешно сохранено',
   settings_save_failed: 'Ошибка сохранения',
+  free_translation_available: 'Бесплатный автоматический перевод включен',
+  free_translation_desc: 'Система использует бесплатные переводческие сервисы: SimplyTranslate AI + Google Translate + MyMemory, не требуется API-ключ. Включите переключатель выше, чтобы автоматически переводить сообщения между сторонами.',
   loading_text: 'Загрузка...',
   business_slug_placeholder: 'Слаг компании',
   online_service: 'Онлайн-сервис', avatar: 'Аватар', language: 'Язык',

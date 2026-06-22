@@ -404,6 +404,8 @@ export default {
   auto_translate_desc: '開啟後，訪客消息將自動翻譯為客服語言',
   settings_save_success: '保存成功',
   settings_save_failed: '保存失敗',
+  free_translation_available: '已啟用免費自動翻譯',
+  free_translation_desc: '系統使用 SimplyTranslate AI + Google Translate + MyMemory 免費翻譯服務，無需任何 API 密鑰。打開上方開關即可自動翻譯雙方消息。',
   loading_text: '加載中...',
   business_slug_placeholder: '商家標識',
 

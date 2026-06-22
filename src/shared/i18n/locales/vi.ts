@@ -331,6 +331,8 @@ export default {
   auto_translate_desc: 'Khi bật, tin nhắn của khách sẽ được tự động dịch sang ngôn ngữ của nhân viên',
   settings_save_success: 'Đã lưu thành công',
   settings_save_failed: 'Lưu thất bại',
+  free_translation_available: 'Bật dịch tự động miễn phí',
+  free_translation_desc: 'Hệ thống sử dụng dịch vụ dịch thuật miễn phí SimplyTranslate AI + Google Translate + MyMemory, không cần API key. Bật công tắc phía trên để tự động dịch tin nhắn giữa hai bên.',
   loading_text: 'Đang tải...',
   business_slug_placeholder: 'Slug doanh nghiệp',
   online_service: 'Dịch vụ trực tuyến', avatar: 'Ảnh đại diện', language: 'Ngôn ngữ',

@@ -392,6 +392,8 @@ export default {
   auto_translate_desc: 'Lorsqu\'il est activé, les messages des visiteurs sont automatiquement traduits dans la langue du personnel',
   settings_save_success: 'Enregistré avec succès',
   settings_save_failed: 'Échec de l\'enregistrement',
+  free_translation_available: 'Traduction automatique gratuite activée',
+  free_translation_desc: 'Le système utilise des services de traduction gratuits : SimplyTranslate AI + Google Translate + MyMemory, sans nécessiter de clés API. Activez l\'interrupteur ci-dessus pour traduire automatiquement les messages des deux côtés.',
   loading_text: 'Chargement...',
   business_slug_placeholder: 'Slug d\'entreprise',
   online_service: 'Service en ligne',

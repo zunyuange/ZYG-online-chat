@@ -411,6 +411,8 @@ export default {
   auto_translate_desc: '有効にすると、訪問者のメッセージがスタッフの言語に自動翻訳されます',
   settings_save_success: '保存しました',
   settings_save_failed: '保存に失敗しました',
+  free_translation_available: '無料自動翻訳が有効になっています',
+  free_translation_desc: 'システムは SimplyTranslate AI + Google Translate + MyMemory の無料翻訳サービスを使用しており、APIキーは必要ありません。上記のスイッチをオンにすると、両者のメッセージが自動的に翻訳されます。',
   loading_text: '読み込み中...',
   business_slug_placeholder: 'ビジネススラッグ',
   online_service: 'オンラインサービス',

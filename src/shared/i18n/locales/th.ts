@@ -334,6 +334,8 @@ export default {
   auto_translate_desc: 'เมื่อเปิดใช้งาน ข้อความผู้เยี่ยมชมจะถูกแปลเป็นภาษาของเจ้าหน้าที่โดยอัตโนมัติ',
   settings_save_success: 'บันทึกสำเร็จ',
   settings_save_failed: 'บันทึกล้มเหลว',
+  free_translation_available: 'การแปลอัตโนมัติฟรีเปิดใช้งานแล้ว',
+  free_translation_desc: 'ระบบใช้บริการแปลฟรี: SimplyTranslate AI + Google Translate + MyMemory ไม่จำเป็นต้องมี API key เปิดสวิตช์ข้างต้นเพื่อแปลข้อความอัตโนมัติระหว่างทั้งสองฝ่าย',
   loading_text: 'กำลังโหลด...',
   business_slug_placeholder: 'รหัสธุรกิจ',
   online_service: 'บริการออนไลน์', avatar: 'อวาตาร์', language: 'ภาษา',
