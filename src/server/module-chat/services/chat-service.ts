@@ -164,16 +164,8 @@ async function getBusinessBySlug(slug?: string): Promise<BusinessRow | null> {
   console.log('[ChatService] getBusinessBySlug called with slug:', slug)
 
   if (!slug) {
-    // Return default business - find by business_slug = 'default' and business_id = 0
-    const business = await db.get<BusinessRow>(
-      'SELECT id, business_slug, business_name FROM staff_users WHERE business_slug = ? AND business_id = 0 AND role = ?',
-      ['default', 'admin']
-    )
-    console.log(
-      '[ChatService] getBusinessBySlug: no slug provided, returning default business:',
-      business
-    )
-    return business || null
+    console.log('[ChatService] getBusinessBySlug: no slug provided, returning null')
+    return null
   }
 
   // Try to find by business_slug first (商家使用 business_slug 标识)
@@ -225,11 +217,15 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
 
   // Get business info based on slug or id
   const business = await getBusinessBySlug(input.business)
-  // 如果没找到匹配的商家，使用默认商家作为兜底
-  // 如果连默认商家都没有，使用 id=1 作为最后的兜底
-  const businessId = business?.id || 1
-  const businessName = business?.business_name || '默认商家'
-  const businessSlug = business?.business_slug || 'default'
+  
+  // 如果没有传递 business 参数或找不到匹配的商家，抛出错误
+  if (!business) {
+    throw new Error('Business not found or not specified. Please provide a valid business parameter.')
+  }
+  
+  const businessId = business.id
+  const businessName = business.business_name
+  const businessSlug = business.business_slug
 
   console.log(
     '[ChatService] createOrGetSession: input.business =',
