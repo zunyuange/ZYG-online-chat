@@ -300,7 +300,10 @@ chatRoutes.post('/messages', async c => {
       return c.json({ success: false, error: 'Missing required fields' }, 400)
     }
 
-    // ★ 自动翻译：访客消息翻译为客服语言（与 staff-routes 保持一致的逻辑）
+    // ★ 自动翻译：访客消息翻译为客服语言
+    // 注意：不使用 session.lang 判断是否跳过翻译，因为访客界面语言 ≠ 消息内容语言
+    // 例如：访客浏览器是中文但打出了韩文 → 仍需翻译为客服语言
+    // 实际的"内容已是目标语言"检测由 translateText() 内部的 isLikelyAlreadyInTargetLang() 完成
     let translatedContent: string | undefined;
     let translateEngine: string | undefined;
     if (contentType === 'text') {
@@ -327,38 +330,33 @@ chatRoutes.post('/messages', async c => {
               console.warn('[ChatRoutes] Failed to get staff language, using default', e);
             }
           }
-          // 语言相同时跳过（与 staff-routes 逻辑一致）
-          const staffBaseLang = (targetLang || 'zh-CN').split('-')[0].toLowerCase();
-          const visitorLang = session.lang || '';
-          const visitorBaseLang = visitorLang.split('-')[0].toLowerCase();
-          const sameLang = visitorBaseLang && visitorBaseLang === staffBaseLang;
-          if (!sameLang) {
-            console.log('[ChatRoutes] 🈂️ Auto-translating visitor message to staff lang',
-              '| source:', (content as string).substring(0, 30),
-              '| visitorLang:', session.lang || '(empty)',
-              '| staff:', staffName,
-              '| staffLang:', targetLang,
-              '| assignedStaffId:', assignedStaffId,
-              '| businessId:', session.businessId);
-            const translateResult = await translateText({
-              text: content,
-              to: targetLang,
-              businessId: session.businessId,
-              _settings: txSettings as any,
-            } as any);
-            if (translateResult.engine === 'same_language') {
-              console.log('[ChatRoutes] ⏭️ Auto-translate skipped: text already in target language',
-                '| target:', targetLang, '| text:', (content as string).substring(0, 30));
-            } else if (!translateResult.success || !isTranslationUseful(content, translateResult.text)) {
-              console.log('[ChatRoutes] ❌ Translation not useful (same as original), engine:', translateResult.engine || 'none');
-            } else {
-              translatedContent = translateResult.text;
-              translateEngine = translateResult.engine;
-              console.log(`[ChatRoutes] ✅ Visitor→${staffName} translated via ${translateResult.engine}:`, translatedContent.substring(0, 60));
-            }
+          // 记录翻译上下文（方便排查问题）
+          const visitorDetectedLang = detectSourceLanguage(content as string);
+          console.log('[ChatRoutes] 🈂️ Auto-translating visitor message to staff lang',
+            '| source:', (content as string).substring(0, 30),
+            '| detectedLang:', visitorDetectedLang,
+            '| visitorBrowserLang:', session.lang || '(empty)',
+            '| staff:', staffName,
+            '| staffLang:', targetLang,
+            '| assignedStaffId:', assignedStaffId,
+            '| businessId:', session.businessId);
+          const translateResult = await translateText({
+            text: content,
+            to: targetLang,
+            businessId: session.businessId,
+            _settings: txSettings as any,
+          } as any);
+          if (translateResult.engine === 'same_language') {
+            console.log('[ChatRoutes] ⏭️ Auto-translate skipped: content already in target language',
+              '| detected:', visitorDetectedLang, '| target:', targetLang);
+          } else if (!translateResult.success || !isTranslationUseful(content, translateResult.text)) {
+            console.log('[ChatRoutes] ❌ Translation not useful (all engines failed or returned same text)',
+              '| engine:', translateResult.engine || 'none',
+              '| detected:', visitorDetectedLang);
           } else {
-            console.log('[ChatRoutes] ⏭️ Skipping: same base language',
-              '| visitor:', visitorBaseLang, '| staff:', staffBaseLang);
+            translatedContent = translateResult.text;
+            translateEngine = translateResult.engine;
+            console.log(`[ChatRoutes] ✅ Visitor→${staffName} translated via ${translateResult.engine}:`, translatedContent.substring(0, 60));
           }
         } else {
           console.warn('[ChatRoutes] ⚠️ Translation disabled for businessId:', session.businessId,
