@@ -179,10 +179,9 @@ async function getBusinessBySlug(slug?: string): Promise<BusinessRow | null> {
   }
 
   // Try to find by business_slug first (商家使用 business_slug 标识)
-  // 先尝试精确匹配 business_slug（不限制 business_id）
-  let business = await db.get<BusinessRow>(
-    'SELECT id, business_slug, business_name FROM staff_users WHERE business_slug = ?',
-    [slug]
+  const business = await db.get<BusinessRow>(
+    'SELECT id, business_slug, business_name FROM staff_users WHERE business_slug = ? AND business_id = 0 AND role = ?',
+    [slug, 'admin']
   )
 
   console.log('[ChatService] getBusinessBySlug: query result for slug=', JSON.stringify(slug), '->', business ? JSON.stringify(business) : 'NULL')
