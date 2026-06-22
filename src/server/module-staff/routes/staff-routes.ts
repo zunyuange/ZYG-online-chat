@@ -51,9 +51,16 @@ async function requireAuth(c: any, next: any) {
   }
 
   // Attach businessId, businessSlug, userId and role to context for downstream use
-  // 注意：businessId 可能是 0（超级管理员），需要用 !== undefined 判断
-  if (result.businessId !== undefined) {
-    c.set('businessId', result.businessId)
+  // 修复旧 token 中 businessId=0 的问题：使用 userId 替代
+  // 只有 default 商家的 admin 才保持 businessId=0（超级管理员权限）
+  // 与 business-routes.ts 保持一致的修复逻辑
+  let businessId = result.businessId;
+  if (businessId === 0 && result.userId && result.businessSlug !== 'default') {
+    console.log('[StaffRoutes] Fixing businessId=0 for non-default business, using userId:', result.userId, 'businessSlug:', result.businessSlug);
+    businessId = result.userId;
+  }
+  if (businessId !== undefined) {
+    c.set('businessId', businessId)
   }
   if (result.businessSlug) {
     c.set('businessSlug', result.businessSlug)
@@ -64,6 +71,13 @@ async function requireAuth(c: any, next: any) {
   if (result.role) {
     c.set('role', result.role)
   }
+
+  console.log('[StaffRoutes] Auth context:', {
+    userId: result.userId,
+    businessId: businessId,
+    businessSlug: result.businessSlug,
+    role: result.role,
+  })
 
   await next()
 }
