@@ -177,9 +177,10 @@ async function getBusinessBySlug(slug?: string): Promise<BusinessRow | null> {
   }
 
   // Try to find by business_slug first (商家使用 business_slug 标识)
+  // 只需要 business_slug 和 business_id = 0，不限制 role
   const business = await db.get<BusinessRow>(
-    'SELECT id, business_slug, business_name FROM staff_users WHERE business_slug = ? AND business_id = 0 AND role = ?',
-    [slug, 'admin']
+    'SELECT id, business_slug, business_name FROM staff_users WHERE business_slug = ? AND business_id = 0',
+    [slug]
   )
 
   if (business) {
