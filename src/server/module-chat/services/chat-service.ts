@@ -228,8 +228,13 @@ async function getBusinessBySlug(slug?: string): Promise<BusinessRow | null> {
 export async function createOrGetSession(input: CreateSessionInput = {}): Promise<Session> {
   const db = getDb()
 
+  console.log('[ChatService] createOrGetSession: ENTIRE INPUT =', JSON.stringify(input))
+
   // Get business info based on slug or id
   const business = await getBusinessBySlug(input.business)
+  
+  console.log('[ChatService] createOrGetSession: business from getBusinessBySlug =', business ? JSON.stringify(business) : 'NULL')
+  
   // 如果没找到匹配的商家，使用默认商家作为兜底
   // 如果连默认商家都没有，使用 id=1 作为最后的兜底
   const businessId = business?.id || 1
