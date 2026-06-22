@@ -314,8 +314,8 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
 
   // Build dynamic INSERT with all available fields
   const fields = ['id', 'visiter_id', 'visitor_name', 'business_id', 'status', 'task_status', 'created_at', 'updated_at']
-  const values: (string | number)[] = [sessionId, visitorId, visitorName, businessId, now, now]
-  const placeholders = ['?', '?', '?', '?', "'active'", "'requirement_discussion'", '?', '?']
+  const values: (string | number)[] = [sessionId, visitorId, visitorName, businessId, 'active', 'requirement_discussion', now, now]
+  const placeholders = ['?', '?', '?', '?', '?', '?', '?', '?']
 
   // 访客自定义字段：如果传入了就写入
   if (input.email) { fields.push('email'); values.push(input.email); placeholders.push('?') }
