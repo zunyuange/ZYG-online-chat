@@ -182,6 +182,8 @@ async function getBusinessBySlug(slug?: string): Promise<BusinessRow | null> {
     [slug, 'admin']
   )
 
+  console.log('[ChatService] getBusinessBySlug: query result for slug=', JSON.stringify(slug), '->', business ? JSON.stringify(business) : 'NULL')
+
   if (business) {
     console.log('[ChatService] getBusinessBySlug: found business by slug:', business)
     return business
@@ -233,9 +235,15 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
 
   console.log(
     '[ChatService] createOrGetSession: input.business =',
-    input.business,
-    '-> businessId =',
-    businessId
+    JSON.stringify(input.business),
+    '-> business found:',
+    business ? 'YES' : 'NO',
+    ', businessId =',
+    businessId,
+    ', businessName =',
+    businessName,
+    ', businessSlug =',
+    businessSlug
   )
 
   // Generate visitor_id for the session
