@@ -873,20 +873,7 @@ chatRoutes.post('/messages/:id/translate', async c => {
       return c.json({ success: false, error: '仅文本消息支持翻译' }, 400)
     }
 
-    // 3. 检测原文语言，相同语言跳过翻译（避免浪费 API 配额）
-    const detectedSource = detectSourceLanguage(row.content);
-    const targetBase = to.split('-')[0];
-    const sourceBase = detectedSource.split('-')[0];
-    if (sourceBase === targetBase || detectedSource === to) {
-      console.log('[ChatRoutes] ⏭️ Manual translate skipped: source and target language match',
-        '| detected:', detectedSource, '| to:', to);
-      return c.json({
-        success: false,
-        error: '原文语言与翻译目标语言一致，无需翻译',
-      }, 200);
-    }
-
-    // 4. 获取翻译设置
+    // 3. 获取翻译设置
     const txSettings = await getTranslationSettings(row.business_id)
 
     if (!txSettings?.enabled) {
@@ -895,6 +882,9 @@ chatRoutes.post('/messages/:id/translate', async c => {
         error: '翻译功能未启用，请在客服设置中开启自动翻译开关',
       }, 400)
     }
+
+    // 4. 检测源语言（仅用于日志）
+    const detectedSource = detectSourceLanguage(row.content)
 
     // 5. 执行翻译
     console.log('[ChatRoutes] 🈂️ Manual translate | messageId:', messageId,
