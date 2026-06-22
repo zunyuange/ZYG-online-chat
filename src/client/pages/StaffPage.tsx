@@ -1323,7 +1323,18 @@ export function StaffPage() {
                       width: '8px',
                       height: '8px',
                       borderRadius: '50%',
-                      backgroundColor: currentSession.status === 'active' ? '#52c41a' : '#999',
+                      backgroundColor: (() => {
+                        if (currentSession.status !== 'active') return '#999';
+                        // 最近5分钟内有访客活动才显示在线绿点
+                        const threshold = 5 * 60 * 1000;
+                        if (currentSession.lastVisitorActivityAt) {
+                          return Date.now() - new Date(currentSession.lastVisitorActivityAt).getTime() < threshold ? '#52c41a' : '#999';
+                        }
+                        if (currentSession.lastMessageAt) {
+                          return Date.now() - new Date(currentSession.lastMessageAt).getTime() < threshold ? '#52c41a' : '#999';
+                        }
+                        return '#999';
+                      })(),
                     }}></span>
                     {currentSession.visitorName}
                   </div>

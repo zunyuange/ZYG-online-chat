@@ -226,12 +226,13 @@ export function SessionList({
   const isVisitorOnline = (session: SessionWithPreview): boolean => {
     if (session.status !== 'active') return false;
     // 优先使用 lastVisitorActivityAt（访客发消息时更新）
+    // 注意：JSON 解析后是字符串，需要 new Date() 转换
     if (session.lastVisitorActivityAt) {
-      return Date.now() - session.lastVisitorActivityAt.getTime() < VISITOR_ONLINE_THRESHOLD_MS;
+      return Date.now() - new Date(session.lastVisitorActivityAt).getTime() < VISITOR_ONLINE_THRESHOLD_MS;
     }
     // 兼容旧数据：使用 lastMessageAt，但仅当最后消息是访客发送的
     if (session.lastMessageAt && session.lastMessage?.senderType === 'visitor') {
-      return Date.now() - session.lastMessageAt.getTime() < VISITOR_ONLINE_THRESHOLD_MS;
+      return Date.now() - new Date(session.lastMessageAt).getTime() < VISITOR_ONLINE_THRESHOLD_MS;
     }
     // 新会话且无访客消息 → 离线（灰点）
     return false;
