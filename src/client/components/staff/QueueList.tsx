@@ -304,9 +304,6 @@ export function QueueList({ isOpen, onClose, onSelectSession, t = (s: string) =>
                 <div style={infoStyle}>
                   <div style={nameStyle}>
                     {item.visitorName}
-                    <span style={statusBadgeStyle(item.taskStatus)}>
-                      {getStatusLabel(item.taskStatus)}
-                    </span>
                   </div>
                   {item.topic && (
                     <div style={topicStyle}>

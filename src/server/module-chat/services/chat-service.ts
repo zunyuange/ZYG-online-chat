@@ -57,6 +57,7 @@ interface SessionRow {
   lang: string | null
   transfer_history: string | null
   response_time: number | null
+  last_visitor_activity_at: number | null
   email: string | null
   phone: string | null
   pid: string | null
@@ -123,6 +124,9 @@ function mapRowToSession(row: SessionRow, business?: BusinessRow, staffName?: st
     device: row.device || undefined,
     lang: row.lang || undefined,
     avatar: row.avatar || undefined,
+    lastVisitorActivityAt: row.last_visitor_activity_at
+      ? new Date(row.last_visitor_activity_at)
+      : undefined,
   }
 }
 
@@ -526,13 +530,13 @@ export async function sendMessage(input: SendMessageInput, businessId?: number):
   if (input.senderType === 'visitor') {
     if (businessId && businessId !== 0) {
       await db.run(
-        'UPDATE sessions SET unread_by_staff = unread_by_staff + 1, updated_at = ? WHERE id = ? AND business_id = ?',
-        [now, input.sessionId, businessId]
+        'UPDATE sessions SET unread_by_staff = unread_by_staff + 1, last_visitor_activity_at = ?, updated_at = ? WHERE id = ? AND business_id = ?',
+        [now, now, input.sessionId, businessId]
       )
     } else {
       await db.run(
-        'UPDATE sessions SET unread_by_staff = unread_by_staff + 1, updated_at = ? WHERE id = ?',
-        [now, input.sessionId]
+        'UPDATE sessions SET unread_by_staff = unread_by_staff + 1, last_visitor_activity_at = ?, updated_at = ? WHERE id = ?',
+        [now, now, input.sessionId]
       )
     }
   } else {

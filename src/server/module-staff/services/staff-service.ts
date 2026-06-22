@@ -23,6 +23,7 @@ interface MessagePreviewRow {
   session_id: string
   content: string
   content_type: string
+  sender_type: string
   created_at: number
 }
 
@@ -236,7 +237,7 @@ export async function listSessionsWithPreview(
   const placeholders = sessionIds.map(() => '?').join(',')
 
   const rows = await db.all<MessagePreviewRow>(
-    `SELECT session_id, content, content_type, created_at
+    `SELECT session_id, content, content_type, sender_type, created_at
      FROM messages
      WHERE session_id IN (${placeholders})
      AND id IN (
@@ -245,12 +246,13 @@ export async function listSessionsWithPreview(
     [...sessionIds, ...sessionIds]
   )
 
-  const lastMessages = new Map<string, { content: string; contentType: string; createdAt: Date }>()
+  const lastMessages = new Map<string, { content: string; contentType: string; senderType: string; createdAt: Date }>()
 
   for (const row of rows) {
     lastMessages.set(row.session_id, {
       content: row.content,
       contentType: row.content_type,
+      senderType: row.sender_type,
       createdAt: new Date(row.created_at),
     })
   }

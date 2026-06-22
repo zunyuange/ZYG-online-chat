@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   lang TEXT DEFAULT "cn",
   transfer_history TEXT,
   response_time INTEGER,
+  last_visitor_activity_at INTEGER,
   created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
   updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
 );

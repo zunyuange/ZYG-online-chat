@@ -10,6 +10,7 @@ interface SessionWithPreview extends Session {
   lastMessage?: {
     content: string;
     contentType: string;
+    senderType: string;
     createdAt: Date;
   };
 }
@@ -220,13 +221,29 @@ export function SessionList({
     flexWrap: 'wrap',
   };
 
-  const statusDotStyle = (status: string): React.CSSProperties => ({
+  // 判断访客是否真正在线：最近5分钟内有活动才算在线
+  const VISITOR_ONLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5分钟
+  const isVisitorOnline = (session: SessionWithPreview): boolean => {
+    if (session.status !== 'active') return false;
+    // 优先使用 lastVisitorActivityAt（访客发消息时更新）
+    if (session.lastVisitorActivityAt) {
+      return Date.now() - session.lastVisitorActivityAt.getTime() < VISITOR_ONLINE_THRESHOLD_MS;
+    }
+    // 兼容旧数据：使用 lastMessageAt，但仅当最后消息是访客发送的
+    if (session.lastMessageAt && session.lastMessage?.senderType === 'visitor') {
+      return Date.now() - session.lastMessageAt.getTime() < VISITOR_ONLINE_THRESHOLD_MS;
+    }
+    // 新会话且无访客消息 → 离线（灰点）
+    return false;
+  };
+
+  const statusDotStyle = (online: boolean): React.CSSProperties => ({
     width: '7px',
     height: '7px',
     borderRadius: '50%',
-    backgroundColor: status === 'active' ? '#51cf66' : '#ced4da',
+    backgroundColor: online ? '#51cf66' : '#ced4da',
     flexShrink: 0,
-    boxShadow: status === 'active' ? '0 0 0 2px rgba(81,207,102,0.2)' : 'none',
+    boxShadow: online ? '0 0 0 2px rgba(81,207,102,0.2)' : 'none',
   });
 
   const staffBadgeStyle: React.CSSProperties = {
@@ -376,8 +393,8 @@ export function SessionList({
 
                     {/* 第二行：标签 + 状态 */}
                     <div style={metaRowStyle}>
-                      {/* 会话状态 */}
-                      <span style={statusDotStyle(session.status)} title={session.status} />
+                      {/* 会话状态 — 根据最近活动时间判断是否在线 */}
+                      <span style={statusDotStyle(isVisitorOnline(session))} title={isVisitorOnline(session) ? t('online') : t('offline')} />
 
                       {/* 当前分配客服（优先显示），无分配时显示商家名称 */}
                       {assignedStaffName ? (

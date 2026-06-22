@@ -10,6 +10,7 @@ interface SessionWithPreview extends Session {
   lastMessage?: {
     content: string;
     contentType: string;
+    senderType: string;
     createdAt: Date;
   };
 }
@@ -421,6 +422,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
           lastMessage: {
             content: message.content,
             contentType: message.contentType,
+            senderType: message.senderType,
             createdAt: message.createdAt,
           },
           unreadByStaff: message.senderType === 'visitor' ? s.unreadByStaff + 1 : s.unreadByStaff,

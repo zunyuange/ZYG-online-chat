@@ -89,6 +89,7 @@ export interface Session {
   device?: string;
   lang?: string;
   avatar?: string;
+  lastVisitorActivityAt?: Date; // 访客最近活动时间（用于判断是否在线）
 }
 
 export interface Message {
