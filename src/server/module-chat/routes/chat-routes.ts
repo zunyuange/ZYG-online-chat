@@ -300,7 +300,7 @@ chatRoutes.post('/messages', async c => {
       return c.json({ success: false, error: 'Missing required fields' }, 400)
     }
 
-    // ★ 自动翻译：访客消息翻译为客服语言
+    // ★ 自动翻译：访客消息翻译为客服语言（与 staff-routes 保持完全一致的逻辑）
     // 注意：不使用 session.lang 判断是否跳过翻译，因为访客界面语言 ≠ 消息内容语言
     // 例如：访客浏览器是中文但打出了韩文 → 仍需翻译为客服语言
     // 实际的"内容已是目标语言"检测由 translateText() 内部的 isLikelyAlreadyInTargetLang() 完成
@@ -309,7 +309,16 @@ chatRoutes.post('/messages', async c => {
     if (contentType === 'text') {
       const session = await chatService.getSession(sessionId);
       if (session) {
-        const txSettings = await getTranslationSettings(session.businessId);
+        // ⚠️ 与 staff-routes 对齐：使用 session.businessId 查询，传入 businessSlug 作为 fallback
+        // 下级客服可能自己没有配置翻译，但上级商家已全局启用 → 需查询上级设置
+        const txBusinessId = session.businessId || 1;
+        const txSettings = await getTranslationSettings(txBusinessId, session.businessSlug);
+        console.log('[ChatRoutes] 🔍 Translation check (visitor→staff)',
+          '| txBusinessId:', txBusinessId,
+          '| businessSlug:', session.businessSlug,
+          '| txSettings:', txSettings ? `enabled=${txSettings.enabled} defaultLang=${txSettings.defaultLang}` : 'NULL',
+          '| session.lang:', session.lang || 'NULL',
+          '| assignedStaffId:', session.assignedStaffId || 'none');
         if (txSettings?.enabled) {
           // 翻译目标：优先使用分配客服的个人语言 → 商家默认语言 → 'zh-CN'
           let targetLang = txSettings.defaultLang || 'zh-CN';
@@ -332,18 +341,18 @@ chatRoutes.post('/messages', async c => {
           }
           // 记录翻译上下文（方便排查问题）
           const visitorDetectedLang = detectSourceLanguage(content as string);
-          console.log('[ChatRoutes] 🈂️ Auto-translating visitor message to staff lang',
-            '| source:', (content as string).substring(0, 30),
+          console.log('[ChatRoutes] 🈂️ Auto-translating visitor→staff',
+            '| content:', (content as string).substring(0, 30),
             '| detectedLang:', visitorDetectedLang,
             '| visitorBrowserLang:', session.lang || '(empty)',
             '| staff:', staffName,
-            '| staffLang:', targetLang,
+            '| targetLang:', targetLang,
             '| assignedStaffId:', assignedStaffId,
-            '| businessId:', session.businessId);
+            '| txBusinessId:', txBusinessId);
           const translateResult = await translateText({
             text: content,
             to: targetLang,
-            businessId: session.businessId,
+            businessId: txBusinessId,
             _settings: txSettings as any,
           } as any);
           if (translateResult.engine === 'same_language') {
@@ -352,16 +361,24 @@ chatRoutes.post('/messages', async c => {
           } else if (!translateResult.success || !isTranslationUseful(content, translateResult.text)) {
             console.log('[ChatRoutes] ❌ Translation not useful (all engines failed or returned same text)',
               '| engine:', translateResult.engine || 'none',
-              '| detected:', visitorDetectedLang);
+              '| detected:', visitorDetectedLang,
+              '| targetLang:', targetLang,
+              '| contentLen:', content.length);
           } else {
             translatedContent = translateResult.text;
             translateEngine = translateResult.engine;
             console.log(`[ChatRoutes] ✅ Visitor→${staffName} translated via ${translateResult.engine}:`, translatedContent.substring(0, 60));
           }
         } else {
-          console.warn('[ChatRoutes] ⚠️ Translation disabled for businessId:', session.businessId,
-            '| txSettings:', txSettings ? `enabled=${txSettings.enabled}` : 'NULL');
+          console.warn('[ChatRoutes] ⚠️ Translation DISABLED for txBusinessId:', txBusinessId,
+            '| txSettings:', txSettings ? `enabled=${txSettings.enabled}` : 'NULL',
+            '| businessSlug:', session.businessSlug);
+          if (!txSettings) {
+            console.warn('[ChatRoutes] 💡 No settings found - check staff_users table for businessId:', txBusinessId);
+          }
         }
+      } else {
+        console.warn('[ChatRoutes] ⚠️ Session not found for auto-translate, sessionId:', sessionId);
       }
     }
 
@@ -408,7 +425,8 @@ chatRoutes.post('/messages', async c => {
         // - 如果答案语言 = 访客语言：翻译到客服默认语言（客服需要看翻译版本）
         // - 如果答案语言 ≠ 访客语言：翻译到访客语言（访客需要理解回复内容）
         let staffTranslated: string | undefined;
-        const txSettings = await getTranslationSettings(session.businessId);
+        const robotTxBusinessId = session.businessId || 1;
+        const txSettings = await getTranslationSettings(robotTxBusinessId, session.businessSlug);
         if (txSettings?.enabled) {
           // 规范化语言比较：提取基础语言码（en-US → en）
           const baseLang = (lang: string) => (lang || 'en').split('-')[0].toLowerCase();
@@ -426,7 +444,7 @@ chatRoutes.post('/messages', async c => {
             const robotTranslateResult = await translateText({
               text: knowledge.answer,
               to: targetLang,
-              businessId: session.businessId,
+              businessId: robotTxBusinessId,
               _settings: txSettings as any,
             } as any);
             if (robotTranslateResult.engine === 'same_language') {
