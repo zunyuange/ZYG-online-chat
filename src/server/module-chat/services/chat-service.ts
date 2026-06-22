@@ -330,10 +330,10 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
   if (input.lang) { fields.push('lang'); values.push(input.lang); placeholders.push('?') }
   if (input.avatar) { fields.push('avatar'); values.push(input.avatar); placeholders.push('?') }
 
-  const sql = `INSERT INTO sessions (${fields.join(', ')}) VALUES (${placeholders.join(', ')})`
+  const sql = `INSERT OR IGNORE INTO sessions (${fields.join(', ')}) VALUES (${placeholders.join(', ')})`
   await db.run(sql, values)
 
-  const row = await db.get<SessionRow>('SELECT * FROM sessions WHERE id = ?', [sessionId])
+  const row = await db.get<SessionRow>('SELECT * FROM sessions WHERE id = ? AND business_id = ?', [sessionId, businessId])
   if (row) {
     return mapRowToSession(row, business || undefined)
   }

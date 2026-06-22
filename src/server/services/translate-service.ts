@@ -364,6 +364,7 @@ export async function getTranslationSettings(businessId?: number, businessSlug?:
       ['default']
     );
   } else if (businessId !== undefined && businessId > 0) {
+    // 先尝试按 id 查询（可能是客服账号或商家主账号）
     settings = await db.get<{
       enable_auto_trans: number;
       default_lang: string;
@@ -372,6 +373,17 @@ export async function getTranslationSettings(businessId?: number, businessSlug?:
       'SELECT enable_auto_trans, default_lang, business_id FROM staff_users WHERE id = ?',
       [businessId]
     );
+    // 如果没找到，尝试按 business_id 查询商家主账号
+    if (!settings) {
+      settings = await db.get<{
+        enable_auto_trans: number;
+        default_lang: string;
+        business_id: number;
+      }>(
+        'SELECT enable_auto_trans, default_lang, business_id FROM staff_users WHERE id = ? AND business_id = 0',
+        [businessId]
+      );
+    }
   } else if (businessSlug) {
     settings = await db.get<{
       enable_auto_trans: number;
@@ -406,23 +418,32 @@ export async function getTranslationSettings(businessId?: number, businessSlug?:
   }
 
   let enabled = settings.enable_auto_trans === 1;
+  let defaultLang = settings.default_lang || 'zh-CN';
 
   // 下级客服（business_id > 0）：从上级商家继承启用状态
-  if (settings.business_id > 0 && !enabled) {
-    const parent = await db.get<{ enable_auto_trans: number }>(
-      'SELECT enable_auto_trans FROM staff_users WHERE id = ?',
+  if (settings.business_id > 0) {
+    const parent = await db.get<{ enable_auto_trans: number; default_lang: string }>(
+      'SELECT enable_auto_trans, default_lang FROM staff_users WHERE id = ?',
       [settings.business_id]
     );
-    if (parent?.enable_auto_trans === 1) {
-      enabled = true;
-      console.log('[TranslateService] Parent inheritance for staff', businessId,
-        '| parent enabled:', true, '| final enabled:', true);
+    if (parent) {
+      // 继承上级的启用状态（如果下级未禁用）
+      if (!enabled && parent.enable_auto_trans === 1) {
+        enabled = true;
+        console.log('[TranslateService] Parent inheritance for staff', businessId,
+          '| parent enabled:', true, '| final enabled:', true);
+      }
+      // 继承上级的默认语言（如果下级未设置）
+      if (!defaultLang && parent.default_lang) {
+        defaultLang = parent.default_lang;
+        console.log('[TranslateService] Inherited default_lang from parent:', defaultLang);
+      }
     }
   }
 
   return {
     enabled,
-    defaultLang: settings.default_lang,
+    defaultLang,
   };
 }
 

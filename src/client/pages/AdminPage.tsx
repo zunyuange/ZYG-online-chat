@@ -1220,6 +1220,24 @@ export function AdminPage() {
             >
               <option value="zh-CN">{t('lang_zh_CN')}</option>
               <option value="en-US">{t('lang_en_US')}</option>
+              <option value="tc">{t('lang_tc')}</option>
+              <option value="jp">{t('lang_jp')}</option>
+              <option value="kr">{t('lang_kr')}</option>
+              <option value="es">{t('lang_es')}</option>
+              <option value="fr">{t('lang_fr')}</option>
+              <option value="it">{t('lang_it')}</option>
+              <option value="de">{t('lang_de')}</option>
+              <option value="pt">{t('lang_pt')}</option>
+              <option value="vi">{t('lang_vi')}</option>
+              <option value="ru">{t('lang_ru')}</option>
+              <option value="id">{t('lang_id')}</option>
+              <option value="th">{t('lang_th')}</option>
+              <option value="ar">{t('lang_ar')}</option>
+              <option value="el">{t('lang_el')}</option>
+              <option value="pl">{t('lang_pl')}</option>
+              <option value="da">{t('lang_da')}</option>
+              <option value="nl">{t('lang_nl')}</option>
+              <option value="fi">{t('lang_fi')}</option>
             </select>
           </div>
           
