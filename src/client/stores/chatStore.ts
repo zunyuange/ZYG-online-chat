@@ -126,6 +126,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const visitorName = localStorage.getItem(VISITOR_NAME_KEY) || undefined;
       const business = getUrlBusiness();
       
+      console.log('[ChatStore] initSession: business from URL =', business);
+      console.log('[ChatStore] initSession: URL =', window.location.href);
+      
       // 从 URL 获取访客自定义信息
       const visitorInfo = getVisitorInfoFromUrl();
       // 如果 URL 传了 userName，优先使用
