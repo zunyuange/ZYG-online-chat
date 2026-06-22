@@ -99,10 +99,42 @@ businessRoutes.get('/info', async (c) => {
       }
       
       if (businessId !== undefined && businessId > 0) {
-        business = await db.get(
-          'SELECT id, business_name, business_slug, default_lang as lang, created_at, updated_at FROM staff_users WHERE id = ?',
+        // ★ 关键修复：先查当前用户，判断是商家管理员还是下属客服
+        const currentUser = await db.get<{ id: number; business_id: number; role: string; business_slug: string | null; business_name: string | null }>(
+          'SELECT id, business_id, role, business_slug, business_name FROM staff_users WHERE id = ?',
           [businessId]
         );
+
+        if (currentUser) {
+          // 如果是商家管理员（有自己的 business_slug），直接返回自己的信息
+          if (currentUser.role === 'admin' && currentUser.business_slug) {
+            business = {
+              id: currentUser.id,
+              business_name: currentUser.business_name || '默认商家',
+              business_slug: currentUser.business_slug,
+              lang: null,
+              created_at: 0,
+              updated_at: 0,
+            };
+            console.log('[BusinessRoutes] /info: user is admin with slug:', currentUser.business_slug);
+          } else if (currentUser.business_id && currentUser.business_id !== currentUser.id) {
+            // ★ 下属客服：business_id 指向上级商家 → 查上级商家信息
+            business = await db.get(
+              'SELECT id, business_name, business_slug, default_lang as lang, created_at, updated_at FROM staff_users WHERE id = ?',
+              [currentUser.business_id]
+            );
+            console.log('[BusinessRoutes] /info: user is staff, resolved parent business_id:', currentUser.business_id);
+          } else {
+            // 兜底：按 businessId 查（商家管理员但没 slug）
+            business = await db.get(
+              'SELECT id, business_name, business_slug, default_lang as lang, created_at, updated_at FROM staff_users WHERE id = ?',
+              [businessId]
+            );
+          }
+        } else {
+          // 按 businessId 查不到用户，说明是无效上下文
+          business = null;
+        }
       } else {
         // 回退：从 token 解析
         const authHeader = c.req.header('Authorization');

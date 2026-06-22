@@ -250,22 +250,26 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
   // Get business info based on slug or id
   const business = await getBusinessBySlug(input.business)
 
-  // 优先级：URL传入的business > 会话已有的business_id对应的商家 > 默认商家
-  const businessId = business?.id || sessionBusinessId || 1
+  // 优先级：显式传入的business > 会话已有的business_id > 默认商家
+  // ⚠️ 关键：input.business 为空时，不使用 getBusinessBySlug(undefined) 返回的默认商家
+  //   因为 getBusinessBySlug(undefined) 总会返回 id=1，会覆盖 sessionBusinessId
+  //   只有 URL 明确传了 business 参数时才优先使用
+  const businessId = input.business ? (business?.id || sessionBusinessId || 1) : (sessionBusinessId || business?.id || 1)
   
   // 根据最终的businessId获取商家信息
   let businessName = business?.business_name || '默认商家';
   let businessSlug = business?.business_slug || 'default';
   
-  // 如果businessId来自会话但没有匹配到business对象，需要重新查询
-  if (sessionBusinessId && !business && businessId !== 1) {
+  // 如果 businessId 来自会话但没有匹配到传入的 business 对象，需要重新查询
+  // 或者 businessId 与 business?.id 不一致（说明用的是 sessionBusinessId）
+  if ((sessionBusinessId && !input.business) || (businessId !== business?.id)) {
     const sessionBusiness = await db.get<{ business_name: string; business_slug: string }>(
       'SELECT business_name, business_slug FROM staff_users WHERE id = ?',
       [businessId]
     );
     if (sessionBusiness) {
-      businessName = sessionBusiness.business_name;
-      businessSlug = sessionBusiness.business_slug;
+      businessName = sessionBusiness.business_name || businessName;
+      businessSlug = sessionBusiness.business_slug || businessSlug;
     }
   }
 
