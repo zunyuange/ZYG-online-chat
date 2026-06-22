@@ -230,16 +230,39 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
 
   console.log('[ChatService] createOrGetSession: ENTIRE INPUT =', JSON.stringify(input))
 
+  // 如果提供了会话ID，先尝试从数据库获取会话的商家信息
+  let sessionBusinessInfo: { id: number; name: string; slug: string } | undefined;
+  if (input.sessionId) {
+    const existingSession = await db.get<{ business_id: number }>(
+      'SELECT business_id FROM sessions WHERE id = ?',
+      [input.sessionId]
+    );
+    if (existingSession) {
+      // 根据会话的business_id获取商家信息
+      const sessionBusiness = await db.get<{ id: number; business_name: string; business_slug: string }>(
+        'SELECT id, business_name, business_slug FROM staff_users WHERE id = ?',
+        [existingSession.business_id]
+      );
+      if (sessionBusiness) {
+        sessionBusinessInfo = {
+          id: sessionBusiness.id,
+          name: sessionBusiness.business_name,
+          slug: sessionBusiness.business_slug
+        };
+        console.log('[ChatService] createOrGetSession: Found existing session business =', JSON.stringify(sessionBusinessInfo));
+      }
+    }
+  }
+
   // Get business info based on slug or id
   const business = await getBusinessBySlug(input.business)
   
   console.log('[ChatService] createOrGetSession: business from getBusinessBySlug =', business ? JSON.stringify(business) : 'NULL')
   
-  // 如果没找到匹配的商家，使用默认商家作为兜底
-  // 如果连默认商家都没有，使用 id=1 作为最后的兜底
-  const businessId = business?.id || 1
-  const businessName = business?.business_name || '默认商家'
-  const businessSlug = business?.business_slug || 'default'
+  // 优先级：URL传入的business > 会话已有的business信息 > 默认商家
+  const businessId = business?.id || sessionBusinessInfo?.id || 1
+  const businessName = business?.business_name || sessionBusinessInfo?.name || '默认商家'
+  const businessSlug = business?.business_slug || sessionBusinessInfo?.slug || 'default'
 
   console.log(
     '[ChatService] createOrGetSession: input.business =',
