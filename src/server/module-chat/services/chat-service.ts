@@ -91,6 +91,8 @@ interface MessageRow {
 }
 
 function mapRowToSession(row: SessionRow, business?: BusinessRow, staffName?: string): Session {
+  console.log('[ChatService] mapRowToSession: business_id=', row.business_id, ', business passed:', business ? JSON.stringify(business) : 'undefined')
+  
   return {
     id: row.id,
     visitorName: row.visitor_name,
