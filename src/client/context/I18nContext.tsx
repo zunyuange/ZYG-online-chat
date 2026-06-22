@@ -55,9 +55,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const setLocale = (newLocale: LocaleCode) => {
     setLocaleState(newLocale);
     localStorage.setItem('chat_locale', newLocale);
-    // 保留当前URL的查询参数，只刷新页面
-    const url = new URL(window.location.href);
-    window.location.href = url.toString();
+    window.location.reload();
   };
 
   const t = (key: LocaleKey): string => {

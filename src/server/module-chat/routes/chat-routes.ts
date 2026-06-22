@@ -31,15 +31,8 @@ async function requireAuth(c: any, next: any) {
     return c.json({ success: false, error: result.error || 'Token 无效' }, 401)
   }
 
-  // 修复旧 token 中 businessId=0 的问题：使用 userId 替代
-  // 只有 default 商家的 admin 才保持 businessId=0（超级管理员权限）
-  let businessId = result.businessId;
-  if (businessId === 0 && result.userId && result.businessSlug !== 'default') {
-    console.log('[ChatRoutes] Fixing businessId=0 for non-default business, using userId:', result.userId, 'businessSlug:', result.businessSlug);
-    businessId = result.userId;
-  }
-  if (businessId !== undefined) {
-    c.set('businessId', businessId)
+  if (result.businessId) {
+    c.set('businessId', result.businessId)
   }
   if (result.businessSlug) {
     c.set('businessSlug', result.businessSlug)

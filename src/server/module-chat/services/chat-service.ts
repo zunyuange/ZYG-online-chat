@@ -179,19 +179,13 @@ async function getBusinessBySlug(slug?: string): Promise<BusinessRow | null> {
   }
 
   // Try to find by business_slug first (商家使用 business_slug 标识)
-  console.log('[ChatService] getBusinessBySlug: Executing query with slug=', JSON.stringify(slug))
-  const business = await db.get<BusinessRow>(
-    'SELECT id, business_slug, business_name, business_id, role FROM staff_users WHERE business_slug = ?',
+  // 先尝试精确匹配 business_slug（不限制 business_id）
+  let business = await db.get<BusinessRow>(
+    'SELECT id, business_slug, business_name FROM staff_users WHERE business_slug = ?',
     [slug]
   )
 
-  console.log('[ChatService] getBusinessBySlug: Raw query result:', business ? JSON.stringify(business) : 'NULL')
-  
-  if (business && business.business_id === 0 && business.role === 'admin') {
-    console.log('[ChatService] getBusinessBySlug: Found valid business owner:', business)
-  } else if (business) {
-    console.log('[ChatService] getBusinessBySlug: Found but not owner - business_id=', business.business_id, ', role=', business.role)
-  }
+  console.log('[ChatService] getBusinessBySlug: query result for slug=', JSON.stringify(slug), '->', business ? JSON.stringify(business) : 'NULL')
 
   if (business) {
     console.log('[ChatService] getBusinessBySlug: found business by slug:', business)
@@ -234,52 +228,30 @@ async function getBusinessBySlug(slug?: string): Promise<BusinessRow | null> {
 export async function createOrGetSession(input: CreateSessionInput = {}): Promise<Session> {
   const db = getDb()
 
-  // 如果提供了会话ID，先尝试获取会话的商家信息（用于恢复正确的商家归属）
-  let sessionBusinessId: number | undefined;
-  if (input.sessionId) {
-    const existingSession = await db.get<{ business_id: number }>(
-      'SELECT business_id FROM sessions WHERE id = ?',
-      [input.sessionId]
-    );
-    if (existingSession) {
-      sessionBusinessId = existingSession.business_id;
-      console.log('[ChatService] createOrGetSession: Found session business_id =', sessionBusinessId);
-    }
-  }
+  console.log('[ChatService] createOrGetSession: ENTIRE INPUT =', JSON.stringify(input))
 
   // Get business info based on slug or id
   const business = await getBusinessBySlug(input.business)
-
-  // 优先级：显式传入的business > 会话已有的business_id > 默认商家
-  // ⚠️ 关键：input.business 为空时，不使用 getBusinessBySlug(undefined) 返回的默认商家
-  //   因为 getBusinessBySlug(undefined) 总会返回 id=1，会覆盖 sessionBusinessId
-  //   只有 URL 明确传了 business 参数时才优先使用
-  const businessId = input.business ? (business?.id || sessionBusinessId || 1) : (sessionBusinessId || business?.id || 1)
   
-  // 根据最终的businessId获取商家信息
-  let businessName = business?.business_name || '默认商家';
-  let businessSlug = business?.business_slug || 'default';
+  console.log('[ChatService] createOrGetSession: business from getBusinessBySlug =', business ? JSON.stringify(business) : 'NULL')
   
-  // 如果 businessId 来自会话但没有匹配到传入的 business 对象，需要重新查询
-  // 或者 businessId 与 business?.id 不一致（说明用的是 sessionBusinessId）
-  if ((sessionBusinessId && !input.business) || (businessId !== business?.id)) {
-    const sessionBusiness = await db.get<{ business_name: string; business_slug: string }>(
-      'SELECT business_name, business_slug FROM staff_users WHERE id = ?',
-      [businessId]
-    );
-    if (sessionBusiness) {
-      businessName = sessionBusiness.business_name || businessName;
-      businessSlug = sessionBusiness.business_slug || businessSlug;
-    }
-  }
+  // 如果没找到匹配的商家，使用默认商家作为兜底
+  // 如果连默认商家都没有，使用 id=1 作为最后的兜底
+  const businessId = business?.id || 1
+  const businessName = business?.business_name || '默认商家'
+  const businessSlug = business?.business_slug || 'default'
 
   console.log(
     '[ChatService] createOrGetSession: input.business =',
-    input.business,
-    '-> businessId =',
+    JSON.stringify(input.business),
+    '-> business found:',
+    business ? 'YES' : 'NO',
+    ', businessId =',
     businessId,
     ', businessName =',
-    businessName
+    businessName,
+    ', businessSlug =',
+    businessSlug
   )
 
   // Generate visitor_id for the session
@@ -336,17 +308,7 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
             )
             staffName = staff?.name
           }
-          
-          // 如果传入的business为空，但会话有business_id，查询商家信息
-          let updatedSessionBusiness = business;
-          if (!business && updatedRow.business_id) {
-            updatedSessionBusiness = await db.get<BusinessRow>(
-              'SELECT id, business_slug, business_name FROM staff_users WHERE id = ?',
-              [updatedRow.business_id]
-            );
-          }
-          
-          return mapRowToSession(updatedRow, updatedSessionBusiness || undefined, staffName)
+          return mapRowToSession(updatedRow, business || undefined, staffName)
         }
       }
       let staffName: string | undefined
@@ -357,17 +319,7 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
         )
         staffName = staff?.name
       }
-      
-      // 如果传入的business为空，但会话有business_id，查询商家信息
-      let sessionBusiness = business;
-      if (!business && row.business_id) {
-        sessionBusiness = await db.get<BusinessRow>(
-          'SELECT id, business_slug, business_name FROM staff_users WHERE id = ?',
-          [row.business_id]
-        );
-      }
-      
-      return mapRowToSession(row, sessionBusiness || undefined, staffName)
+      return mapRowToSession(row, business || undefined, staffName)
     }
   }
 

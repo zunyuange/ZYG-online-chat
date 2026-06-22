@@ -375,17 +375,11 @@ export async function login(username: string, password: string, clientIp: string
       // Update last_active timestamp for online status tracking
       await updateStaffLastActive(userId);
       
-      // 商家主账号：数据库中 business_id = 0，但可能是新创建的商家管理员
+      // 商家主账号：数据库中 business_id = 0，但有 business_slug/business_name
       // 使用自己的 userId 作为 token 中的 businessId，实现数据隔离
       // 所有商家（包括 default）都用自己的 ID，不再有 businessId=0 的超管特权
       // 真正的超级管理员通过 role='admin' + businessSlug='default' 判断
-      // 
-      // ⚠️ 注意：不能依赖 business_slug/business_name 判断是否为商家主账号
-      // 因为通过 createStaffUser 创建的用户这两个字段可能为 NULL
-      // 修正：只要 businessId=0 且有 userId，就自动修正
-      if (businessId === 0 && userId) {
-        console.log('[AuthService] Fixing businessId=0 → userId=', userId, 
-          'businessSlug=', u.business_slug, 'businessName=', u.business_name);
+      if (businessId === 0 && (u.business_slug || u.business_name)) {
         businessId = userId;
       }
       

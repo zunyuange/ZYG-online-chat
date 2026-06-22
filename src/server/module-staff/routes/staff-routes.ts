@@ -51,16 +51,9 @@ async function requireAuth(c: any, next: any) {
   }
 
   // Attach businessId, businessSlug, userId and role to context for downstream use
-  // 修复旧 token 中 businessId=0 的问题：使用 userId 替代
-  // 只有 default 商家的 admin 才保持 businessId=0（超级管理员权限）
-  // 与 business-routes.ts 保持一致的修复逻辑
-  let businessId = result.businessId;
-  if (businessId === 0 && result.userId && result.businessSlug !== 'default') {
-    console.log('[StaffRoutes] Fixing businessId=0 for non-default business, using userId:', result.userId, 'businessSlug:', result.businessSlug);
-    businessId = result.userId;
-  }
-  if (businessId !== undefined) {
-    c.set('businessId', businessId)
+  // 注意：businessId 可能是 0（超级管理员），需要用 !== undefined 判断
+  if (result.businessId !== undefined) {
+    c.set('businessId', result.businessId)
   }
   if (result.businessSlug) {
     c.set('businessSlug', result.businessSlug)
@@ -71,13 +64,6 @@ async function requireAuth(c: any, next: any) {
   if (result.role) {
     c.set('role', result.role)
   }
-
-  console.log('[StaffRoutes] Auth context:', {
-    userId: result.userId,
-    businessId: businessId,
-    businessSlug: result.businessSlug,
-    role: result.role,
-  })
 
   await next()
 }
@@ -248,22 +234,18 @@ staffRoutes.post('/messages', async c => {
       const txBusinessId = session?.businessId || bizCtx.businessId;
       const txSettings = await getTranslationSettings(txBusinessId, getCtxString(c, 'businessSlug'));
 
-      // 如果没找到翻译设置，使用默认启用翻译的配置
-      const effectiveSettings = txSettings || { enabled: true, defaultLang: 'zh-CN' };
-      
       // 翻译目标语言：优先使用 session.lang（访客浏览器语言），空则回退到默认
-      const targetLang = session?.lang || effectiveSettings.defaultLang || 'zh-CN';
+      const targetLang = session?.lang || txSettings?.defaultLang || 'zh-CN';
 
       console.log('[StaffRoutes] 🔍 Translation check',
         '| staffId:', bizCtx.businessId,
         '| queriedBusinessId:', txBusinessId,
         '| txSettings:', txSettings ? `enabled=${txSettings.enabled} defaultLang=${txSettings.defaultLang}` : 'NULL',
-        '| effectiveSettings:', `enabled=${effectiveSettings.enabled} defaultLang=${effectiveSettings.defaultLang}`,
         '| session.lang:', session?.lang || 'NULL',
         '| targetLang:', targetLang,
         '| session.businessId:', session?.businessId);
 
-      if (effectiveSettings.enabled && targetLang) {
+      if (txSettings?.enabled && targetLang) {
         const staffDetectedLang = detectSourceLanguage(content as string);
         const langSource = session?.lang ? 'session.lang' : 'settings.defaultLang (fallback)';
         console.log('[StaffRoutes] 🈂️ Auto-translating staff message to visitor lang:', targetLang,
@@ -274,7 +256,7 @@ staffRoutes.post('/messages', async c => {
           text: content,
           to: targetLang,
           businessId: txBusinessId,
-          _settings: effectiveSettings as any,
+          _settings: txSettings as any,
         } as any);
         if (translateResult.engine === 'same_language') {
           translatedContent = undefined;

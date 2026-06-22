@@ -373,38 +373,7 @@ export async function getTranslationSettings(businessId?: number, businessSlug?:
       'SELECT enable_auto_trans, default_lang, business_id FROM staff_users WHERE id = ?',
       [businessId]
     );
-    
-    console.log('[TranslateService] getTranslationSettings: businessId=', businessId, 
-      'first query (by id):', settings ? JSON.stringify(settings) : 'NULL');
-    
-    // 如果找到了设置且这是一个下级客服（business_id > 0），尝试继承上级商家的设置
-    if (settings && settings.business_id > 0) {
-      const parentSettings = await db.get<{
-        enable_auto_trans: number;
-        default_lang: string;
-        business_id: number;
-      }>(
-        'SELECT enable_auto_trans, default_lang, business_id FROM staff_users WHERE id = ? AND business_id = 0',
-        [settings.business_id]
-      );
-      
-      console.log('[TranslateService] getTranslationSettings: businessId=', businessId, 
-        'parent query (business_id=', settings.business_id, '):', parentSettings ? JSON.stringify(parentSettings) : 'NULL');
-      
-      // 如果上级商家有设置，继承上级的启用状态和默认语言
-      if (parentSettings) {
-        // 继承上级的启用状态（如果下级未禁用）
-        if (settings.enable_auto_trans !== 0 && parentSettings.enable_auto_trans === 1) {
-          settings.enable_auto_trans = 1;
-        }
-        // 继承上级的默认语言（如果下级未设置）
-        if (!settings.default_lang && parentSettings.default_lang) {
-          settings.default_lang = parentSettings.default_lang;
-        }
-      }
-    }
-    
-    // 如果还是没找到，尝试按 business_id 直接查询商家主账号
+    // 如果没找到，尝试按 business_id 查询商家主账号
     if (!settings) {
       settings = await db.get<{
         enable_auto_trans: number;
@@ -414,9 +383,6 @@ export async function getTranslationSettings(businessId?: number, businessSlug?:
         'SELECT enable_auto_trans, default_lang, business_id FROM staff_users WHERE id = ? AND business_id = 0',
         [businessId]
       );
-      
-      console.log('[TranslateService] getTranslationSettings: businessId=', businessId, 
-        'fallback query:', settings ? JSON.stringify(settings) : 'NULL');
     }
   } else if (businessSlug) {
     settings = await db.get<{
