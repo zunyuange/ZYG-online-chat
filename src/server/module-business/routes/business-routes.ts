@@ -369,8 +369,8 @@ businessRoutes.post('/create', async (c) => {
     const passwordHash = await hashPassword(password);
 
     const result = await db.run(
-      'INSERT INTO staff_users (username, password_hash, business_name, business_slug, description, business_id, role, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [username, passwordHash, name, slug, description || '', 0, 'admin', 'active', Date.now(), Date.now()]
+      'INSERT INTO staff_users (username, password_hash, business_name, business_slug, description, business_id, role, status, enable_auto_trans, default_lang, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [username, passwordHash, name, slug, description || '', 0, 'admin', 'active', 1, 'zh-CN', Date.now(), Date.now()]
     );
 
     const newBusiness = await db.get('SELECT id, business_name as name, business_slug as slug, description, created_at FROM staff_users WHERE id = ?', [result.lastInsertRowid]);
