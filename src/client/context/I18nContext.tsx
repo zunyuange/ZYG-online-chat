@@ -1,23 +1,27 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { locales, type LocaleCode, type LocaleKey, supportedLocales } from '@shared/i18n';
+
+type I18nParams = Record<string, string | number>;
 
 interface I18nContextType {
   locale: LocaleCode;
   setLocale: (locale: LocaleCode) => void;
-  t: (key: LocaleKey) => string;
+  t: (key: LocaleKey, params?: I18nParams) => string;
   supportedLocales: typeof supportedLocales;
 }
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
 
+/** 所有支持的语言代码集合（用于快速查找） */
+const ALL_LOCALE_CODES: readonly string[] = supportedLocales.map(l => l.code);
+
 /**
- * 将 URL lang 参数值映射到系统 LocaleCode
+ * 将浏览器语言标签映射到系统 LocaleCode
  * 支持常见格式: ko→kr, ja/jp→jp, en/en-US→en-US, zh-CN→zh-CN, zh-TW/tc→tc 等
  */
 function mapLangToLocale(lang: string): LocaleCode | null {
   // 先尝试直接匹配
-  const allLocaleCodes = supportedLocales.map(l => l.code);
-  if (allLocaleCodes.includes(lang)) {
+  if ((ALL_LOCALE_CODES as readonly string[]).includes(lang)) {
     return lang as LocaleCode;
   }
   // 映射常见 lang 值到 locale code
@@ -46,77 +50,77 @@ function mapLangToLocale(lang: string): LocaleCode | null {
   return langMap[lang] || null;
 }
 
+/**
+ * 获取初始语言设置，按优先级:
+ * 1. localStorage 中用户手动选择的语言
+ * 2. URL 参数 ?lang=xxx
+ * 3. 浏览器语言自动检测（优先 navigator.languages 完整列表）
+ * 4. 兜底: 中文简体
+ */
 function getInitialLocale(): LocaleCode {
   if (typeof window === 'undefined') return 'zh-CN';
-  
+
   // 1. 优先从 localStorage 读取用户手动选择的语言
   const saved = localStorage.getItem('chat_locale');
-  const allLocaleCodes = supportedLocales.map(l => l.code);
-  if (saved && allLocaleCodes.includes(saved)) {
+  if (saved && (ALL_LOCALE_CODES as readonly string[]).includes(saved)) {
     return saved as LocaleCode;
   }
-  
+
   // 2. 从 URL 参数 lang 读取（专属链接预设语言）
   const urlParams = new URLSearchParams(window.location.search);
   const urlLang = urlParams.get('lang');
   if (urlLang) {
     const mapped = mapLangToLocale(urlLang);
     if (mapped) {
-      // 保存到 localStorage，确保页面内刷新/重载后保持一致
       localStorage.setItem('chat_locale', mapped);
       return mapped;
     }
   }
-  
-  // 3. 首次访问：根据浏览器语言自动匹配
-  const browserLang = navigator.language;
-  if (browserLang.startsWith('en')) return 'en-US';
-  if (browserLang.startsWith('zh')) {
-    if (browserLang.includes('Hant') || browserLang.includes('HK') || browserLang.includes('TW')) {
-      return 'tc';
-    }
-    return 'zh-CN';
+
+  // 3. 首次访问：根据浏览器语言自动匹配（遍历完整语言偏好列表）
+  const browserLangs = navigator.languages?.length ? navigator.languages : [navigator.language];
+  for (const lang of browserLangs) {
+    const mapped = mapLangToLocale(lang);
+    if (mapped) return mapped;
   }
-  if (browserLang.startsWith('ja')) return 'jp';
-  if (browserLang.startsWith('ko')) return 'kr';
-  if (browserLang.startsWith('es')) return 'es';
-  if (browserLang.startsWith('fr')) return 'fr';
-  if (browserLang.startsWith('it')) return 'it';
-  if (browserLang.startsWith('de')) return 'de';
-  if (browserLang.startsWith('pt')) return 'pt';
-  if (browserLang.startsWith('vi')) return 'vi';
-  if (browserLang.startsWith('ru')) return 'ru';
-  if (browserLang.startsWith('id')) return 'id';
-  if (browserLang.startsWith('th')) return 'th';
-  if (browserLang.startsWith('ar')) return 'ar';
-  if (browserLang.startsWith('el')) return 'el';
-  if (browserLang.startsWith('pl')) return 'pl';
-  if (browserLang.startsWith('da')) return 'da';
-  if (browserLang.startsWith('nl')) return 'nl';
-  if (browserLang.startsWith('fi')) return 'fi';
-  
-  // 4. 默认中文
+
+  // 4. 兜底: 默认中文简体
   return 'zh-CN';
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<LocaleCode>(getInitialLocale);
 
+  // 同步 html[lang] 和 dir 属性（SEO / 无障碍 / RTL 支持）
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr';
+  }, [locale]);
+
   const setLocale = (newLocale: LocaleCode) => {
     setLocaleState(newLocale);
     localStorage.setItem('chat_locale', newLocale);
-    window.location.reload();
   };
 
-  const t = (key: LocaleKey): string => {
+  const t = (key: LocaleKey, params?: I18nParams): string => {
     const translations = locales[locale];
     const value = translations[key];
     
+    let result: string;
     if (Array.isArray(value)) {
-      return value[Math.floor(Math.random() * value.length)];
+      result = value[Math.floor(Math.random() * value.length)];
+    } else {
+      result = (value as string) || key;
     }
     
-    return value || key;
+    // 支持模板参数替换，如 {count}、{domain} 等
+    if (params) {
+      for (const [paramKey, paramValue] of Object.entries(params)) {
+        result = result.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), String(paramValue));
+      }
+    }
+    
+    return result;
   };
 
   return (

@@ -14,7 +14,8 @@ function HomeContent() {
   const { t, locale, setLocale, supportedLocales } = useI18n();
   const { siteName } = useSiteSettings();
 
-  const platformName = siteName || t('service_title') || '在线客服';
+  const platformName = siteName || t('service_title');
+  const currentDomain = typeof window !== 'undefined' ? window.location.hostname : '';
 
   // Override overflow:hidden to allow scrolling on home page
   useEffect(() => {
@@ -40,38 +41,38 @@ function HomeContent() {
   const features = [
     {
       icon: <MessageCircle size={28} />,
-      title: '实时在线聊天',
-      desc: '访客与客服实时文字沟通，支持图片、视频、文件等多种消息类型，消息加密传输保障安全',
+      title: t('home_feature_chat_title'),
+      desc: t('home_feature_chat_desc'),
       color: '#1890ff',
     },
     {
       icon: <Globe size={28} />,
-      title: '多语言自动翻译',
-      desc: '内置多引擎AI翻译，访客和客服使用各自语言交流，系统自动互译，打破语言障碍',
+      title: t('home_feature_translate_title'),
+      desc: t('home_feature_translate_desc'),
       color: '#52c41a',
     },
     {
       icon: <Shield size={28} />,
-      title: '独立商家隔离',
-      desc: '每个商家拥有独立的数据空间和客服团队，会话、消息、配置完全隔离，互不干扰',
+      title: t('home_feature_isolation_title'),
+      desc: t('home_feature_isolation_desc'),
       color: '#722ed1',
     },
     {
       icon: <Zap size={28} />,
-      title: 'PWA渐进式应用',
-      desc: '支持安装到手机/桌面，离线时仍可访问历史消息，消息推送实时到达，媲美原生App体验',
+      title: t('home_feature_pwa_title'),
+      desc: t('home_feature_pwa_desc'),
       color: '#fa8c16',
     },
     {
       icon: <Users size={28} />,
-      title: '智能客服分配',
-      desc: '支持客服轮询/空闲分配策略，可管理客服在线状态，支持会话转接和多客服协作处理',
+      title: t('home_feature_route_title'),
+      desc: t('home_feature_route_desc'),
       color: '#eb2f96',
     },
     {
       icon: <FileText size={28} />,
-      title: '访客身份识别',
-      desc: '通过URL参数传递访客身份信息（用户名、邮箱、电话等），客服端实时显示访客画像',
+      title: t('home_feature_visitor_title'),
+      desc: t('home_feature_visitor_desc'),
       color: '#13c2c2',
     },
   ];
@@ -115,11 +116,45 @@ function HomeContent() {
             color: 'rgba(255,255,255,0.75)',
             lineHeight: '1.8',
             maxWidth: '600px',
-            margin: '0 auto 32px',
+            margin: '0 auto 24px',
           }}>
-            轻量级在线客服系统，支持多商家独立运营、多语言实时翻译。
-            访客通过商家专属链接接入，客服通过后台统一管理。
+            {t('home_hero_subtitle')}
           </p>
+
+          {/* Language Switcher */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            marginBottom: '24px',
+            flexWrap: 'wrap',
+          }}>
+            <Globe size={16} color="rgba(255,255,255,0.55)" />
+            <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)', marginRight: '4px' }}>
+              {t('home_lang_switch')}:
+            </span>
+            {supportedLocales?.map((l) => (
+              <button
+                key={l.code}
+                onClick={() => setLocale(l.code as any)}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  border: locale === l.code ? '1px solid rgba(24,144,255,0.5)' : '1px solid rgba(255,255,255,0.15)',
+                  backgroundColor: locale === l.code ? 'rgba(24,144,255,0.15)' : 'transparent',
+                  color: locale === l.code ? '#1890ff' : 'rgba(255,255,255,0.65)',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  fontWeight: locale === l.code ? 600 : 400,
+                }}
+                title={l.name}
+              >
+                {l.nativeName}
+              </button>
+            ))}
+          </div>
 
           {/* CTA Button */}
           <a
@@ -139,7 +174,7 @@ function HomeContent() {
               boxShadow: '0 4px 12px rgba(24,144,255,0.4)',
             }}
           >
-            查看接入文档
+            {t('home_hero_cta')}
             <ArrowRight size={18} />
           </a>
         </div>
@@ -158,7 +193,7 @@ function HomeContent() {
             color: '#1a1a2e',
             margin: '0 0 12px 0',
           }}>
-            平台核心功能
+            {t('home_features_title')}
           </h2>
           <p style={{
             fontSize: '15px',
@@ -167,7 +202,7 @@ function HomeContent() {
             margin: '0 auto',
             lineHeight: '1.6',
           }}>
-            为您提供一站式的CF智能多语言在线客服解决方案
+            {t('home_features_subtitle')}
           </p>
         </div>
 
@@ -245,7 +280,7 @@ function HomeContent() {
             textAlign: 'center',
             margin: '0 0 48px 0',
           }}>
-            如何接入使用
+            {t('home_how_title')}
           </h2>
 
           <div style={{
@@ -257,20 +292,20 @@ function HomeContent() {
               {
                 step: '01',
                 icon: <Users size={24} />,
-                title: '注册商家',
-                desc: '在支持的部署环境中添加商家，每个商家拥有独立的客服团队和数据空间',
+                title: t('home_step1_title'),
+                desc: t('home_step1_desc'),
               },
               {
                 step: '02',
                 icon: <Link2 size={24} />,
-                title: '获取链接',
-                desc: '获取商家专属的接入链接：{域名}/chat?business=你的商家标识',
+                title: t('home_step2_title'),
+                desc: t('home_step2_desc', { domain: currentDomain }),
               },
               {
                 step: '03',
                 icon: <Code2 size={24} />,
-                title: '嵌入网站',
-                desc: '通过 Script 标签或 iframe 嵌入到你的网站，5分钟快速接入',
+                title: t('home_step3_title'),
+                desc: t('home_step3_desc'),
               },
             ].map((step, i) => (
               <div key={i} style={{ textAlign: 'center' }}>
@@ -345,7 +380,7 @@ function HomeContent() {
                 transition: 'all 0.2s',
               }}
             >
-              查看详细接入文档
+              {t('home_how_cta')}
               <ArrowRight size={16} />
             </a>
           </div>
@@ -365,7 +400,7 @@ function HomeContent() {
           textAlign: 'center',
           margin: '0 0 36px 0',
         }}>
-          技术支持
+          {t('home_tech_title')}
         </h2>
 
         <div style={{
@@ -376,23 +411,23 @@ function HomeContent() {
           {[
             {
               icon: '🌐',
-              title: '多语言界面',
-              desc: `支持 ${supportedLocales?.length || 22}+ 种界面语言，自动检测浏览器语言`,
+              title: t('home_tech_i18n_title'),
+              desc: t('home_tech_i18n_desc', { count: supportedLocales?.length || 22 }),
             },
             {
               icon: '🔄',
-              title: '多引擎翻译',
-              desc: 'Cloudflare AI / PearApi / SimplyTranslate / Google 自动切换容灾',
+              title: t('home_tech_translate_title'),
+              desc: t('home_tech_translate_desc'),
             },
             {
               icon: '📱',
-              title: 'PWA 离线支持',
-              desc: '可安装为桌面/移动应用，离线访问历史聊天记录',
+              title: t('home_tech_pwa_title'),
+              desc: t('home_tech_pwa_desc'),
             },
             {
               icon: '🔒',
-              title: '数据安全隔离',
-              desc: '商家数据完全隔离，客服权限分级管理，支持自定义字段',
+              title: t('home_tech_security_title'),
+              desc: t('home_tech_security_desc'),
             },
           ].map((item, i) => (
             <div
@@ -437,17 +472,17 @@ function HomeContent() {
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
           <p style={{ margin: '0 0 16px 0' }}>
             <span style={{ color: '#fff', fontWeight: 500 }}>{platformName}</span>
-            {' - Powered by Cloudflare Workers + D1 + Hono'}
+            {t('home_footer_powered')}
           </p>
           <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <a href="/stafflogin" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>
-              客服登录
+              {t('home_footer_staff_login')}
             </a>
             <a href="/adminlogin" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>
-              管理员登录
+              {t('home_footer_admin_login')}
             </a>
             <a href="/docs" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>
-              接入文档
+              {t('home_footer_docs')}
             </a>
           </div>
         </div>
