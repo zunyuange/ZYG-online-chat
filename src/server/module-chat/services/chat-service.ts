@@ -166,16 +166,10 @@ async function getBusinessBySlug(slug?: string): Promise<BusinessRow | null> {
   console.log('[ChatService] getBusinessBySlug called with slug:', slug)
 
   if (!slug) {
-    // Return default business - find by business_slug = 'default' and business_id = 0
-    const business = await db.get<BusinessRow>(
-      'SELECT id, business_slug, business_name FROM staff_users WHERE business_slug = ? AND business_id = 0 AND role = ?',
-      ['default', 'admin']
-    )
-    console.log(
-      '[ChatService] getBusinessBySlug: no slug provided, returning default business:',
-      business
-    )
-    return business || null
+    // ★ 不再返回默认商家：没有提供 business 参数时，返回 null
+    //   访客必须通过商家的专属链接（?business=xxx）才能进入客服聊天
+    console.log('[ChatService] getBusinessBySlug: no slug provided, refusing to fall back to default business')
+    return null
   }
 
   // Try to find by business_slug first (商家使用 business_slug 标识)
@@ -328,11 +322,15 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
   
   console.log('[ChatService] createOrGetSession: business from getBusinessBySlug =', business ? JSON.stringify(business) : 'NULL')
   
-  // 如果没找到匹配的商家，使用默认商家作为兜底
-  // 如果连默认商家都没有，使用 id=1 作为最后的兜底
-  const businessId = business?.id || 1
-  const businessName = business?.business_name || '默认商家'
-  const businessSlug = business?.business_slug || 'default'
+  // ★ 如果没有找到匹配的商家，拒绝创建会话（不再回退到默认商家）
+  if (!business) {
+    console.warn('[ChatService] createOrGetSession: No business found and refused to fall back to default, rejecting session creation')
+    throw new Error('BUSINESS_NOT_FOUND: 未找到对应的商家，请通过商家专属链接访问')
+  }
+  
+  const businessId = business.id
+  const businessName = business.business_name
+  const businessSlug = business.business_slug
 
   console.log(
     '[ChatService] createOrGetSession: CREATING NEW session with businessId =',

@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { useTodoStore } from './stores/todoStore';
 import type { Todo } from '@shared/types';
 import { ChatPage } from './pages/ChatPage';
+import { HomePage } from './pages/HomePage';
 import { StaffPage } from './pages/StaffPage';
 import { StaffLoginPage } from './pages/StaffLoginPage';
 import { AdminLoginPage } from './pages/AdminLoginPage';
@@ -14,7 +15,15 @@ import { AdminPage } from './pages/AdminPage';
 import { DocsPage } from './pages/DocsPage';
 import { I18nProvider } from './context/I18nContext';
 
-type Page = 'todo' | 'chat' | 'staff' | 'stafflogin' | 'admin' | 'adminlogin' | 'docs';
+type Page = 'todo' | 'home' | 'chat' | 'staff' | 'stafflogin' | 'admin' | 'adminlogin' | 'docs';
+
+/** 检测是否有有效的 business 参数（非空） */
+function hasBusinessParam(): boolean {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  const business = params.get('business');
+  return !!business;
+}
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>(() => {
@@ -26,9 +35,12 @@ function App() {
       if (path === '/adminlogin') return 'adminlogin';
       if (path === '/admin') return 'admin';
       if (path === '/docs') return 'docs';
-      if (path === '/chat' || path === '/') return 'chat';
+      // ★ 核心修复：/ 和 /chat 路径下，无 business 参数则展示首页，有则进入聊天
+      if (path === '/chat' || path === '/') {
+        return hasBusinessParam() ? 'chat' : 'home';
+      }
     }
-    return 'chat';
+    return 'home';
   });
 
   const todos = useTodoStore((state) => state.todos);
@@ -49,8 +61,10 @@ function App() {
   // Update URL when page changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      let path = '/chat';
-      if (currentPage === 'todo') path = '/todo';
+      let path = '/';
+      if (currentPage === 'home') path = '/';
+      else if (currentPage === 'chat') path = '/chat';
+      else if (currentPage === 'todo') path = '/todo';
       else if (currentPage === 'staff') path = '/staff';
       else if (currentPage === 'stafflogin') path = '/stafflogin';
       else if (currentPage === 'admin') path = '/admin';
@@ -70,7 +84,9 @@ function App() {
       else if (path === '/admin') setCurrentPage('admin');
       else if (path === '/docs') setCurrentPage('docs');
       else if (path === '/todo') setCurrentPage('todo');
-      else setCurrentPage('chat');
+      // ★ 核心修复：/ 和 /chat 路径下，无 business 参数则展示首页
+      else if (path === '/chat' || path === '/') setCurrentPage(hasBusinessParam() ? 'chat' : 'home');
+      else setCurrentPage('home');
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -116,7 +132,11 @@ function App() {
     fontSize: '14px',
   });
 
-  // Render Chat, Login, Admin or Staff page directly without navigation (full-page layouts)
+  // Render Home, Chat, Login, Admin or Staff page directly without navigation (full-page layouts)
+  if (currentPage === 'home') {
+    return <HomePage />;
+  }
+
   if (currentPage === 'chat') {
     return (
       <I18nProvider>
