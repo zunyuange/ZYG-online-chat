@@ -445,30 +445,7 @@ export function MessageItem({
                           )}
                         </button>
                       ))}
-                      
-                      {/* 分隔 + 重新自动翻译 */}
-                      <div style={{ borderTop: '1px solid #e8e8e8' }} />
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleTranslate(); }}
-                        disabled={translating}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          width: '100%',
-                          padding: '8px 12px',
-                          border: 'none',
-                          backgroundColor: '#fff',
-                          cursor: translating ? 'default' : 'pointer',
-                          fontSize: '12px',
-                          color: '#1890ff',
-                          textAlign: 'left',
-                          fontWeight: 500,
-                        }}
-                      >
-                        <span>🔁</span>
-                        <span>{t('retry_auto_translate') || '重新自动翻译（全部引擎）'}</span>
-                      </button>
+
                     </div>
                   )}
                 </div>
@@ -544,31 +521,6 @@ export function MessageItem({
                 }}>
                   {t('choose_translate_engine') || '选择翻译渠道'}
                 </div>
-
-                {/* 自动翻译（全部引擎） */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowEngineDropdown(false); handleTranslate(); }}
-                  disabled={translating}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: 'none',
-                    backgroundColor: '#e6f7ff',
-                    cursor: translating ? 'default' : 'pointer',
-                    fontSize: '12px',
-                    color: '#1890ff',
-                    textAlign: 'left',
-                    fontWeight: 500,
-                    borderBottom: '1px solid #e8e8e8',
-                    transition: 'background-color 0.15s',
-                  }}
-                >
-                  <span>🚀</span>
-                  <span style={{ flex: 1 }}>{t('auto_translate_all') || '自动翻译（推荐）'}</span>
-                </button>
 
                 {/* 各翻译引擎选项 */}
                 {TRANSLATE_ENGINES.map((eng) => (
