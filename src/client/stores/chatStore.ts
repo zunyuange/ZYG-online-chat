@@ -55,10 +55,17 @@ const getVisitorInfoFromUrl = () => {
 const updateUrlSessionId = (sessionId: string): void => {
   const url = new URL(window.location.href);
   url.searchParams.set('s', sessionId);
-  // Preserve business parameter if present
-  const business = getUrlBusiness();
-  if (business) {
-    url.searchParams.set('business', business);
+  // 保留关键 URL 参数：business, lang, userName 等
+  const preserveParams = ['business', 'lang', 'userName', 'email', 'phone', 'pid', 'avatar'];
+  for (const param of preserveParams) {
+    const value = url.searchParams.get(param);
+    if (!value) {
+      // 尝试从原始 URL 读取（如果当前 URL 已经丢失了某些参数）
+      const originalValue = new URLSearchParams(window.location.search).get(param);
+      if (originalValue) {
+        url.searchParams.set(param, originalValue);
+      }
+    }
   }
   window.history.replaceState({}, '', url.toString());
 };
