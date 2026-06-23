@@ -108,6 +108,7 @@ function LanguageSwitcher() {
 function DocsContent() {
   const { t, supportedLocales } = useI18n();
   const [copied, setCopied] = useState<string | null>(null);
+  const [copiedLang, setCopiedLang] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'script' | 'iframe' | 'url'>('script');
   const [showLangCodes, setShowLangCodes] = useState(false);
 
@@ -717,30 +718,74 @@ document.getElementById('chatBtn').addEventListener('click', () => {
                           <th style={{ padding: '8px 16px', textAlign: 'left', fontWeight: 500, color: '#999', fontSize: '12px' }}>{t('docs_lang_code')}</th>
                           <th style={{ padding: '8px 16px', textAlign: 'left', fontWeight: 500, color: '#999', fontSize: '12px' }}>{t('docs_lang_native_name')}</th>
                           <th style={{ padding: '8px 16px', textAlign: 'left', fontWeight: 500, color: '#999', fontSize: '12px' }}>{t('docs_lang_english_name')}</th>
+                          <th style={{ padding: '8px 16px', textAlign: 'center', fontWeight: 500, color: '#999', fontSize: '12px' }}>{t('copy')}</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {supportedLocales.map((l, i) => (
-                          <tr key={l.code} style={{
-                            borderBottom: '1px solid #f0f0f0',
-                            backgroundColor: i % 2 === 0 ? '#fff' : '#fafbfc',
-                          }}>
-                            <td style={{ padding: '8px 16px' }}>
-                              <code style={{
-                                padding: '2px 8px',
-                                backgroundColor: '#f0f5ff',
-                                borderRadius: '4px',
-                                color: '#c41d7f',
-                                fontSize: '12px',
-                                fontFamily: "'Fira Code', 'Consolas', monospace",
-                              }}>
-                                {l.code}
-                              </code>
-                            </td>
-                            <td style={{ padding: '8px 16px', color: '#333' }}>{l.nativeName}</td>
-                            <td style={{ padding: '8px 16px', color: '#666' }}>{l.name}</td>
-                          </tr>
-                        ))}
+                        {supportedLocales.map((l, i) => {
+                          const langUrl = `${currentDomain}/chat?business=default&lang=${l.code}`;
+                          const isLangCopied = copiedLang === l.code;
+                          return (
+                            <tr key={l.code} style={{
+                              borderBottom: '1px solid #f0f0f0',
+                              backgroundColor: i % 2 === 0 ? '#fff' : '#fafbfc',
+                            }}>
+                              <td style={{ padding: '8px 16px' }}>
+                                <code
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(langUrl).then(() => {
+                                      setCopiedLang(l.code);
+                                      setTimeout(() => setCopiedLang(null), 2000);
+                                    }).catch(() => {});
+                                  }}
+                                  title={`${t('copy')}: ${langUrl}`}
+                                  style={{
+                                    padding: '2px 8px',
+                                    backgroundColor: isLangCopied ? '#f6ffed' : '#f0f5ff',
+                                    border: isLangCopied ? '1px solid #b7eb8f' : '1px solid transparent',
+                                    borderRadius: '4px',
+                                    color: isLangCopied ? '#52c41a' : '#c41d7f',
+                                    fontSize: '12px',
+                                    fontFamily: "'Fira Code', 'Consolas', monospace",
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                  }}
+                                >
+                                  {l.code}
+                                </code>
+                              </td>
+                              <td style={{ padding: '8px 16px', color: '#333' }}>{l.nativeName}</td>
+                              <td style={{ padding: '8px 16px', color: '#666' }}>{l.name}</td>
+                              <td style={{ padding: '8px 16px', textAlign: 'center' }}>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(langUrl).then(() => {
+                                      setCopiedLang(l.code);
+                                      setTimeout(() => setCopiedLang(null), 2000);
+                                    }).catch(() => {});
+                                  }}
+                                  title={langUrl}
+                                  style={{
+                                    padding: '4px 10px',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    backgroundColor: isLangCopied ? '#52c41a' : '#1890ff',
+                                    color: '#fff',
+                                    cursor: 'pointer',
+                                    fontSize: '11px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    transition: 'all 0.2s',
+                                  }}
+                                >
+                                  {isLangCopied ? <Check size={12} /> : <Copy size={12} />}
+                                  {isLangCopied ? t('copied') : t('copy')}
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
