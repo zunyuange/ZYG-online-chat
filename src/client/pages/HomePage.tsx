@@ -80,6 +80,19 @@ function HomeContent() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f5f7fa' }}>
+      {/* Header */}
+      <div style={{
+        backgroundColor: 'rgba(0,21,41,0.95)',
+        backdropFilter: 'blur(8px)',
+        padding: '12px 32px',
+        display: 'flex',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+      }}>
+        <LanguageSwitcher />
+      </div>
+
       {/* Hero Section */}
       <div style={{
         background: 'linear-gradient(135deg, #001529 0%, #002140 40%, #003366 100%)',
@@ -121,15 +134,6 @@ function HomeContent() {
           }}>
             {t('home_hero_subtitle')}
           </p>
-
-          {/* Language Switcher */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            marginBottom: '24px',
-          }}>
-            <LanguageSwitcher />
-          </div>
 
           {/* CTA Button */}
           <a
