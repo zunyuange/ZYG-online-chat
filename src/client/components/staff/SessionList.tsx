@@ -3,7 +3,7 @@
  */
 
 import type { Session } from '@shared/types';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { UnreadBadge } from './UnreadBadge';
 
 interface SessionWithPreview extends Session {
@@ -53,6 +53,14 @@ export function SessionList({
   staffList = [],
   t = (s: string) => s,
 }: SessionListProps) {
+  // 定时器强制刷新，确保在线状态时间判断能及时更新
+  // 每30秒强制重新渲染一次，保证绿点/灰点最多延迟30秒
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setTick((t) => t + 1), 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   const staffMap = useMemo(() => {
     const map: Record<number, { name: string; username: string }> = {};
     for (const s of staffList) {
@@ -97,11 +105,11 @@ export function SessionList({
   // ============ Style Definitions ============
 
   const containerStyle: React.CSSProperties = {
+    flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    height: '100%',
+    minHeight: 0,
     backgroundColor: '#fafbfc',
-    borderRight: '1px solid #e8ecf1',
   };
 
   const headerStyle: React.CSSProperties = {
@@ -225,16 +233,12 @@ export function SessionList({
   const VISITOR_ONLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5分钟
   const isVisitorOnline = (session: SessionWithPreview): boolean => {
     if (session.status !== 'active') return false;
-    // 优先使用 lastVisitorActivityAt（访客发消息时更新）
-    // 注意：JSON 解析后是字符串，需要 new Date() 转换
+    // 仅使用 lastVisitorActivityAt（仅访客发消息时更新），
+    // 不再使用 lastMessageAt（客服回复也会更新，导致误判）
     if (session.lastVisitorActivityAt) {
       return Date.now() - new Date(session.lastVisitorActivityAt).getTime() < VISITOR_ONLINE_THRESHOLD_MS;
     }
-    // 兼容旧数据：使用 lastMessageAt，但仅当最后消息是访客发送的
-    if (session.lastMessageAt && session.lastMessage?.senderType === 'visitor') {
-      return Date.now() - new Date(session.lastMessageAt).getTime() < VISITOR_ONLINE_THRESHOLD_MS;
-    }
-    // 新会话且无访客消息 → 离线（灰点）
+    // 无访客活动记录 → 离线（灰点）
     return false;
   };
 

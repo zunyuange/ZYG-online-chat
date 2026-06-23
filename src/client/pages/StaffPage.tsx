@@ -141,6 +141,13 @@ export function StaffPage() {
 
   // ============ ALL HOOKS MUST BE BEFORE CONDITIONAL RETURNS ============
 
+  // 定时刷新在线状态：每30秒强制重新渲染以保证绿点时效性
+  const [, setStatusTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setStatusTick((t) => t + 1), 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Detect mobile on mount and resize
   useEffect(() => {
     const checkMobile = () => {
@@ -712,9 +719,19 @@ export function StaffPage() {
     transform: showSessionList ? 'translateX(0)' : 'translateX(-100%)',
     transition: 'transform 0.3s ease',
     boxShadow: showSessionList ? '2px 0 8px rgba(0,0,0,0.15)' : 'none',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+    backgroundColor: '#fafbfc',
+    borderRight: '1px solid #e8ecf1',
   } : {
     width: '320px',
     flexShrink: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+    backgroundColor: '#fafbfc',
+    borderRight: '1px solid #e8ecf1',
   };
 
   const contentStyle: React.CSSProperties = {
@@ -1233,7 +1250,7 @@ export function StaffPage() {
             <div style={sidebarStyle}>
               {/* Statistics Cards */}
               {currentPage === 'home' && (
-                <div style={{ padding: '12px', borderBottom: '1px solid #e8e8e8', backgroundColor: '#fff' }}>
+                <div style={{ padding: '12px', borderBottom: '1px solid #e8e8e8', backgroundColor: '#fff', flexShrink: 0 }}>
                   <div style={{ fontSize: '13px', fontWeight: 500, color: '#666', marginBottom: '12px', paddingLeft: '4px' }}>
                     {t('staff_stats_overview')}
                   </div>
