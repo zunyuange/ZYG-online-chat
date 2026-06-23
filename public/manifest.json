@@ -3,7 +3,10 @@
   "short_name": "智能客服",
   "description": "CF智能多语言在线客服系统 - 基于Cloudflare Workers的免费多语言实时客服平台",
   "start_url": "/chat",
+  "scope": "/",
+  "id": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#ffffff",
   "theme_color": "#1890ff",
   "orientation": "portrait-primary",
@@ -22,5 +25,6 @@
     }
   ],
   "categories": ["utilities", "communication"],
-  "lang": "zh-CN"
+  "lang": "zh-CN",
+  "prefer_related_applications": false
 }

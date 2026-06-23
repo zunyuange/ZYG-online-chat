@@ -38,6 +38,10 @@ interface ChatWindowProps {
   showTranslate?: boolean;
   /** Callback when a message is manually translated */
   onTranslated?: (messageId: number, translatedContent: string, translateEngine?: string) => void;
+  /** 提示音开关状态 */
+  soundOn?: boolean;
+  /** 切换提示音回调 */
+  onToggleSound?: () => void;
 }
 
 export function ChatWindow({
@@ -63,6 +67,8 @@ export function ChatWindow({
   onRestart,
   showTranslate = false,
   onTranslated,
+  soundOn,
+  onToggleSound,
 }: ChatWindowProps) {
   const [showLangModal, setShowLangModal] = useState(false);
 
@@ -242,6 +248,16 @@ export function ChatWindow({
         <div style={statusStyle}>
           <span style={dotStyle}></span>
           <span>{getStatusText()}</span>
+          {/* 提示音开关 */}
+          {onToggleSound && (
+            <button
+              onClick={onToggleSound}
+              style={{ ...langButtonStyle, padding: '2px', fontSize: '16px' }}
+              title={soundOn ? t('close_wav') : t('open_wav')}
+            >
+              {soundOn ? '🔔' : '🔕'}
+            </button>
+          )}
           {setLocale && supportedLocales.length > 0 && (
             <button
               onClick={() => setShowLangModal(true)}

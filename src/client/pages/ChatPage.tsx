@@ -2,13 +2,20 @@
  * Chat Page - User/Visitor chat interface
  */
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import type { ContentType } from '@shared/types';
 import { useChatStore } from '@client/stores/chatStore';
 import { ChatWindow } from '@client/components/chat/ChatWindow';
 import { PWAInstallPrompt } from '@client/components/chat/PWAInstallPrompt';
 import { useI18n } from '@client/context/I18nContext';
 import { useSiteSettings } from '@client/hooks/useSiteSettings';
+import {
+  initServiceWorkerForNotification,
+  isNotificationGranted,
+  isNotificationSupported,
+  requestNotificationPermission,
+} from '@client/services/notificationService';
+import { initSound, isSoundEnabled, setSoundEnabled } from '@client/utils/notificationSound';
 
 export function ChatPage() {
   const { t, locale, setLocale, supportedLocales } = useI18n();
@@ -35,11 +42,38 @@ export function ChatPage() {
     checkStaffOnline,
   } = useChatStore();
 
+  // 音频/通知开关状态
+  const [soundOn, setSoundOn] = useState(isSoundEnabled());
+
   // Initialize session on mount
   useEffect(() => {
     initSession();
     checkStaffOnline();
   }, [initSession, checkStaffOnline]);
+
+  // ★ 初始化音频和推送通知服务（首次用户交互时请求权限）
+  useEffect(() => {
+    initSound();
+    initServiceWorkerForNotification();
+
+    // 延迟请求通知权限，避免页面加载时弹窗
+    const timer = setTimeout(() => {
+      if (!isNotificationGranted() && isNotificationSupported()) {
+        requestNotificationPermission().catch(() => {
+          // 用户拒绝或浏览器不支持，静默处理
+        });
+      }
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  /** 切换音频开关 */
+  const handleToggleSound = () => {
+    const next = !soundOn;
+    setSoundOn(next);
+    setSoundEnabled(next);
+  };
 
   // Manual translation callback: updates local message state
   const handleTranslated = useCallback((messageId: number, translatedContent: string, translateEngine?: string) => {
@@ -177,6 +211,8 @@ export function ChatPage() {
         onRestart={handleRestart}
         showTranslate={true}
         onTranslated={handleTranslated}
+        soundOn={soundOn}
+        onToggleSound={handleToggleSound}
       />
 
       {/* PWA Install Prompt */}

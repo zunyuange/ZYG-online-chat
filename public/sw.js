@@ -109,6 +109,80 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// ===== Push Notification Events =====
+
+// Push event: show notification when push message received from server
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+
+  try {
+    const data = event.data.json();
+    const { title, body, icon, badge, tag, data: payload, requireInteraction } = data;
+
+    const options = {
+      body: body || '',
+      icon: icon || '/icons/icon-192.svg',
+      badge: badge || '/icons/icon-192.svg',
+      tag: tag || 'chat-message',
+      data: payload || {},
+      requireInteraction: requireInteraction ?? false,
+      vibrate: [200, 100, 200],
+      actions: [
+        { action: 'open', title: payload?.actionOpenTitle || '查看' },
+        { action: 'close', title: payload?.actionCloseTitle || '关闭' },
+      ],
+    };
+
+    event.waitUntil(
+      self.registration.showNotification(title || 'New Message', options)
+    );
+  } catch {
+    // Fallback: treat as text
+    event.waitUntil(
+      self.registration.showNotification('New Message', {
+        body: event.data.text(),
+        icon: '/icons/icon-192.svg',
+        badge: '/icons/icon-192.svg',
+      })
+    );
+  }
+});
+
+// Notification click: focus existing window or open new one
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const data = event.notification.data || {};
+  const action = event.action;
+
+  if (action === 'close') return;
+
+  // Build URL with session info
+  let url = '/chat';
+  if (data.sessionId) {
+    url += `?s=${encodeURIComponent(data.sessionId)}`;
+  }
+  if (data.business) {
+    const sep = url.includes('?') ? '&' : '?';
+    url += `${sep}business=${encodeURIComponent(data.business)}`;
+  }
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Focus existing window if found
+      for (const client of clientList) {
+        if (client.url.includes('/chat') && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Open new window
+      if (clients.openWindow) {
+        return clients.openWindow(url);
+      }
+    })
+  );
+});
+
 // Handle messages from clients
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {

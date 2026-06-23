@@ -4,6 +4,8 @@
 
 import { create } from 'zustand';
 import type { Session, Message, ContentType } from '@shared/types';
+import { playNotificationSound } from '@client/utils/notificationSound';
+import { notifyNewStaffMessage, startUnreadTitleFlash, stopUnreadTitleFlash } from '@client/services/notificationService';
 
 // LocalStorage keys
 const SESSION_ID_KEY = 'chat_session_id';
@@ -524,6 +526,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
         messages: get().messages.map((m) => ({ ...m, isRead: true })),
         session: { ...session, unreadByVisitor: 0 },
       });
+      // 已读后停止标题闪烁
+      stopUnreadTitleFlash();
     } catch (error) {
       console.error('Mark as read error:', error);
     }
@@ -538,16 +542,38 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // Update last message time
     lastMessageTime = Math.max(lastMessageTime, new Date(message.createdAt).getTime());
 
+    const isStaffMessage = message.senderType === 'staff';
+
+    const updatedSession = session
+      ? {
+          ...session,
+          lastMessageAt: message.createdAt,
+          unreadByVisitor: isStaffMessage ? session.unreadByVisitor + 1 : session.unreadByVisitor,
+        }
+      : null;
+
     set({
       messages: [...messages, message],
-      session: session
-        ? {
-            ...session,
-            lastMessageAt: message.createdAt,
-            unreadByVisitor: message.senderType === 'staff' ? session.unreadByVisitor + 1 : session.unreadByVisitor,
-          }
-        : null,
+      session: updatedSession,
     });
+
+    // ★ 新消息通知：当收到客服消息时触发
+    if (isStaffMessage) {
+      // 音频提示
+      playNotificationSound();
+
+      // 桌面通知（仅页面不可见时）
+      const staffName = session?.assignedStaffName || '客服';
+      const preview = typeof message.content === 'string'
+        ? message.content
+        : `[${message.contentType || 'message'}]`;
+      notifyNewStaffMessage(staffName, preview, session?.id);
+
+      // 闪烁标题栏（未读消息数）
+      if (updatedSession) {
+        startUnreadTitleFlash(updatedSession.unreadByVisitor);
+      }
+    }
   },
 
   // Update session from SSE
