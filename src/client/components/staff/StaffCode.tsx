@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Copy, Check, Link, Code2, BookOpen } from 'lucide-react';
+import { Copy, Check, Link, Code2, BookOpen, Globe } from 'lucide-react';
 import { useI18n } from '@client/context/I18nContext';
+import { supportedLocales } from '@shared/i18n';
 
 interface BusinessInfo {
   id: number;
@@ -192,6 +193,91 @@ export function StaffCode() {
           </div>
           <p style={{ color: '#999', fontSize: '14px', marginTop: '12px' }}>
             {t('staff_code_direct_link_desc')}
+          </p>
+        </div>
+      </div>
+
+      {/* Language Code Reference */}
+      <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '24px' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Globe size={18} style={{ color: '#1890ff' }} />
+          <h3 style={{ fontSize: '16px', fontWeight: 500, margin: 0 }}>{t('staff_code_language_ref_title')}</h3>
+        </div>
+        <div style={{ padding: '20px' }}>
+          <p style={{ color: '#666', fontSize: '14px', marginBottom: '16px' }}>
+            {t('staff_code_language_ref_desc')}
+          </p>
+          {/* Example URL */}
+          <div style={{
+            backgroundColor: '#f0f7ff',
+            border: '1px solid #bdd7ee',
+            borderRadius: '6px',
+            padding: '10px 14px',
+            marginBottom: '16px',
+            fontSize: '13px',
+            fontFamily: 'monospace',
+            color: '#1a6ab5',
+            wordBreak: 'break-all',
+          }}>
+            {directLink}<span style={{ color: '#e67e22', fontWeight: 600 }}>&amp;lang=ko</span>
+          </div>
+          {/* Language Table */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+            gap: '8px',
+          }}>
+            {supportedLocales.map((locale) => (
+              <div
+                key={locale.code}
+                onClick={() => copyToClipboard(locale.code, `lang-${locale.code}`)}
+                title={`${t('staff_code_click_to_copy')}: &lang=${locale.code}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 12px',
+                  backgroundColor: '#fafafa',
+                  border: '1px solid #f0f0f0',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  transition: 'background-color 0.2s',
+                  userSelect: 'none',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#e6f7ff';
+                  e.currentTarget.style.borderColor = '#91d5ff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#fafafa';
+                  e.currentTarget.style.borderColor = '#f0f0f0';
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{
+                    display: 'inline-block',
+                    padding: '2px 8px',
+                    backgroundColor: '#e6f7ff',
+                    border: '1px solid #91d5ff',
+                    borderRadius: '4px',
+                    fontWeight: 600,
+                    color: '#1890ff',
+                    fontFamily: 'monospace',
+                    fontSize: '12px',
+                  }}>
+                    {locale.code}
+                  </span>
+                  <span style={{ color: '#333' }}>{locale.nativeName}</span>
+                </div>
+                <span style={{ color: '#999', fontSize: '11px' }}>
+                  {copied === `lang-${locale.code}` ? '✓' : '&lang=' + locale.code}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p style={{ color: '#999', fontSize: '12px', marginTop: '12px' }}>
+            {t('staff_code_language_ref_tip')}
           </p>
         </div>
       </div>

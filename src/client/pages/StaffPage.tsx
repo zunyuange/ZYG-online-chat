@@ -1326,12 +1326,11 @@ export function StaffPage() {
                       backgroundColor: (() => {
                         if (currentSession.status !== 'active') return '#999';
                         // 最近5分钟内有访客活动才显示在线绿点
+                        // 只使用 lastVisitorActivityAt（仅访客发消息时更新），
+                        // 不再使用 lastMessageAt（客服回复也会更新，导致误判）
                         const threshold = 5 * 60 * 1000;
                         if (currentSession.lastVisitorActivityAt) {
                           return Date.now() - new Date(currentSession.lastVisitorActivityAt).getTime() < threshold ? '#52c41a' : '#999';
-                        }
-                        if (currentSession.lastMessageAt) {
-                          return Date.now() - new Date(currentSession.lastMessageAt).getTime() < threshold ? '#52c41a' : '#999';
                         }
                         return '#999';
                       })(),
