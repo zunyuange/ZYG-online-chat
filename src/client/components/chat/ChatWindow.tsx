@@ -112,6 +112,8 @@ export function ChatWindow({
       return '#ff4d4f';
     })(),
   };
+
+  const langButtonStyle: React.CSSProperties = {
     background: 'none',
     border: 'none',
     color: '#fff',
