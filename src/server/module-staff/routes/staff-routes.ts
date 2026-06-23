@@ -19,6 +19,7 @@ import * as queueService from '@server/module-chat/services/queue-service'
 import { translateText, isTranslationUseful, getTranslationSettings, detectSourceLanguage } from '@server/services/translate-service'
 import { verifyToken } from '@server/module-auth/services/auth-service'
 import { getDb } from '@server/shared/db'
+import { updateStaffLastActive } from '@server/module-admin/services/admin-service'
 import { visitorFieldRoutes } from './visitor-field-routes'
 
 export const staffRoutes = new Hono()
@@ -313,10 +314,35 @@ staffRoutes.post('/messages', async c => {
     // Broadcast session update to staff
     await sseService.broadcastSessionUpdate(session)
 
+    // ★ 更新 last_active：客服发送消息时标记为活跃
+    const staffUserId = getCtxNumber(c, 'userId')
+    if (staffUserId) {
+      updateStaffLastActive(staffUserId).catch(err =>
+        console.error('[StaffRoutes] Update last_active on message send error:', err)
+      )
+    }
+
     return c.json({ success: true, data: message })
   } catch (error) {
     console.error('Send message error:', error)
     return c.json({ success: false, error: 'Failed to send message' }, 500)
+  }
+})
+
+// ==========================================
+// Ping Route — 保持客服在线状态（用于无 SSE 场景，如管理后台）
+// ==========================================
+
+staffRoutes.post('/ping', async c => {
+  try {
+    const userId = getCtxNumber(c, 'userId')
+    if (userId) {
+      await updateStaffLastActive(userId)
+    }
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('Ping error:', error)
+    return c.json({ success: false, error: 'Ping failed' }, 500)
   }
 })
 
@@ -385,6 +411,8 @@ staffRoutes.get('/sse', async c => {
   const bizCtx = requireBusiness(c)
   if (!bizCtx) return
 
+  const userId = getCtxNumber(c, 'userId')
+
   return streamSSE(c, async stream => {
     // Add staff client to connection pool with business isolation
     // businessId=0 for super admin (receives all), others receive only their own
@@ -405,9 +433,18 @@ staffRoutes.get('/sse', async c => {
     }
 
     // Send periodic heartbeats
+    // ★ 同时更新 last_active，确保只要客服的 SSE 连接存活就一直标记为在线
     while (isConnected) {
       await new Promise(resolve => setTimeout(resolve, 30000))
       try {
+        // ★ 核心修复：每个 heartbeat 周期更新 last_active
+        //   旧逻辑只发送 SSE heartbeat，不更新数据库 last_active
+        //   导致登录超过 5 分钟后就显示"客服已下线"
+        if (userId) {
+          updateStaffLastActive(userId).catch(err =>
+            console.error('[StaffRoutes] Update last_active error:', err)
+          )
+        }
         await stream.writeSSE({
           event: 'heartbeat',
           data: JSON.stringify({ type: 'heartbeat', timestamp: Date.now() }),

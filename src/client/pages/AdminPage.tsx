@@ -132,6 +132,28 @@ export function AdminPage() {
     checkAuth();
   }, []);
 
+  // ★ 定期向服务端发送心跳，保持客服在线状态
+  // 管理后台没有 SSE 连接，需要主动 ping 来更新 last_active
+  useEffect(() => {
+    // 只在数据加载完成后（即认证通过）才启动心跳
+    if (loading) return;
+
+    const pingInterval = setInterval(async () => {
+      try {
+        const token = localStorage.getItem('admin_token');
+        if (!token) return;
+        await fetch('/api/staff/ping', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch {
+        // 静默失败，ping 不是关键操作
+      }
+    }, 120000); // 每 2 分钟 ping 一次（在线阈值是 5 分钟）
+
+    return () => clearInterval(pingInterval);
+  }, [loading]);
+
   // Override global overflow:hidden to allow scrolling on admin page
   useEffect(() => {
     const html = document.documentElement;
