@@ -230,44 +230,41 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
 
   console.log('[ChatService] createOrGetSession: ENTIRE INPUT =', JSON.stringify(input))
 
-  // Get business info based on slug or id
-  const business = await getBusinessBySlug(input.business)
-  
-  console.log('[ChatService] createOrGetSession: business from getBusinessBySlug =', business ? JSON.stringify(business) : 'NULL')
-  
-  // 如果没找到匹配的商家，使用默认商家作为兜底
-  // 如果连默认商家都没有，使用 id=1 作为最后的兜底
-  const businessId = business?.id || 1
-  const businessName = business?.business_name || '默认商家'
-  const businessSlug = business?.business_slug || 'default'
-
-  console.log(
-    '[ChatService] createOrGetSession: input.business =',
-    JSON.stringify(input.business),
-    '-> business found:',
-    business ? 'YES' : 'NO',
-    ', businessId =',
-    businessId,
-    ', businessName =',
-    businessName,
-    ', businessSlug =',
-    businessSlug
-  )
-
-  // Generate visitor_id for the session
-  const visitorId = input.sessionId || randomUUID()
-
-  // If sessionId provided, try to get existing session
-  // 多租户隔离：校验已有 session 的 business_id 与当前商家一致，防止跨商家 session 复用
+  // ★ 核心修复：如果传入 sessionId，优先通过 sessionId 直接查找已有会话
+  //   不要先用 getBusinessBySlug 查商家，因为 slug 可能因各种原因查不到，
+  //   导致 businessId 错误，进而查不到已有 session，回退到默认商家
   if (input.sessionId) {
+    // 不加 business_id 条件，直接按 id 查找已有 session
     const row = await db.get<SessionRow>(
-      'SELECT * FROM sessions WHERE id = ? AND business_id = ?',
-      [input.sessionId, businessId]
+      'SELECT * FROM sessions WHERE id = ?',
+      [input.sessionId]
     )
     if (row) {
       console.log(
-        `[ChatService] Found existing session ${input.sessionId} with status: ${row.status}`
+        `[ChatService] Found existing session ${input.sessionId} with status: ${row.status}, business_id: ${row.business_id}`
       )
+      
+      // ★ 从 session 的 business_id 反查商家信息（最可靠的方式）
+      let business = await db.get<BusinessRow>(
+        'SELECT id, business_slug, business_name FROM staff_users WHERE id = ?',
+        [row.business_id]
+      )
+      
+      // 如果 session 的 business_id 查不到商家（异常情况），尝试用 input.business slug
+      if (!business && input.business) {
+        business = await getBusinessBySlug(input.business)
+      }
+      
+      // 兜底：查默认商家
+      if (!business) {
+        business = await db.get<BusinessRow>(
+          'SELECT id, business_slug, business_name FROM staff_users WHERE business_slug = ? AND business_id = 0 AND role = ?',
+          ['default', 'admin']
+        )
+      }
+
+      console.log('[ChatService] createOrGetSession: resolved business from session.business_id=', row.business_id, '->', business ? JSON.stringify(business) : 'NULL')
+
       // 更新已有的访客自定义字段（如果数据库中为空且本次传入了值）
       const updates: string[] = []
       const updateVals: unknown[] = []
@@ -321,7 +318,33 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
       }
       return mapRowToSession(row, business || undefined, staffName)
     }
+    // sessionId 提供但找不到会话，属于首次创建场景，继续往下走
+    console.log(`[ChatService] Session ${input.sessionId} not found, will create new one`)
   }
+
+  // ★ 以下为创建新会话逻辑（只在没有已有 session 时才会走到这里）
+  // Get business info based on slug or id
+  const business = await getBusinessBySlug(input.business)
+  
+  console.log('[ChatService] createOrGetSession: business from getBusinessBySlug =', business ? JSON.stringify(business) : 'NULL')
+  
+  // 如果没找到匹配的商家，使用默认商家作为兜底
+  // 如果连默认商家都没有，使用 id=1 作为最后的兜底
+  const businessId = business?.id || 1
+  const businessName = business?.business_name || '默认商家'
+  const businessSlug = business?.business_slug || 'default'
+
+  console.log(
+    '[ChatService] createOrGetSession: CREATING NEW session with businessId =',
+    businessId,
+    ', businessName =',
+    businessName,
+    ', businessSlug =',
+    businessSlug
+  )
+
+  // Generate visitor_id for the session
+  const visitorId = input.sessionId || randomUUID()
 
   // Create new session
   const sessionId = input.sessionId || randomUUID()
