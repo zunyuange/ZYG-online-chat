@@ -86,10 +86,24 @@ function HomeContent() {
         backdropFilter: 'blur(8px)',
         padding: '12px 32px',
         display: 'flex',
-        justifyContent: 'flex-end',
+        justifyContent: 'space-between',
         alignItems: 'center',
         borderBottom: '1px solid rgba(255,255,255,0.06)',
       }}>
+        {/* 左侧：平台Logo / 名称 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <MessageCircle size={20} color="#1890ff" />
+          <span style={{ fontSize: '16px', fontWeight: 600, color: '#fff' }}>
+            {platformName}
+          </span>
+        </div>
+
+        {/* 中间：导航区域（预留） */}
+        <nav style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+          {/* 暂未添加导航项 */}
+        </nav>
+
+        {/* 右侧：语言切换 */}
         <LanguageSwitcher />
       </div>
 
