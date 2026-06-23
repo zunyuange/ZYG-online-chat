@@ -82,7 +82,8 @@ interface ChatState {
   error: string | null;
   sseConnected: boolean;
   usePolling: boolean; // Fallback for Workers environment
-  staffOnline: boolean; // 是否有客服在线
+  staffOnline: boolean; // 是否有客服在线（任意客服）
+  assignedStaffOnline: boolean | null; // 已分配客服是否在线（null = 未分配/未检测）
 
   // Actions
   initSession: () => Promise<void>;
@@ -109,6 +110,8 @@ let eventSource: EventSource | null = null;
 let pollingInterval: ReturnType<typeof setInterval> | null = null;
 // Track last message time for polling
 let lastMessageTime: number = 0;
+// Polling cycle counter for periodic staff online check (check every 5 cycles ≈ 15s)
+let pollingCycleCount: number = 0;
 
 export const useChatStore = create<ChatState>((set, get) => ({
   // Initial state
@@ -121,6 +124,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   sseConnected: false,
   usePolling: false,
   staffOnline: false,
+  assignedStaffOnline: null,
 
   // Initialize session from URL, localStorage or create new
   initSession: async () => {
@@ -306,11 +310,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }
 
         // Update session if there are any changes (including staff assignment)
+        const staffChanged = updatedSession.assignedStaffId !== session.assignedStaffId;
+        
         if (updatedSession.status !== session.status || 
             updatedSession.unreadByVisitor !== session.unreadByVisitor ||
-            updatedSession.assignedStaffId !== session.assignedStaffId) {
-          console.log('[ChatStore] Updating session state');
+            staffChanged) {
+          console.log('[ChatStore] Updating session state, staffChanged:', staffChanged);
           set({ session: updatedSession });
+        }
+
+        // ★ 关键修复：分配客服变化时，立即重新检查该客服的在线状态
+        if (staffChanged) {
+          console.log('[ChatStore] Assigned staff changed, re-checking online status...');
+          // 延迟一小段时间后检查（确保 session 状态已更新）
+          setTimeout(() => get().checkStaffOnline(), 50);
         }
       } else {
         console.log('[ChatStore] Failed to get session status:', sessionResult.error);
@@ -594,10 +607,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ usePolling: true });
     console.log('[ChatStore] Starting message polling (SSE fallback)');
 
+    pollingCycleCount = 0;
+
     // Poll every 3 seconds
     pollingInterval = setInterval(() => {
       console.log('[ChatStore] Polling for new messages...');
       get().checkNewMessages();
+      
+      // ★ 关键修复：每 5 个轮询周期（约 15 秒）重新检测已分配客服是否在线
+      pollingCycleCount++;
+      if (pollingCycleCount % 5 === 0) {
+        const { session } = get();
+        if (session?.assignedStaffId) {
+          console.log('[ChatStore] Periodic check: re-checking assigned staff online status...');
+          get().checkStaffOnline();
+        }
+      }
     }, 3000);
   },
 
@@ -637,6 +662,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       error: null,
       sseConnected: false,
       usePolling: false,
+      assignedStaffOnline: null,
     });
 
     // Reset last message time
@@ -647,7 +673,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   // Check if staff is online
+  // - 已分配客服：检查该特定客服是否在线
+  // - 未分配客服：检查是否有任意在线客服
   checkStaffOnline: async () => {
+    const { session } = get();
     try {
       const business = getUrlBusiness();
       const params = new URLSearchParams();
@@ -655,11 +684,28 @@ export const useChatStore = create<ChatState>((set, get) => ({
         params.set('business', business);
       }
       
+      // ★ 关键修复：如果已分配客服，检查该客服是否在线
+      if (session?.assignedStaffId) {
+        params.set('staffId', String(session.assignedStaffId));
+      }
+      
       const response = await fetch(`/api/chat/staff/online?${params}`);
       const result = await response.json();
       
       if (result.success && result.data) {
-        set({ staffOnline: result.data.isOnline });
+        const data = result.data;
+        
+        if (data.isAssignedStaffOnline !== undefined) {
+          // 检查的是特定客服
+          set({
+            staffOnline: data.isOnline,
+            assignedStaffOnline: data.isAssignedStaffOnline,
+          });
+          console.log(`[ChatStore] Assigned staff #${data.staffId} (${data.staffName}) online:`, data.isAssignedStaffOnline);
+        } else {
+          // 检查的是任意客服
+          set({ staffOnline: data.isOnline });
+        }
       }
     } catch (error) {
       console.error('Check staff online error:', error);

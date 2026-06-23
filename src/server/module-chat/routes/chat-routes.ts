@@ -1132,10 +1132,49 @@ chatRoutes.post('/banword/check', async c => {
 chatRoutes.get('/staff/online', async c => {
   try {
     const businessSlug = c.req.query('business')
+    const staffIdParam = c.req.query('staffId')
     const db = getDb()
     const now = Date.now()
     const onlineThreshold = 5 * 60 * 1000
 
+    // 如果传入了 staffId，检查特定客服是否在线
+    if (staffIdParam) {
+      const staffId = parseInt(staffIdParam, 10)
+      if (isNaN(staffId) || staffId <= 0) {
+        return c.json({ success: false, error: '无效的客服ID' }, 400)
+      }
+
+      const staff = await db.get<{ id: number; name: string; last_active: number | null; status: string }>(
+        `SELECT id, name, last_active, status
+         FROM staff_users
+         WHERE id = ?`,
+        [staffId]
+      )
+
+      if (!staff) {
+        return c.json({
+          success: true,
+          data: { onlineCount: 0, isOnline: false, staffId, staffName: null, isAssignedStaffOnline: false },
+        })
+      }
+
+      const isOnline = staff.status === 'active'
+        && staff.last_active !== null
+        && staff.last_active > (now - onlineThreshold)
+
+      return c.json({
+        success: true,
+        data: {
+          onlineCount: isOnline ? 1 : 0,
+          isOnline: isOnline,
+          staffId: staff.id,
+          staffName: staff.name,
+          isAssignedStaffOnline: isOnline,
+        },
+      })
+    }
+
+    // 原有逻辑：检查商家下是否有任意在线客服
     let query = `
       SELECT COUNT(*) as count 
       FROM staff_users 

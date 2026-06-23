@@ -27,6 +27,7 @@ interface ChatWindowProps {
   sseConnected?: boolean;
   usePolling?: boolean;
   staffOnline?: boolean;
+  assignedStaffOnline?: boolean | null;
   session?: Session | null;
   t?: (key: string) => string;
   locale?: string;
@@ -53,6 +54,7 @@ export function ChatWindow({
   sseConnected,
   usePolling,
   staffOnline,
+  assignedStaffOnline,
   session,
   t = (key: string) => key,
   locale,
@@ -94,11 +96,22 @@ export function ChatWindow({
     width: '8px',
     height: '8px',
     borderRadius: '50%',
-    // 客服离线 → 灰色；SSE/Polling连接正常 → 绿色；都未连接 → 红色
-    backgroundColor: staffOnline === false ? '#999' : ((sseConnected || usePolling) ? '#52c41a' : '#ff4d4f'),
+    backgroundColor: (() => {
+      // ★ 核心修复：已分配客服 → 优先判断该客服是否在线
+      if (assignedStaffOnline !== null && assignedStaffOnline !== undefined) {
+        // 已分配客服离线 → 红色（这才是真正的"客服下线"）
+        if (assignedStaffOnline === false) return '#ff4d4f';
+        // 已分配客服在线 + 连接正常 → 绿色
+        if ((sseConnected || usePolling)) return '#52c41a';
+        // 已分配客服在线 + 连接中 → 橙色
+        return '#faad14';
+      }
+      // 未分配客服 → 按原逻辑
+      if (staffOnline === false) return '#999';
+      if ((sseConnected || usePolling)) return '#52c41a';
+      return '#ff4d4f';
+    })(),
   };
-
-  const langButtonStyle: React.CSSProperties = {
     background: 'none',
     border: 'none',
     color: '#fff',
@@ -166,6 +179,15 @@ export function ChatWindow({
   };
 
   const getStatusText = () => {
+    // ★ 核心修复：已分配客服 → 优先显示该客服的具体状态
+    if (assignedStaffOnline !== null && assignedStaffOnline !== undefined) {
+      if (assignedStaffOnline === false) return t('service_offline');
+      // 已分配客服在线
+      if (sseConnected) return t('service_online');
+      if (usePolling) return t('polling');
+      return t('connecting');
+    }
+    // 未分配客服 → 原逻辑
     if (staffOnline === false) return t('service_offline');
     if (sseConnected) return t('service_online');
     if (usePolling) return t('polling');

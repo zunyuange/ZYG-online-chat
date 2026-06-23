@@ -23,6 +23,7 @@ export function ChatPage() {
     sseConnected,
     usePolling,
     staffOnline,
+    assignedStaffOnline,
     error,
     initSession,
     loadMessages,
@@ -167,6 +168,7 @@ export function ChatPage() {
         sseConnected={sseConnected}
         usePolling={usePolling}
         staffOnline={staffOnline}
+        assignedStaffOnline={assignedStaffOnline}
         session={session}
         t={t as any}
         locale={locale}
