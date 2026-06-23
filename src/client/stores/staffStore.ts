@@ -289,18 +289,21 @@ export const useStaffStore = create<StaffState>((set, get) => ({
           const existingIds = new Set(currentMsgs.map((m) => m.id));
           const toAdd = serverMessages.filter((m) => !existingIds.has(m.id));
 
-          // Update if there are new messages or read status changes
-          if (toAdd.length > 0 || hasReadStatusChanges) {
+          // Update read status changes
+          if (hasReadStatusChanges && toAdd.length === 0) {
             const newMessages = new Map(messages);
-            newMessages.set(currentSessionId, [...updatedMessages, ...toAdd]);
+            newMessages.set(currentSessionId, updatedMessages);
             set({ messages: newMessages });
-            
-            // Auto-mark as read when receiving new messages in current session
-            // This ensures visitor sees "read" status without requiring staff to click
-            if (toAdd.length > 0) {
-              console.log(`[StaffStore] Auto-marking session ${currentSessionId} as read after receiving ${toAdd.length} new messages`);
-              get().markAsRead(currentSessionId);
+          }
+
+          // ★ 关键修复：新消息必须通过 addMessage 添加以触发通知
+          if (toAdd.length > 0) {
+            console.log(`[StaffStore] Found ${toAdd.length} new messages via polling, dispatching via addMessage`);
+            for (const msg of toAdd) {
+              get().addMessage(msg);
             }
+            // Auto-mark as read after receiving new messages
+            get().markAsRead(currentSessionId);
           }
         }
       }

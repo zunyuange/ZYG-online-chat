@@ -156,6 +156,17 @@ export function StaffPage() {
     setSoundEnabled(next);
   };
 
+  // ★ 通知权限横幅状态（授权后自动隐藏）
+  const [showPermBanner, setShowPermBanner] = useState(
+    isNotificationSupported() && !isNotificationGranted()
+  );
+  const handleEnableNotification = async () => {
+    const result = await requestNotificationPermission().catch(() => 'denied' as const);
+    if (result === 'granted') {
+      setShowPermBanner(false);
+    }
+  };
+
   // ============ ALL HOOKS MUST BE BEFORE CONDITIONAL RETURNS ============
 
   // 定时刷新在线状态：每30秒强制重新渲染以保证绿点时效性
@@ -165,13 +176,25 @@ export function StaffPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // ★ 初始化音频和推送通知服务
+  // ★ 初始化音频和推送通知服务（登录后执行）
   useEffect(() => {
+    if (!isAuthenticated) return;
     initSound();
     initServiceWorkerForNotification();
     const cleanup = setupVisibilityHandler();
-    return cleanup;
-  }, []);
+
+    // ★ 延迟 3 秒后请求通知权限
+    const timer = setTimeout(() => {
+      if (isNotificationSupported() && !isNotificationGranted()) {
+        requestNotificationPermission().catch(() => {});
+      }
+    }, 3000);
+
+    return () => {
+      cleanup();
+      clearTimeout(timer);
+    };
+  }, [isAuthenticated]);
 
   // ★ 页面获得焦点时自动标记已读
   useEffect(() => {
@@ -1100,7 +1123,7 @@ export function StaffPage() {
       </div>
 
       {/* ★ 通知权限引导横幅 */}
-      {isNotificationSupported() && !isNotificationGranted() && (
+      {showPermBanner && (
         <div style={{
           backgroundColor: '#fff7e6',
           borderBottom: '1px solid #ffd591',
@@ -1114,7 +1137,7 @@ export function StaffPage() {
             ⚠️ {t('notification_permission_banner')}
           </span>
           <button
-            onClick={() => requestNotificationPermission().catch(() => {})}
+            onClick={handleEnableNotification}
             style={{
               padding: '5px 16px',
               backgroundColor: '#faad14',
