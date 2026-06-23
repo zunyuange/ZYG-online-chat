@@ -111,14 +111,24 @@ export function StaffChatWindow({
     flexShrink: 0,
   };
 
-  const statusDotStyle = (status: string): React.CSSProperties => ({
+  // 判断访客是否真正在线：基于 lastVisitorActivityAt，与 SessionList / StaffPage 保持一致
+  const isVisitorOnline = (s: Session): boolean => {
+    if (s.status !== 'active') return false;
+    const threshold = 5 * 60 * 1000; // 5分钟
+    if (s.lastVisitorActivityAt) {
+      return Date.now() - new Date(s.lastVisitorActivityAt).getTime() < threshold;
+    }
+    return false;
+  };
+
+  const statusDotStyle = (online: boolean): React.CSSProperties => ({
     width: '8px',
     height: '8px',
     borderRadius: '50%',
-    backgroundColor: status === 'active' ? '#51cf66' : '#ced4da',
+    backgroundColor: online ? '#51cf66' : '#ced4da',
     flexShrink: 0,
-    boxShadow: status === 'active' ? '0 0 0 3px rgba(81,207,102,0.25)' : 'none',
-    animation: status === 'active' ? 'pulseGreen 2s ease-in-out infinite' : 'none',
+    boxShadow: online ? '0 0 0 3px rgba(81,207,102,0.25)' : 'none',
+    animation: online ? 'pulseGreen 2s ease-in-out infinite' : 'none',
   });
 
   const actionBtnStyle = (color: string): React.CSSProperties => ({
@@ -232,7 +242,7 @@ export function StaffChatWindow({
             {/* 状态点 + 名字 + 时间 */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                <span style={statusDotStyle(session.status)} />
+                <span style={statusDotStyle(isVisitorOnline(session))} />
                 <span style={{ fontWeight: 600, fontSize: '15px', color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {session.visitorName}
                 </span>
