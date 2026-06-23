@@ -236,9 +236,9 @@ wrangler d1 execute zyg-online-chat-db --file=scripts/reset-db.sql --remote
 ```
 
 > **数据库初始化脚本说明：**
-> - `src/server/shared/db-init.sql` — 生产环境首次部署使用，包含完整建表 + 初始数据（默认管理员 admin/123456、默认商家）
-> - `scripts/reset-db.sql` — 重置数据库使用，会删除所有数据后重建表结构
+> - `src/server/shared/db-init.sql` — 唯一数据库初始化脚本，包含完整建表 + 初始数据（默认管理员 admin/123456、默认商家），首次部署和重置数据库通用
 > - `scripts/d1-migrate-*.sql` — 增量迁移脚本，用于已有数据库的列/表补充
+> - **运行时自动初始化**：项目启动时 `db.ts` 会自动检测并创建缺失的表/列/索引，无需手动执行 SQL
 
 初始化后系统包含：
 - **管理员账号**：`admin` / `123456`（系统管理后台）
