@@ -157,8 +157,11 @@ self.addEventListener('notificationclick', (event) => {
 
   if (action === 'close') return;
 
+  // Determine target page: staff or chat
+  const targetPage = data.page || 'chat';
+
   // Build URL with session info
-  let url = '/chat';
+  let url = targetPage === 'staff' ? '/staff' : '/chat';
   if (data.sessionId) {
     url += `?s=${encodeURIComponent(data.sessionId)}`;
   }
@@ -169,13 +172,18 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Focus existing window if found
+      // ★ 优先聚焦已有窗口
       for (const client of clientList) {
-        if (client.url.includes('/chat') && 'focus' in client) {
+        const clientUrl = client.url;
+        // 匹配同类型页面（staff 或 chat）
+        if (targetPage === 'staff' && clientUrl.includes('/staff') && 'focus' in client) {
+          return client.focus();
+        }
+        if (targetPage === 'chat' && clientUrl.includes('/chat') && 'focus' in client) {
           return client.focus();
         }
       }
-      // Open new window
+      // 无匹配窗口则打开新窗口
       if (clients.openWindow) {
         return clients.openWindow(url);
       }

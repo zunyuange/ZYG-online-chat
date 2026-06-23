@@ -45,6 +45,8 @@ export default {
   please_enter_contact: '請輸入您的聯繫方式',
   close_wav: '關閉提示音',
   open_wav: '開啟提示音',
+  notification_permission_banner: '為了防止錯過客戶訊息，請開啟瀏覽器通知權限功能。點擊網址列左側的 🔒 圖標，將「通知」改為「允許」',
+  notification_enable: '開啟通知',
   paste_images_tip: '將您剪切好的圖片粘貼到輸入框即可',
   message_tip: '你有一條消息',
   how_to_send_screenshot: '怎樣發截圖？',

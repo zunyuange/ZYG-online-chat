@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { MessageCircle, Users, User, LogOut, Code2, Settings, ArrowRightLeft, XCircle, ListChecks } from 'lucide-react';
+import { MessageCircle, Users, User, LogOut, Code2, Settings, ArrowRightLeft, XCircle, ListChecks, Bell, BellOff } from 'lucide-react';
 import { useStaffStore } from '@client/stores/staffStore';
 import { SessionList } from '@client/components/staff/SessionList';
 import { StaffChatWindow, VisitorInfoPanel } from '@client/components/staff/StaffChatWindow';
@@ -18,6 +18,14 @@ import { VisitorFields } from '@client/components/staff/VisitorFields';
 import { useAuth } from '@client/hooks/useAuth';
 import { useSiteSettings } from '@client/hooks/useSiteSettings';
 import { useI18n } from '@client/context/I18nContext';
+import {
+  initServiceWorkerForNotification,
+  isNotificationGranted,
+  isNotificationSupported,
+  requestNotificationPermission,
+  setupVisibilityHandler,
+} from '@client/services/notificationService';
+import { initSound, isSoundEnabled, setSoundEnabled } from '@client/utils/notificationSound';
 
 interface UserInfo {
   userId?: number;
@@ -139,6 +147,15 @@ export function StaffPage() {
   const [selectedRejectRequest, setSelectedRejectRequest] = useState<any | null>(null);
   const [rejectReason, setRejectReason] = useState('');
 
+  // ★ 提示音开关状态
+  const [soundOn, setSoundOn] = useState(isSoundEnabled());
+  /** 切换提示音 */
+  const handleToggleSound = () => {
+    const next = !soundOn;
+    setSoundOn(next);
+    setSoundEnabled(next);
+  };
+
   // ============ ALL HOOKS MUST BE BEFORE CONDITIONAL RETURNS ============
 
   // 定时刷新在线状态：每30秒强制重新渲染以保证绿点时效性
@@ -147,6 +164,25 @@ export function StaffPage() {
     const interval = setInterval(() => setStatusTick((t) => t + 1), 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // ★ 初始化音频和推送通知服务
+  useEffect(() => {
+    initSound();
+    initServiceWorkerForNotification();
+    const cleanup = setupVisibilityHandler();
+    return cleanup;
+  }, []);
+
+  // ★ 页面获得焦点时自动标记已读
+  useEffect(() => {
+    const handleFocus = () => {
+      if (currentSessionId && totalUnread > 0) {
+        markAsRead(currentSessionId);
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [currentSessionId, totalUnread, markAsRead]);
 
   // Detect mobile on mount and resize
   useEffect(() => {
@@ -962,6 +998,25 @@ export function StaffPage() {
               </option>
             ))}
           </select>
+          {/* Sound toggle */}
+          <button
+            onClick={handleToggleSound}
+            style={{
+              padding: '6px 8px',
+              backgroundColor: 'transparent',
+              border: '1px solid rgba(255,255,255,0.3)',
+              borderRadius: '16px',
+              color: '#fff',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '14px',
+            }}
+            title={soundOn ? t('close_wav') : t('open_wav')}
+          >
+            {soundOn ? <Bell size={14} /> : <BellOff size={14} />}
+          </button>
           {/* User menu */}
           <div style={{ position: 'relative' }}>
             <button
@@ -1043,6 +1098,39 @@ export function StaffPage() {
           </div>
         </div>
       </div>
+
+      {/* ★ 通知权限引导横幅 */}
+      {isNotificationSupported() && !isNotificationGranted() && (
+        <div style={{
+          backgroundColor: '#fff7e6',
+          borderBottom: '1px solid #ffd591',
+          padding: '10px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+        }}>
+          <span style={{ fontSize: '13px', color: '#ad6800', flex: 1 }}>
+            ⚠️ {t('notification_permission_banner')}
+          </span>
+          <button
+            onClick={() => requestNotificationPermission().catch(() => {})}
+            style={{
+              padding: '5px 16px',
+              backgroundColor: '#faad14',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: 500,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {t('notification_enable')}
+          </button>
+        </div>
+      )}
 
       {/* Navigation Tabs */}
       <div style={navTabStyle}>

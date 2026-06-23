@@ -1,6 +1,9 @@
 /**
  * 浏览器端音频通知 —— 使用 Web Audio API 生成通知提示音
  * 无需外部音频文件，所有浏览器均支持
+ * 
+ * 关键：AudioContext 必须在用户首次交互后创建并保持存活，
+ * 否则浏览器自动播放策略会阻止后续的音频输出。
  */
 
 let audioContext: AudioContext | null = null;
@@ -8,12 +11,40 @@ let soundEnabled: boolean = true;
 
 const STORAGE_KEY = 'chat_sound_enabled';
 
+/** 
+ * ★ 全局音频解锁：必须在用户首次交互（click/touch）时调用一次 
+ * 之后 AudioContext 保持存活，SSE/轮询收到消息时可直接播放
+ */
+function tryUnlockAudio(): void {
+  if (audioContext && audioContext.state !== 'suspended') return;
+  try {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    if (audioContext.state === 'suspended') {
+      audioContext.resume();
+    }
+    // 创建一个空缓冲区并播放，彻底激活 AudioContext
+    const buf = audioContext.createBuffer(1, 1, 22050);
+    const src = audioContext.createBufferSource();
+    src.buffer = buf;
+    src.connect(audioContext.destination);
+    src.start(0);
+    src.stop(audioContext.currentTime + 0.001);
+    console.log('[NotificationSound] AudioContext unlocked, state:', audioContext.state);
+  } catch (e) {
+    console.warn('[NotificationSound] Audio unlock failed:', e);
+  }
+}
+
 /** 初始化（需在用户交互后调用以符合浏览器自动播放策略） */
 export function initSound(): void {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved !== null) {
     soundEnabled = saved === 'true';
   }
+  // ★ 立即尝试解锁音频上下文
+  tryUnlockAudio();
 }
 
 /** 获取/设置提示音开关 */
@@ -27,14 +58,30 @@ export function setSoundEnabled(enabled: boolean): void {
 }
 
 function getAudioContext(): AudioContext {
-  if (!audioContext) {
-    audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  if (audioContext) {
+    // 已有上下文：检查是否需要恢复
+    if (audioContext.state === 'suspended') {
+      audioContext.resume().catch(() => {});
+    }
+    return audioContext;
   }
-  if (audioContext.state === 'suspended') {
-    audioContext.resume();
+
+  // ★ 优先复用 index.html 中预创建的共享 AudioContext（已解锁）
+  const win = window as any;
+  const ctx = (win.__shared_audio_ctx?.state !== 'closed')
+    ? win.__shared_audio_ctx as AudioContext
+    : new (window.AudioContext || (window as any).webkitAudioContext)();
+
+  // 确保已解锁
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
   }
-  return audioContext;
+  audioContext = ctx;
+  return ctx;
 }
+
+/** ★ 暴露解锁方法，供 index.html 全局事件调用 */
+export { tryUnlockAudio };
 
 /**
  * 播放新消息提示音（清脆的 "叮咚" 双音效果）

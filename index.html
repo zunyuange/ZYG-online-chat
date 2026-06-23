@@ -59,26 +59,28 @@
       });
 
       // ★ 音频上下文预解锁（需在首次用户交互时初始化）
+      //   创建并保持 AudioContext 存活，供 notificationSound.ts 复用
       window.__audio_unlocked = false;
-      document.addEventListener('click', function unlockAudio() {
+      window.__shared_audio_ctx = null;
+      function unlockAudioNow() {
         if (window.__audio_unlocked) return;
         try {
           const ctx = new (window.AudioContext || window.webkitAudioContext)();
           if (ctx.state === 'suspended') ctx.resume();
-          ctx.close();
+          // 播放空缓冲彻底激活
+          const buf = ctx.createBuffer(1, 1, 22050);
+          const src = ctx.createBufferSource();
+          src.buffer = buf;
+          src.connect(ctx.destination);
+          src.start(0);
+          src.stop(ctx.currentTime + 0.001);
+          window.__shared_audio_ctx = ctx; // ★ 保持存活，供 notificationSound 复用
           window.__audio_unlocked = true;
+          console.log('[PWA] Audio unlocked');
         } catch (e) { /* 静默 */ }
-      }, { once: false, capture: true });
-
-      document.addEventListener('touchstart', function unlockAudioTouch() {
-        if (window.__audio_unlocked) return;
-        try {
-          const ctx = new (window.AudioContext || window.webkitAudioContext)();
-          if (ctx.state === 'suspended') ctx.resume();
-          ctx.close();
-          window.__audio_unlocked = true;
-        } catch (e) { /* 静默 */ }
-      }, { once: false, capture: true });
+      }
+      document.addEventListener('click', unlockAudioNow, { once: false, capture: true });
+      document.addEventListener('touchstart', unlockAudioNow, { once: false, capture: true });
     </script>
   </body>
 </html>

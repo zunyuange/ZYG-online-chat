@@ -55,6 +55,8 @@ export const enUS = {
   please_enter_contact: 'Please enter your contact information',
   close_wav: 'Disable sound',
   open_wav: 'Enable sound',
+  notification_permission_banner: 'To avoid missing customer messages, please enable browser notification permission. Click the 🔒 icon in the address bar and set "Notifications" to "Allow".',
+  notification_enable: 'Enable Notifications',
   paste_images_tip: 'Paste your copied image into the input box',
   message_tip: 'You have a new message',
   how_to_send_screenshot: 'How to send screenshots?',

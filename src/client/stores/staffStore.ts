@@ -5,6 +5,13 @@
 import { create } from 'zustand';
 import type { Session, Message, ContentType, TaskStatus, InputMode } from '@shared/types';
 import { authFetch } from '@client/services/authFetch';
+import { playNotificationSound } from '@client/utils/notificationSound';
+import {
+  notifyNewVisitorMessage,
+  notifyNewVisitorSession,
+  startUnreadTitleFlash,
+  stopUnreadTitleFlash,
+} from '@client/services/notificationService';
 
 interface SessionWithPreview extends Session {
   lastMessage?: {
@@ -61,6 +68,8 @@ interface StaffState {
 let eventSource: EventSource | null = null;
 // Polling interval reference
 let pollingInterval: ReturnType<typeof setInterval> | null = null;
+// ★ 新访客检测：跟踪已见过的 session ID，用于发现新上线访客
+let seenSessionIds: Set<string> = new Set();
 
 export const useStaffStore = create<StaffState>((set, get) => ({
   // Initial state
@@ -91,6 +100,9 @@ export const useStaffStore = create<StaffState>((set, get) => ({
 
         // Calculate total unread
         const totalUnread = sessions.reduce((sum, s) => sum + s.unreadByStaff, 0);
+
+        // ★ 初始化已见 session 列表（首次加载不触发新访客通知）
+        seenSessionIds = new Set(sessions.map((s) => s.id));
 
         set({ sessions, totalUnread, loading: false });
       } else {
@@ -235,6 +247,19 @@ export const useStaffStore = create<StaffState>((set, get) => ({
           return;
         }
         
+        // ★ 新访客检测：发现之前未见过的 session，触发通知
+        if (seenSessionIds.size > 0) {
+          for (const s of newSessions) {
+            if (!seenSessionIds.has(s.id)) {
+              // 新上线访客！
+              console.log(`[StaffStore] New visitor detected: ${s.visitorName} (${s.id})`);
+              notifyNewVisitorSession(s.visitorName || '访客', s.id, s.businessSlug);
+            }
+          }
+        }
+        // 更新已见 session 列表
+        seenSessionIds = new Set(newSessions.map((s) => s.id));
+
         set({ sessions: newSessions, totalUnread });
       }
 
@@ -388,11 +413,14 @@ export const useStaffStore = create<StaffState>((set, get) => ({
             messages: newMessages,
             totalUnread: totalUnread - session.unreadByStaff,
           });
+          // ★ 已读后停止标题闪烁
+          stopUnreadTitleFlash();
         } else {
           set({
             sessions: newSessions,
             totalUnread: totalUnread - session.unreadByStaff,
           });
+          stopUnreadTitleFlash();
         }
       }
     } catch (error) {
@@ -435,6 +463,24 @@ export const useStaffStore = create<StaffState>((set, get) => ({
     const totalUnread = newSessions.reduce((sum, s) => sum + s.unreadByStaff, 0);
 
     set({ messages: newMessages, sessions: newSessions, totalUnread });
+
+    // ★ 客服端通知：收到访客新消息时触发
+    if (message.senderType === 'visitor') {
+      // 音频提示音
+      playNotificationSound();
+
+      // 桌面通知（页面后台时弹出）
+      const session = newSessions.find((s) => s.id === sessionId);
+      const visitorName = session?.visitorName || '访客';
+      const preview = typeof message.content === 'string'
+        ? message.content
+        : `[${message.contentType || '消息'}]`;
+
+      notifyNewVisitorMessage(visitorName, preview, sessionId, session?.businessSlug);
+
+      // 标题栏闪烁
+      startUnreadTitleFlash(totalUnread);
+    }
   },
 
   // Update session from SSE

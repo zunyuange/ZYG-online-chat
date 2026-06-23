@@ -53,6 +53,8 @@ export const zhCN = {
   please_enter_contact: '请输入您的联系方式',
   close_wav: '关闭提示音',
   open_wav: '开启提示音',
+  notification_permission_banner: '为了防止错过客户消息，请开启浏览器通知权限功能。点击地址栏左侧的 🔒 图标，将"通知"改为"允许"',
+  notification_enable: '开启通知',
   paste_images_tip: '将您剪切好的图片粘贴到输入框即可',
   message_tip: '您有一条消息',
   how_to_send_screenshot: '怎么发送图片?',
