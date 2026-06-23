@@ -390,7 +390,7 @@ export default {
   docs_step3_desc: 'قيمة params هي سلسلة JSON. الأحرف الخاصة تحتاج إلى ترميز URL.',
   docs_step3_note: 'مثال: {"source":"website","level":"vip"} ← مُرمَّز ← %7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D',
   docs_step4_title: 'الخطوة 4: إضافة تفضيل اللغة (اختياري)',
-  docs_step4_desc: 'تعيين لغة الواجهة: zh-CN الصينية / en-US الإنجليزية.',
+  docs_step4_desc: 'Set the visitor-side interface language via the lang parameter. Multiple languages are supported. Click below to view all language codes.',
   docs_view_all_lang_codes: 'View All Supported Language Codes',
   docs_hide_lang_codes: 'Hide Language Codes',
   docs_supported_lang_codes: 'Supported Language Codes',

@@ -390,7 +390,7 @@ export default {
   docs_step3_desc: 'De waarde van params is een JSON-string. Speciale tekens vereisen URL-codering.',
   docs_step3_note: 'Voorbeeld: {"source":"website","level":"vip"} → Gecodeerd → %7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D',
   docs_step4_title: 'Stap 4: Voeg taalvoorkeur toe (Optioneel)',
-  docs_step4_desc: 'Stel interfacetaal in: zh-CN Chinees / en-US Engels.',
+  docs_step4_desc: 'Set the visitor-side interface language via the lang parameter. Multiple languages are supported. Click below to view all language codes.',
   docs_view_all_lang_codes: 'View All Supported Language Codes',
   docs_hide_lang_codes: 'Hide Language Codes',
   docs_supported_lang_codes: 'Supported Language Codes',

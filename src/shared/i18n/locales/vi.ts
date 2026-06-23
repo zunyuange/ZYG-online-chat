@@ -387,7 +387,7 @@ export default {
   docs_step3_desc: 'Giá trị params là chuỗi JSON. Ký tự đặc biệt cần mã hóa URL.',
   docs_step3_note: 'Ví dụ: {"source":"website","level":"vip"} → Đã mã hóa → %7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D',
   docs_step4_title: 'Bước 4: Thêm Tùy chọn Ngôn ngữ (Tùy chọn)',
-  docs_step4_desc: 'Đặt ngôn ngữ giao diện: zh-CN tiếng Trung / en-US tiếng Anh.',
+  docs_step4_desc: 'Set the visitor-side interface language via the lang parameter. Multiple languages are supported. Click below to view all language codes.',
   docs_view_all_lang_codes: 'View All Supported Language Codes',
   docs_hide_lang_codes: 'Hide Language Codes',
   docs_supported_lang_codes: 'Supported Language Codes',

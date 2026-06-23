@@ -390,7 +390,7 @@ export default {
   docs_step3_desc: 'Η τιμή params είναι συμβολοσειρά JSON. Ειδικοί χαρακτήρες απαιτούν κωδικοποίηση URL.',
   docs_step3_note: 'Παράδειγμα: {"source":"website","level":"vip"} → Κωδικοποιημένο → %7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D',
   docs_step4_title: 'Βήμα 4: Προσθέστε προτίμηση γλώσσας (Προαιρετικά)',
-  docs_step4_desc: 'Ορίστε γλώσσα διεπαφής: zh-CN Κινεζικά / en-US Αγγλικά.',
+  docs_step4_desc: 'Set the visitor-side interface language via the lang parameter. Multiple languages are supported. Click below to view all language codes.',
   docs_view_all_lang_codes: 'View All Supported Language Codes',
   docs_hide_lang_codes: 'Hide Language Codes',
   docs_supported_lang_codes: 'Supported Language Codes',

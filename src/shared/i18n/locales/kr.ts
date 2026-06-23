@@ -448,7 +448,7 @@ export default {
   docs_step3_desc: 'params 값은 JSON 문자열입니다. { } 등의 특수 문자는 URL 인코딩이 필요합니다.',
   docs_step3_note: '예: {"source":"website","level":"vip"} → 인코딩 후 → %7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D',
   docs_step4_title: '4단계: 언어 설정 lang 추가 (선택)',
-  docs_step4_desc: '인터페이스 언어 설정: zh-CN 중국어 / en-US 영어.',
+  docs_step4_desc: 'Set the visitor-side interface language via the lang parameter. Multiple languages are supported. Click below to view all language codes.',
   docs_view_all_lang_codes: 'View All Supported Language Codes',
   docs_hide_lang_codes: 'Hide Language Codes',
   docs_supported_lang_codes: 'Supported Language Codes',

@@ -465,7 +465,7 @@ export default {
   docs_step3_desc: 'params 的值是 JSON 字串。由於 URL 不能直接包含 { } 等特殊字元，需要用 URL 編碼 處理。',
   docs_step3_note: '範例：{"source":"website","level":"vip"} → 編碼後 → %7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D',
   docs_step4_title: '步驟 4：附加語言偏好 lang（可選）',
-  docs_step4_desc: '指定訪客端介面語言：zh-CN 簡體中文 / en-US 英文。',
+  docs_step4_desc: 'Set the visitor-side interface language via the lang parameter. Multiple languages are supported. Click below to view all language codes.',
   docs_view_all_lang_codes: 'View All Supported Language Codes',
   docs_hide_lang_codes: 'Hide Language Codes',
   docs_supported_lang_codes: 'Supported Language Codes',

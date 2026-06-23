@@ -390,7 +390,7 @@ export default {
   docs_step3_desc: 'Wartość params to ciąg JSON. Znaki specjalne wymagają kodowania URL.',
   docs_step3_note: 'Przykład: {"source":"website","level":"vip"} → Zakodowane → %7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D',
   docs_step4_title: 'Krok 4: Dodaj preferencję językową (Opcjonalnie)',
-  docs_step4_desc: 'Ustaw język interfejsu: zh-CN chiński / en-US angielski.',
+  docs_step4_desc: 'Set the visitor-side interface language via the lang parameter. Multiple languages are supported. Click below to view all language codes.',
   docs_view_all_lang_codes: 'View All Supported Language Codes',
   docs_hide_lang_codes: 'Hide Language Codes',
   docs_supported_lang_codes: 'Supported Language Codes',

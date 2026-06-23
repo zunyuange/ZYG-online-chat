@@ -390,7 +390,7 @@ export default {
   docs_step3_desc: 'Værdien af params er en JSON-streng. Specialtegn kræver URL-kodning.',
   docs_step3_note: 'Eksempel: {"source":"website","level":"vip"} → Kodet → %7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D',
   docs_step4_title: 'Trin 4: Tilføj sprogpræference (Valgfrit)',
-  docs_step4_desc: 'Indstil grænsefladesprog: zh-CN kinesisk / en-US engelsk.',
+  docs_step4_desc: 'Set the visitor-side interface language via the lang parameter. Multiple languages are supported. Click below to view all language codes.',
   docs_view_all_lang_codes: 'View All Supported Language Codes',
   docs_hide_lang_codes: 'Hide Language Codes',
   docs_supported_lang_codes: 'Supported Language Codes',
