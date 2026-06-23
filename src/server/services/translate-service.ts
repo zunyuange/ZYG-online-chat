@@ -2,13 +2,28 @@
  * 免费翻译 API 服务（无需任何 API Key）
  * 
  * 翻译引擎优先级（自动翻译链）:
- * 1. PearApi 万能翻译 ⭐（首选，自动检测语言，支持多翻译方向，免费稳定）
- * 2. SimplyTranslate AI（免费 RESTful，196+ 语言，100次/分钟）
- * 3. Google Translate（免费稳定，CF Worker 上可靠）
- * 4. MyMemory（免费后备，每天 1000~10000 词）
- * 5. 返回原文（所有引擎均失败时降级）
+ * 1. Cloudflare Workers AI ⭐（内网直连，最稳定，零延迟，@cf/meta/m2m100-1.2b）
+ * 2. PearApi 万能翻译（自动检测语言，支持多翻译方向，免费稳定）
+ * 3. SimplyTranslate AI（免费 RESTful，196+ 语言，100次/分钟）
+ * 4. Google Translate（免费稳定，CF Worker 上可靠）
+ * 5. MyMemory（免费后备，每天 1000~10000 词）
+ * 6. 返回原文（所有引擎均失败时降级）
  */
 import { getDb } from '@server/shared/db';
+
+// ==========================================
+// Cloudflare Workers AI 模块级存储
+// ==========================================
+let cloudflareAiBinding: any = null;
+
+/**
+ * 初始化 Cloudflare Workers AI 绑定
+ * 在 Worker 启动时由 index.worker.ts 调用
+ */
+export function initTranslateService(aiBinding: any): void {
+  cloudflareAiBinding = aiBinding;
+  console.log('[TranslateService] Cloudflare AI binding stored');
+}
 
 /** 我们的 locale 代码 → ISO 639-1 语言代码 (用于 MyMemory API) */
 const LOCALE_TO_ISO639: Record<string, string> = {
@@ -237,7 +252,85 @@ export function isLikelyAlreadyInTargetLang(text: string, targetLang: string): b
 }
 
 // ==========================================
-// 🔴 SimplyTranslate AI - 首选推荐
+// 我们的 locale 代码 → M2M100 模型语言代码（ISO 639-1 两字母）
+// @cf/meta/m2m100-1.2b 支持 100+ 语言互译
+// ==========================================
+const LOCALE_TO_M2M100: Record<string, string> = {
+  'zh-CN': 'zh', 'zh-TW': 'zh',
+  'en-US': 'en', 'en-GB': 'en',
+  'ja': 'ja', 'jp': 'ja',
+  'ko': 'ko', 'kr': 'ko',
+  'fr': 'fr', 'de': 'de', 'es': 'es',
+  'pt': 'pt', 'it': 'it', 'ru': 'ru',
+  'vi': 'vi', 'th': 'th', 'id': 'id',
+  'ar': 'ar', 'nl': 'nl', 'pl': 'pl',
+  'da': 'da', 'fi': 'fi', 'el': 'el',
+  'tc': 'zh', 'cn': 'zh',
+  'en': 'en', 'vie': 'vi',
+  'ara': 'ar', 'dan': 'da',
+  'fin': 'fi', 'cht': 'zh',
+  'spa': 'es', 'fra': 'fr', 'kor': 'ko',
+};
+
+function toM2M100Lang(localeCode: string): string {
+  return LOCALE_TO_M2M100[localeCode] || localeCode.split('-')[0] || 'en';
+}
+
+// ==========================================
+// ⭐ Cloudflare Workers AI - 内置翻译（最高优先级）
+// 使用 @cf/meta/m2m100-1.2b 模型，Cloudflare 内网直连
+// 完全免费、零延迟、绝对稳定，无需任何 API Key
+// ==========================================
+async function callCloudflareAITranslate(
+  text: string,
+  targetLang: string,
+  sourceLang: string = 'auto'
+): Promise<string> {
+  if (!cloudflareAiBinding) {
+    console.warn('[TranslateService-CF_AI] ⚠️ AI binding not initialized, skipping');
+    return text;
+  }
+
+  const src = sourceLang === 'auto' ? detectSourceLanguage(text) : sourceLang;
+  const tgt = toM2M100Lang(targetLang);
+  
+  // M2M100 模型对中文使用 "zh" 代码
+  const sourceCode = src.startsWith('zh') ? 'zh' : src.split('-')[0];
+  
+  // 源语言和目标语言相同，跳过
+  if (sourceCode === tgt || (sourceCode === 'zh' && tgt === 'zh')) {
+    console.log(`[TranslateService-CF_AI] ⏭️ Source and target language match (${sourceCode}→${tgt}), skipping`);
+    return text;
+  }
+
+  console.log(`[TranslateService-CF_AI] Calling: ${sourceCode}→${tgt}, textLen=${text.length}, text="${text.substring(0, 40)}"`);
+
+  try {
+    const result = await cloudflareAiBinding.run('@cf/meta/m2m100-1.2b', {
+      text,
+      source_lang: sourceCode,
+      target_lang: tgt,
+    });
+
+    if (result?.translated_text && typeof result.translated_text === 'string') {
+      const translated = result.translated_text.trim();
+      if (translated !== text.trim()) {
+        console.log(`[TranslateService-CF_AI] ✅ Result: "${translated.substring(0, 50)}..."`);
+        return translated;
+      }
+      console.warn('[TranslateService-CF_AI] ⚠️ Returned same text');
+    } else {
+      console.warn('[TranslateService-CF_AI] ⚠️ Unexpected response:', JSON.stringify(result).substring(0, 200));
+    }
+  } catch (error: any) {
+    console.error('[TranslateService-CF_AI] ❌ Error:', error?.message || error);
+  }
+
+  return text;
+}
+
+// ==========================================
+// 🔴 SimplyTranslate AI - 免费 RESTful
 // 免注册、免费 RESTful 翻译接口，支持 196+ 语言
 // 匿名频率限制: 100次/分钟（按 IP），每请求最高 5,000 字符
 // ==========================================
@@ -407,7 +500,7 @@ async function callMyMemoryTranslate(
 }
 
 // ==========================================
-// 🟣 PearApi 万能翻译 - 第4级
+// 🟣 PearApi 万能翻译 - 第1级·免费稳定
 // 免费，自动识别输入语言并进行翻译
 // ==========================================
 
@@ -499,6 +592,7 @@ async function callPearApiTranslate(
 
 /** 所有支持的翻译引擎列表（按推荐优先级排序，用于前端下拉菜单） */
 export const ALL_TRANSLATE_ENGINES = [
+  { key: 'cloudflare', label: 'Cloudflare AI 翻译' },
   { key: 'pearapi', label: 'PearApi 万能翻译' },
   { key: 'simplytranslate', label: 'SimplyTranslate AI' },
   { key: 'google', label: 'Google Translate' },
@@ -527,6 +621,9 @@ export async function translateWithEngine(
   try {
     let translated: string;
     switch (engine) {
+      case 'cloudflare':
+        translated = await callCloudflareAITranslate(text, targetIso, 'auto');
+        break;
       case 'simplytranslate':
         translated = await callSimplyTranslate(text, targetSimply, 'auto');
         break;
@@ -677,10 +774,12 @@ interface TranslateOptionsInternal extends TranslateOptions {
  * 自动翻译文本
  * 
  * 优先级链（纯免费，无需任何 API 密钥）:
- * 1. SimplyTranslate AI（首选推荐，196+ 语言，100次/分钟免费）
- * 2. Google Translate（免费稳定，CF Worker 上可靠）
- * 3. MyMemory 免费翻译（后备，每天 1000~10000 词免费）
- * 4. 返回原文（所有方案都不可用时降级）
+ * 1. Cloudflare Workers AI ⭐（内网直连，最稳定，@cf/meta/m2m100-1.2b）
+ * 2. PearApi 万能翻译（自动检测语言，支持多翻译方向）
+ * 3. SimplyTranslate AI（免费 RESTful，196+ 语言）
+ * 4. Google Translate（免费稳定，CF Worker 上可靠）
+ * 5. MyMemory（免费后备）
+ * 6. 返回原文（所有方案都不可用时降级）
  */
 export async function translateText(options: TranslateOptions): Promise<TranslateResult> {
   const { text, to } = options;
@@ -731,7 +830,26 @@ export async function translateText(options: TranslateOptions): Promise<Translat
   const targetIso = toIso639Lang(to);
 
   // ==========================================
-  // 🥇 第1级：PearApi 万能翻译 ⭐（首选，自动检测语言+精确翻译方向）
+  // ⭐ 第0级：Cloudflare Workers AI（内网直连，最稳定，零延迟）
+  // ==========================================
+  if (cloudflareAiBinding) {
+    console.log(`[TranslateService] ⭐ Trying Cloudflare AI: "${text.substring(0, 50)}..." → ${targetIso}`);
+    try {
+      const translated = await callCloudflareAITranslate(text, targetIso, 'auto');
+      if (translated !== text && translated.trim() !== text.trim()) {
+        console.log(`[TranslateService] ✅ Cloudflare AI success: "${translated.substring(0, 50)}..."`);
+        return { text: translated, engine: 'cloudflare', success: true };
+      }
+      console.log('[TranslateService] ⚡ Cloudflare AI returned same text, falling back...');
+    } catch (error) {
+      console.error('[TranslateService] ❌ Cloudflare AI exception, falling back:', error);
+    }
+  } else {
+    console.log('[TranslateService] ⚠️ Cloudflare AI binding not available, skipping to next engine');
+  }
+
+  // ==========================================
+  // 🥇 第1级：PearApi 万能翻译 ⭐（自动检测语言+精确翻译方向）
   // ==========================================
   console.log(`[TranslateService] 🥇 Trying PearApi: "${text.substring(0, 50)}..." → ${targetIso}`);
   try {
@@ -761,7 +879,7 @@ export async function translateText(options: TranslateOptions): Promise<Translat
   }
 
   // ==========================================
-  // 🥉 第3级：Google Translate（备选）
+  // 🥉 第3级：Google Translate
   // ==========================================
   console.log(`[TranslateService] 🥉 Trying Google Translate: "${text.substring(0, 50)}..." → ${targetGoogle}`);
   try {

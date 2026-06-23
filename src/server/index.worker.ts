@@ -21,12 +21,14 @@ import { initializeD1Db, getDb } from './shared/db';
 import { initializeR2Storage } from './shared/storage';
 import { initBarkService } from './services/bark-service';
 import { initAuthService } from './module-auth/services/auth-service';
+import { initTranslateService } from './services/translate-service';
 
 // Cloudflare Workers bindings
 interface Env {
   DB: D1Database;
   BUCKET?: R2Bucket;
   ASSETS?: Fetcher;
+  AI?: any; // Cloudflare Workers AI binding
   // Environment variables
   BARK_KEY?: string;
   BARK_API?: string;
@@ -114,6 +116,15 @@ async function ensureInitialized(env: Env): Promise<void> {
       ADMIN_JWT_SECRET: env.ADMIN_JWT_SECRET,
     });
     console.log('[Worker] Admin Auth service initialized');
+
+    // Initialize Cloudflare AI translation service
+    if (env.AI) {
+      console.log('[Worker] Initializing Cloudflare AI translation...');
+      initTranslateService(env.AI);
+      console.log('[Worker] Cloudflare AI translation initialized');
+    } else {
+      console.warn('[Worker] Cloudflare AI binding not available, AI translation will be skipped');
+    }
 
     initialized = true;
     console.log('[Worker] All services initialized successfully');

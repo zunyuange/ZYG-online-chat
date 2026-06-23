@@ -889,7 +889,7 @@ chatRoutes.post('/messages/:id/translate', async c => {
 
     // 5. 执行翻译 - 如果指定了 engine，则仅使用该引擎；否则走默认优先级链
     const engineKey = engine?.toLowerCase() || '';
-    const validEngines = ['pearapi', 'simplytranslate', 'google', 'mymemory'];
+    const validEngines = ['cloudflare', 'pearapi', 'simplytranslate', 'google', 'mymemory'];
     
     let translateResult: any;
     

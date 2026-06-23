@@ -40,6 +40,12 @@ binding = "DB"
 database_name = "zyg-online-chat-db"
 database_id = "91fad6d8-e535-4bc0-95fc-2b69c32c7d22"
 
+[ai]
+binding = "AI"
+
 [[env.production.r2_buckets]]
 binding = "BUCKET"
 bucket_name = "zyg-online-chat-uploads"
+
+[env.production.ai]
+binding = "AI"
