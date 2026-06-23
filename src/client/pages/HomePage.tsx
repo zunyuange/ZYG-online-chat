@@ -167,7 +167,7 @@ function HomeContent() {
             margin: '0 auto',
             lineHeight: '1.6',
           }}>
-            为您提供一站式的在线客服解决方案
+            为您提供一站式的CF智能多语言在线客服解决方案
           </p>
         </div>
 

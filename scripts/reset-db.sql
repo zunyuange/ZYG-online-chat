@@ -20,6 +20,7 @@ DROP TABLE IF EXISTS admin_config;
 DROP TABLE IF EXISTS roles;
 DROP TABLE IF EXISTS todos;
 DROP TABLE IF EXISTS visitor_custom_fields;
+DROP TABLE IF EXISTS transfer_requests;
 
 -- Reset auto-increment counters
 DELETE FROM sqlite_sequence;
@@ -211,6 +212,7 @@ staff_id INTEGER NOT NULL,
 tag TEXT, 
 state TEXT NOT NULL DEFAULT 'using', 
 lang TEXT NOT NULL DEFAULT 'zh-CN', 
+business_id INTEGER NOT NULL DEFAULT 0, 
 created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000));
 
 -- Create offline_messages table for offline visitor messages (留言)
@@ -315,6 +317,9 @@ CREATE INDEX IF NOT EXISTS admin_users_username_idx ON admin_users(username);
 CREATE INDEX IF NOT EXISTS roles_name_idx ON roles(name);
 CREATE INDEX IF NOT EXISTS transfer_requests_session_id_idx ON transfer_requests(session_id);
 CREATE INDEX IF NOT EXISTS transfer_requests_to_staff_id_idx ON transfer_requests(to_staff_id);
+CREATE INDEX IF NOT EXISTS transfer_requests_from_staff_id_idx ON transfer_requests(from_staff_id);
+CREATE INDEX IF NOT EXISTS visitor_custom_fields_business_id_idx ON visitor_custom_fields(business_id);
+CREATE INDEX IF NOT EXISTS visitor_custom_fields_field_key_idx ON visitor_custom_fields(business_id, field_key);
 
 -- Initialize default admin user (username: admin, password: 123456)
 -- Password hash for '123456' using SHA-256: 8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92
@@ -328,7 +333,7 @@ INSERT OR REPLACE INTO staff_users (username, password_hash, email, name, role, 
 INSERT OR REPLACE INTO roles (name, description, permissions, is_system, status) VALUES ('超级管理员', '系统默认超级管理员，拥有所有权限', '["admin_view","admin_edit","staff_view","staff_edit","role_view","role_edit","settings"]', 1, 'active');
 
 -- Initialize default settings
-INSERT OR REPLACE INTO admin_config (key, value, description) VALUES ('siteName', '在线客服系统', '网站名称');
+INSERT OR REPLACE INTO admin_config (key, value, description) VALUES ('siteName', 'CF智能多语言在线客服系统', '网站名称');
 INSERT OR REPLACE INTO admin_config (key, value, description) VALUES ('defaultLanguage', 'zh-CN', '默认语言');
 INSERT OR REPLACE INTO admin_config (key, value, description) VALUES ('enableAuth', 'true', '启用认证');
 

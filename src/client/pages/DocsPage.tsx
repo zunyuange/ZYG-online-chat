@@ -1,6 +1,6 @@
 /**
  * 对接文档页面 - 独立公开页面，所有人可访问
- * 展示如何将在线客服系统接入到自己的网站中
+ * 展示如何将CF智能多语言在线客服系统接入到自己的网站中
  */
 import { useState, useEffect } from 'react';
 import { I18nProvider } from '@client/context/I18nContext';

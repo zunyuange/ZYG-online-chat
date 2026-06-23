@@ -352,6 +352,6 @@ INSERT OR REPLACE INTO staff_users (username, password_hash, email, name, role, 
 INSERT OR REPLACE INTO roles (name, description, permissions, is_system, status) VALUES ('超级管理员', '系统默认超级管理员，拥有所有权限', '["admin_view","admin_edit","staff_view","staff_edit","role_view","role_edit","settings"]', 1, 'active');
 
 -- Initialize default settings
-INSERT OR REPLACE INTO admin_config (key, value, description) VALUES ('siteName', '在线客服系统', '网站名称');
+INSERT OR REPLACE INTO admin_config (key, value, description) VALUES ('siteName', 'CF智能多语言在线客服系统', '网站名称');
 INSERT OR REPLACE INTO admin_config (key, value, description) VALUES ('defaultLanguage', 'zh-CN', '默认语言');
 INSERT OR REPLACE INTO admin_config (key, value, description) VALUES ('enableAuth', 'true', '启用认证');

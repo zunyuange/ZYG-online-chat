@@ -43,7 +43,7 @@ export function useSiteSettings() {
 
   return {
     settings,
-    siteName: settings?.siteName || '在线客服系统',
+    siteName: settings?.siteName || 'CF智能多语言在线客服系统',
     defaultLanguage: settings?.defaultLanguage || 'zh-CN',
     enableAuth: settings?.enableAuth ?? true,
     loading,

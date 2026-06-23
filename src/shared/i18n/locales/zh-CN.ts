@@ -75,7 +75,7 @@ export const zhCN = {
   guess_ask: '我猜你想问的:',
   please_enter_message: '请输入消息',
   choose_lang: '选择语言',
-  service_title: '在线客服',
+  service_title: 'CF智能多语言在线客服系统',
   banword_tip: '发送失败，内容包含违禁词',
 
   login: '登录',
@@ -428,7 +428,7 @@ export const zhCN = {
 
   // ===== 对接文档页 =====
   docs_title: '对接文档',
-  docs_subtitle: '将在线客服系统接入到您的网站中',
+  docs_subtitle: '将CF智能多语言在线客服系统接入到您的网站中',
   docs_quick_start: '快速开始',
   docs_quick_start_1: '注册商家账号，获取商家标识',
   docs_quick_start_2: '选择一种接入方式（脚本嵌入/iframe/直接链接）',
@@ -678,7 +678,7 @@ export const zhCN = {
   admin_role_admin: '管理员',
   admin_role_staff: '客服',
   admin_table_business: '商家',
-  signature_online: '在线客服系统',
+  signature_online: 'CF智能多语言在线客服系统',
 
   // ===== 语言名称 =====
   lang_zh_CN: '中文',
