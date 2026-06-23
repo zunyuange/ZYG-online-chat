@@ -341,15 +341,36 @@ export const useChatStore = create<ChatState>((set, get) => ({
           console.log(`[ChatStore] Found ${serverMessages.length} messages from server`);
           
           // Check if any messages have updated isRead status
+          // ★ 同时同步 server 端的 translatedContent（仅在本地无手动翻译时采用）
           let hasReadStatusChanges = false;
           const updatedMessages = messages.map((localMsg) => {
             const serverMsg = serverMessages.find((m) => m.id === localMsg.id);
-            if (serverMsg && serverMsg.isRead !== localMsg.isRead) {
+            if (!serverMsg) return localMsg;
+            
+            const updated = { ...localMsg };
+            let hasChanges = false;
+            
+            // 同步已读状态
+            if (serverMsg.isRead !== localMsg.isRead) {
+              updated.isRead = serverMsg.isRead;
+              hasChanges = true;
               hasReadStatusChanges = true;
-              console.log(`[ChatStore] Message ${localMsg.id} read status changed from ${localMsg.isRead} to ${serverMsg.isRead}`);
-              return { ...localMsg, isRead: serverMsg.isRead };
+              console.log(`[ChatStore] Message ${localMsg.id} isRead: ${localMsg.isRead} → ${serverMsg.isRead}`);
             }
-            return localMsg;
+            
+            // ★ 同步翻译内容：只在本地没有翻译时采用 server 端的
+            //   如果本地已有翻译（用户手动翻译过），保护不被覆盖
+            if (serverMsg.translatedContent && !localMsg.translatedContent) {
+              updated.translatedContent = serverMsg.translatedContent;
+              updated.translateEngine = serverMsg.translateEngine;
+              hasChanges = true;
+              console.log(`[ChatStore] Message ${localMsg.id} accepted server translation via ${serverMsg.translateEngine}`);
+            } else if (serverMsg.translatedContent && localMsg.translatedContent) {
+              // 本地已有翻译，保持本地版本不变
+              console.log(`[ChatStore] Message ${localMsg.id} keeping local translation (manual override protection)`);
+            }
+            
+            return hasChanges ? updated : localMsg;
           });
 
           // Find messages newer than our last known message

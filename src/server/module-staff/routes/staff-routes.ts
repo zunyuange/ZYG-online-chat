@@ -234,22 +234,26 @@ staffRoutes.post('/messages', async c => {
       const txBusinessId = session?.businessId || bizCtx.businessId;
       const txSettings = await getTranslationSettings(txBusinessId, getCtxString(c, 'businessSlug'));
 
-      // 翻译目标语言：优先使用 session.lang（访客浏览器语言），空则回退到默认
-      const targetLang = session?.lang || txSettings?.defaultLang || 'zh-CN';
+      // ★ 翻译目标语言：优先 session.lang（访客浏览器语言）
+      // ★ 修复：当 session.lang 为空时，不 fallback 到 txSettings.defaultLang
+      //   因为 txSettings.defaultLang 是商家/客服的语言，不是访客的语言
+      //   如客服设 defaultLang='zh-TW'，访客 lang 为空时若翻译到 zh-TW，访客会认为翻译错了
+      const visitorLang = session?.lang;
+      const targetLang = visitorLang || 'zh-CN';
+      const targetLangSource = visitorLang ? 'session.lang' : 'zh-CN (visitor lang unknown, default)';
 
       console.log('[StaffRoutes] 🔍 Translation check',
         '| staffId:', bizCtx.businessId,
         '| queriedBusinessId:', txBusinessId,
         '| txSettings:', txSettings ? `enabled=${txSettings.enabled} defaultLang=${txSettings.defaultLang}` : 'NULL',
         '| session.lang:', session?.lang || 'NULL',
-        '| targetLang:', targetLang,
+        '| targetLang:', targetLang, '(source:', targetLangSource + ')',
         '| session.businessId:', session?.businessId);
 
       if (txSettings?.enabled && targetLang) {
         const staffDetectedLang = detectSourceLanguage(content as string);
-        const langSource = session?.lang ? 'session.lang' : 'settings.defaultLang (fallback)';
         console.log('[StaffRoutes] 🈂️ Auto-translating staff message to visitor lang:', targetLang,
-          '| langSource:', langSource,
+          '| langSource:', targetLangSource,
           '| detectedContentLang:', staffDetectedLang,
           '| staffId:', bizCtx.businessId);
         const translateResult = await translateText({
