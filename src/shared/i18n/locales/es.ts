@@ -1,4 +1,4 @@
-// Spanish
+﻿// Spanish
 export default {
   hello: '¡Hola!',
   select_language: 'Seleccionar idioma',
@@ -453,6 +453,12 @@ export default {
   docs_step3_note: 'Ejemplo: {"source":"website","level":"vip"} → Codificado → %7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D',
   docs_step4_title: 'Paso 4: Agregar preferencia de idioma (Opcional)',
   docs_step4_desc: 'Establecer idioma de interfaz: zh-CN para chino / en-US para inglés.',
+  docs_view_all_lang_codes: 'View All Supported Language Codes',
+  docs_hide_lang_codes: 'Hide Language Codes',
+  docs_supported_lang_codes: 'Supported Language Codes',
+  docs_lang_code: 'Code',
+  docs_lang_native_name: 'Native Name',
+  docs_lang_english_name: 'English Name',
   docs_final_url: '✅ URL completa final',
   docs_code_example: '💻 Ejemplo de código frontend',
   docs_code_example_desc: 'El siguiente código JavaScript muestra cómo construir enlaces de chat dinámicamente.',

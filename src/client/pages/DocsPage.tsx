@@ -106,9 +106,10 @@ function LanguageSwitcher() {
 }
 
 function DocsContent() {
-  const { t } = useI18n();
+  const { t, supportedLocales } = useI18n();
   const [copied, setCopied] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'script' | 'iframe' | 'url'>('script');
+  const [showLangCodes, setShowLangCodes] = useState(false);
 
   const currentDomain = typeof window !== 'undefined' ? window.location.origin : 'https://zyg-online-chat.linzihai.workers.dev';
 
@@ -660,12 +661,90 @@ document.getElementById('chatBtn').addEventListener('click', () => {
                   padding: '12px 16px',
                   fontSize: '13px',
                   fontFamily: "'Fira Code', 'Consolas', monospace",
-                  margin: 0,
+                  margin: '0 0 12px 0',
                   color: '#333',
                   overflowX: 'auto',
                 }}>
                   {`${currentDomain}/chat?business=default&userName=张三&pid=user123&params=${encodeURIComponent('{"source":"website","level":"vip"}')}&lang=zh-CN`}
                 </pre>
+                
+                {/* 查看所有支持的语言代码 */}
+                <button
+                  onClick={() => setShowLangCodes(!showLangCodes)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 14px',
+                    border: '1px solid #d9d9d9',
+                    borderRadius: '6px',
+                    backgroundColor: '#fff',
+                    color: '#1890ff',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <Globe size={14} />
+                  {showLangCodes ? t('docs_hide_lang_codes') : t('docs_view_all_lang_codes')}
+                </button>
+
+                {showLangCodes && (
+                  <div style={{
+                    marginTop: '12px',
+                    backgroundColor: '#fafafa',
+                    border: '1px solid #e8e8e8',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                  }}>
+                    <div style={{
+                      padding: '10px 16px',
+                      backgroundColor: '#f0f5ff',
+                      borderBottom: '1px solid #d6e4ff',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      color: '#1d39c4',
+                    }}>
+                      {t('docs_supported_lang_codes')} ({supportedLocales.length})
+                    </div>
+                    <table style={{
+                      width: '100%',
+                      borderCollapse: 'collapse',
+                      fontSize: '13px',
+                    }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid #e8e8e8' }}>
+                          <th style={{ padding: '8px 16px', textAlign: 'left', fontWeight: 500, color: '#999', fontSize: '12px' }}>{t('docs_lang_code')}</th>
+                          <th style={{ padding: '8px 16px', textAlign: 'left', fontWeight: 500, color: '#999', fontSize: '12px' }}>{t('docs_lang_native_name')}</th>
+                          <th style={{ padding: '8px 16px', textAlign: 'left', fontWeight: 500, color: '#999', fontSize: '12px' }}>{t('docs_lang_english_name')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {supportedLocales.map((l, i) => (
+                          <tr key={l.code} style={{
+                            borderBottom: '1px solid #f0f0f0',
+                            backgroundColor: i % 2 === 0 ? '#fff' : '#fafbfc',
+                          }}>
+                            <td style={{ padding: '8px 16px' }}>
+                              <code style={{
+                                padding: '2px 8px',
+                                backgroundColor: '#f0f5ff',
+                                borderRadius: '4px',
+                                color: '#c41d7f',
+                                fontSize: '12px',
+                                fontFamily: "'Fira Code', 'Consolas', monospace",
+                              }}>
+                                {l.code}
+                              </code>
+                            </td>
+                            <td style={{ padding: '8px 16px', color: '#333' }}>{l.nativeName}</td>
+                            <td style={{ padding: '8px 16px', color: '#666' }}>{l.name}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
 
               {/* 完整最终链接 */}

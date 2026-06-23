@@ -1,4 +1,4 @@
-// Danish
+﻿// Danish
 export default {
   hello: 'Hej!',
   select_language: 'Vælg sprog',
@@ -391,6 +391,12 @@ export default {
   docs_step3_note: 'Eksempel: {"source":"website","level":"vip"} → Kodet → %7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D',
   docs_step4_title: 'Trin 4: Tilføj sprogpræference (Valgfrit)',
   docs_step4_desc: 'Indstil grænsefladesprog: zh-CN kinesisk / en-US engelsk.',
+  docs_view_all_lang_codes: 'View All Supported Language Codes',
+  docs_hide_lang_codes: 'Hide Language Codes',
+  docs_supported_lang_codes: 'Supported Language Codes',
+  docs_lang_code: 'Code',
+  docs_lang_native_name: 'Native Name',
+  docs_lang_english_name: 'English Name',
   docs_final_url: '✅ Endelig komplet URL',
   docs_code_example: '💻 Frontend-kodeeksempel',
   docs_code_example_desc: 'Følgende JavaScript-kode viser, hvordan man dynamisk bygger chatlinks.',

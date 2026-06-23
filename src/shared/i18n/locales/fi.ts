@@ -1,4 +1,4 @@
-// Finnish
+﻿// Finnish
 export default {
   hello: 'Hei!',
   select_language: 'Valitse kieli',
@@ -391,6 +391,12 @@ export default {
   docs_step3_note: 'Esimerkki: {"source":"website","level":"vip"} → Koodattu → %7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D',
   docs_step4_title: 'Vaihe 4: Lisää kieliasetus (Valinnainen)',
   docs_step4_desc: 'Aseta käyttöliittymän kieli: zh-CN kiina / en-US englanti.',
+  docs_view_all_lang_codes: 'View All Supported Language Codes',
+  docs_hide_lang_codes: 'Hide Language Codes',
+  docs_supported_lang_codes: 'Supported Language Codes',
+  docs_lang_code: 'Code',
+  docs_lang_native_name: 'Native Name',
+  docs_lang_english_name: 'English Name',
   docs_final_url: '✅ Lopullinen täysi URL',
   docs_code_example: '💻 Frontend-koodiesimerkki',
   docs_code_example_desc: 'Seuraava JavaScript-koodi näyttää, kuinka chat-linkkejä rakennetaan dynaamisesti.',

@@ -1,4 +1,4 @@
-// Thai
+﻿// Thai
 export default {
   hello: 'สวัสดี!',
   select_language: 'เลือกภาษา',
@@ -391,6 +391,12 @@ export default {
   docs_step3_note: 'ตัวอย่าง: {"source":"website","level":"vip"} → เข้ารหัสแล้ว → %7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D',
   docs_step4_title: 'ขั้นตอนที่ 4: เพิ่มการตั้งค่าภาษา (ไม่บังคับ)',
   docs_step4_desc: 'ตั้งค่าภาษาอินเทอร์เฟซ: zh-CN จีน / en-US อังกฤษ',
+  docs_view_all_lang_codes: 'View All Supported Language Codes',
+  docs_hide_lang_codes: 'Hide Language Codes',
+  docs_supported_lang_codes: 'Supported Language Codes',
+  docs_lang_code: 'Code',
+  docs_lang_native_name: 'Native Name',
+  docs_lang_english_name: 'English Name',
   docs_final_url: '✅ URL แบบเต็มสุดท้าย',
   docs_code_example: '💻 ตัวอย่างโค้ด Frontend',
   docs_code_example_desc: 'โค้ด JavaScript ต่อไปนี้แสดงวิธีการสร้างลิงก์แชทแบบไดนามิก',

@@ -1,4 +1,4 @@
-// Russian
+﻿// Russian
 export default {
   hello: 'Привет!',
   select_language: 'Выбрать язык',
@@ -388,6 +388,12 @@ export default {
   docs_step3_note: 'Пример: {"source":"website","level":"vip"} → Закодировано → %7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D',
   docs_step4_title: 'Шаг 4: Добавьте языковые настройки (Опционально)',
   docs_step4_desc: 'Установите язык интерфейса: zh-CN китайский / en-US английский.',
+  docs_view_all_lang_codes: 'View All Supported Language Codes',
+  docs_hide_lang_codes: 'Hide Language Codes',
+  docs_supported_lang_codes: 'Supported Language Codes',
+  docs_lang_code: 'Code',
+  docs_lang_native_name: 'Native Name',
+  docs_lang_english_name: 'English Name',
   docs_final_url: '✅ Итоговый полный URL',
   docs_code_example: '💻 Пример кода для фронтенда',
   docs_code_example_desc: 'Следующий JavaScript-код показывает, как динамически создавать ссылки чата.',

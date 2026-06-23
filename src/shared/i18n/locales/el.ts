@@ -1,4 +1,4 @@
-// Greek
+﻿// Greek
 export default {
   hello: 'Γεια σας!',
   select_language: 'Επιλέξτε γλώσσα',
@@ -391,6 +391,12 @@ export default {
   docs_step3_note: 'Παράδειγμα: {"source":"website","level":"vip"} → Κωδικοποιημένο → %7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D',
   docs_step4_title: 'Βήμα 4: Προσθέστε προτίμηση γλώσσας (Προαιρετικά)',
   docs_step4_desc: 'Ορίστε γλώσσα διεπαφής: zh-CN Κινεζικά / en-US Αγγλικά.',
+  docs_view_all_lang_codes: 'View All Supported Language Codes',
+  docs_hide_lang_codes: 'Hide Language Codes',
+  docs_supported_lang_codes: 'Supported Language Codes',
+  docs_lang_code: 'Code',
+  docs_lang_native_name: 'Native Name',
+  docs_lang_english_name: 'English Name',
   docs_final_url: '✅ Τελική πλήρης διεύθυνση URL',
   docs_code_example: '💻 Παράδειγμα κώδικα frontend',
   docs_code_example_desc: 'Ο παρακάτω κώδικας JavaScript δείχνει πώς να δημιουργείτε δυναμικά συνδέσμους συνομιλίας.',

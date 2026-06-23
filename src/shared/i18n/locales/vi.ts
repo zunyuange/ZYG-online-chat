@@ -1,4 +1,4 @@
-// Vietnamese
+﻿// Vietnamese
 export default {
   hello: 'Xin chào!',
   select_language: 'Chọn ngôn ngữ',
@@ -388,6 +388,12 @@ export default {
   docs_step3_note: 'Ví dụ: {"source":"website","level":"vip"} → Đã mã hóa → %7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D',
   docs_step4_title: 'Bước 4: Thêm Tùy chọn Ngôn ngữ (Tùy chọn)',
   docs_step4_desc: 'Đặt ngôn ngữ giao diện: zh-CN tiếng Trung / en-US tiếng Anh.',
+  docs_view_all_lang_codes: 'View All Supported Language Codes',
+  docs_hide_lang_codes: 'Hide Language Codes',
+  docs_supported_lang_codes: 'Supported Language Codes',
+  docs_lang_code: 'Code',
+  docs_lang_native_name: 'Native Name',
+  docs_lang_english_name: 'English Name',
   docs_final_url: '✅ URL Hoàn chỉnh',
   docs_code_example: '💻 Ví dụ Mã Frontend',
   docs_code_example_desc: 'Mã JavaScript sau đây cho thấy cách tạo liên kết chat động.',

@@ -1,4 +1,4 @@
-// Dutch
+﻿// Dutch
 export default {
   hello: 'Hallo!',
   select_language: 'Selecteer taal',
@@ -391,6 +391,12 @@ export default {
   docs_step3_note: 'Voorbeeld: {"source":"website","level":"vip"} → Gecodeerd → %7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D',
   docs_step4_title: 'Stap 4: Voeg taalvoorkeur toe (Optioneel)',
   docs_step4_desc: 'Stel interfacetaal in: zh-CN Chinees / en-US Engels.',
+  docs_view_all_lang_codes: 'View All Supported Language Codes',
+  docs_hide_lang_codes: 'Hide Language Codes',
+  docs_supported_lang_codes: 'Supported Language Codes',
+  docs_lang_code: 'Code',
+  docs_lang_native_name: 'Native Name',
+  docs_lang_english_name: 'English Name',
   docs_final_url: '✅ Volledige definitieve URL',
   docs_code_example: '💻 Frontend-codevoorbeeld',
   docs_code_example_desc: 'De volgende JavaScript-code laat zien hoe u chatlinks dynamisch kunt bouwen.',

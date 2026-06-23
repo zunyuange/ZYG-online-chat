@@ -1,4 +1,4 @@
-// 中文繁体
+﻿// 中文繁体
 export default {
   hello: '您好！',
   select_language: '選擇語言',
@@ -466,6 +466,12 @@ export default {
   docs_step3_note: '範例：{"source":"website","level":"vip"} → 編碼後 → %7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D',
   docs_step4_title: '步驟 4：附加語言偏好 lang（可選）',
   docs_step4_desc: '指定訪客端介面語言：zh-CN 簡體中文 / en-US 英文。',
+  docs_view_all_lang_codes: 'View All Supported Language Codes',
+  docs_hide_lang_codes: 'Hide Language Codes',
+  docs_supported_lang_codes: 'Supported Language Codes',
+  docs_lang_code: 'Code',
+  docs_lang_native_name: 'Native Name',
+  docs_lang_english_name: 'English Name',
   docs_final_url: '✅ 最終完整連結',
   docs_code_example: '💻 前端程式碼範例',
   docs_code_example_desc: '以下 JavaScript 程式碼展示如何在後端或前端動態拼接客服連結，適合在頁面中動態產生按鈕連結。',

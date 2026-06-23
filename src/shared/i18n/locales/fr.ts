@@ -1,4 +1,4 @@
-// French
+﻿// French
 export default {
   hello: 'Bonjour !',
   select_language: 'Choisir la langue',
@@ -453,6 +453,12 @@ export default {
   docs_step3_note: 'Exemple : {"source":"website","level":"vip"} → Encodé → %7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D',
   docs_step4_title: 'Étape 4 : Ajouter la préférence de langue (Optionnel)',
   docs_step4_desc: "Définir la langue de l'interface : zh-CN pour le chinois / en-US pour l'anglais.",
+  docs_view_all_lang_codes: 'View All Supported Language Codes',
+  docs_hide_lang_codes: 'Hide Language Codes',
+  docs_supported_lang_codes: 'Supported Language Codes',
+  docs_lang_code: 'Code',
+  docs_lang_native_name: 'Native Name',
+  docs_lang_english_name: 'English Name',
   docs_final_url: '✅ URL complète finale',
   docs_code_example: '💻 Exemple de code frontend',
   docs_code_example_desc: "Le code JavaScript suivant montre comment construire dynamiquement des liens de chat.",

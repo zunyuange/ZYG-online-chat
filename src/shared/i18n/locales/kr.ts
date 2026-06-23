@@ -1,4 +1,4 @@
-// 韩语
+﻿// 韩语
 export default {
   hello: '안녕하세요!',
   select_language: '언어 선택',
@@ -449,6 +449,12 @@ export default {
   docs_step3_note: '예: {"source":"website","level":"vip"} → 인코딩 후 → %7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D',
   docs_step4_title: '4단계: 언어 설정 lang 추가 (선택)',
   docs_step4_desc: '인터페이스 언어 설정: zh-CN 중국어 / en-US 영어.',
+  docs_view_all_lang_codes: 'View All Supported Language Codes',
+  docs_hide_lang_codes: 'Hide Language Codes',
+  docs_supported_lang_codes: 'Supported Language Codes',
+  docs_lang_code: 'Code',
+  docs_lang_native_name: 'Native Name',
+  docs_lang_english_name: 'English Name',
   docs_final_url: '✅ 최종 전체 URL',
   docs_code_example: '💻 프론트엔드 코드 예시',
   docs_code_example_desc: '다음 JavaScript 코드는 백엔드 또는 프론트엔드에서 동적으로 채팅 링크를 구성하는 방법을 보여줍니다.',

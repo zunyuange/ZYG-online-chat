@@ -1,4 +1,4 @@
-// Indonesian
+﻿// Indonesian
 export default {
   hello: 'Halo!',
   select_language: 'Pilih bahasa',
@@ -391,6 +391,12 @@ export default {
   docs_step3_note: 'Contoh: {"source":"website","level":"vip"} → Dikodekan → %7B%22source%22%3A%22website%22%2C%22level%22%3A%22vip%22%7D',
   docs_step4_title: 'Langkah 4: Tambahkan Preferensi Bahasa (Opsional)',
   docs_step4_desc: 'Atur bahasa antarmuka: zh-CN Mandarin / en-US Inggris.',
+  docs_view_all_lang_codes: 'View All Supported Language Codes',
+  docs_hide_lang_codes: 'Hide Language Codes',
+  docs_supported_lang_codes: 'Supported Language Codes',
+  docs_lang_code: 'Code',
+  docs_lang_native_name: 'Native Name',
+  docs_lang_english_name: 'English Name',
   docs_final_url: '✅ URL Lengkap Akhir',
   docs_code_example: '💻 Contoh Kode Frontend',
   docs_code_example_desc: 'Kode JavaScript berikut menunjukkan cara membuat tautan chat secara dinamis.',
