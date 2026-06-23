@@ -53,8 +53,11 @@ export function ChatPage() {
 
   // ★ 初始化音频和推送通知服务（首次用户交互时请求权限）
   useEffect(() => {
-    initSound();
-    initServiceWorkerForNotification();
+    const init = async () => {
+      await initSound();
+      await initServiceWorkerForNotification();
+    };
+    init();
 
     // 延迟请求通知权限，避免页面加载时弹窗
     const timer = setTimeout(() => {

@@ -179,9 +179,15 @@ export function StaffPage() {
   // ★ 初始化音频和推送通知服务（登录后执行）
   useEffect(() => {
     if (!isAuthenticated) return;
-    initSound();
-    initServiceWorkerForNotification();
-    const cleanup = setupVisibilityHandler();
+
+    let visibilityCleanup: (() => void) | undefined;
+
+    const init = async () => {
+      await initSound();
+      await initServiceWorkerForNotification();
+      visibilityCleanup = setupVisibilityHandler();
+    };
+    init();
 
     // ★ 延迟 3 秒后请求通知权限
     const timer = setTimeout(() => {
@@ -191,8 +197,8 @@ export function StaffPage() {
     }, 3000);
 
     return () => {
-      cleanup();
       clearTimeout(timer);
+      visibilityCleanup?.();
     };
   }, [isAuthenticated]);
 

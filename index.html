@@ -60,27 +60,42 @@
 
       // ★ 音频上下文预解锁（需在首次用户交互时初始化）
       //   创建并保持 AudioContext 存活，供 notificationSound.ts 复用
+      //   Chrome: 用户手势后 resume() 即可
+      //   Safari: 必须在用户手势同步回调中创建并 resume
+      //   Firefox: 类似 Chrome，但需要 await resume()
       window.__audio_unlocked = false;
       window.__shared_audio_ctx = null;
-      function unlockAudioNow() {
+      async function unlockAudioNow() {
         if (window.__audio_unlocked) return;
         try {
-          const ctx = new (window.AudioContext || window.webkitAudioContext)();
-          if (ctx.state === 'suspended') ctx.resume();
-          // 播放空缓冲彻底激活
-          const buf = ctx.createBuffer(1, 1, 22050);
-          const src = ctx.createBufferSource();
-          src.buffer = buf;
-          src.connect(ctx.destination);
-          src.start(0);
-          src.stop(ctx.currentTime + 0.001);
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return;
+          const ctx = new AudioCtx();
+          // ★ Safari/跨浏览器：必须 await resume()
+          if (ctx.state === 'suspended') {
+            await ctx.resume();
+          }
+          // 播放极短静音缓冲区彻底激活 AudioContext
+          if (ctx.state === 'running') {
+            const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
+            const src = ctx.createBufferSource();
+            src.buffer = buf;
+            src.connect(ctx.destination);
+            src.start(0);
+            src.stop(ctx.currentTime + 0.001);
+          }
           window.__shared_audio_ctx = ctx; // ★ 保持存活，供 notificationSound 复用
           window.__audio_unlocked = true;
-          console.log('[PWA] Audio unlocked');
-        } catch (e) { /* 静默 */ }
+          console.log('[PWA] Audio unlocked, state:', ctx.state);
+        } catch (e) {
+          console.warn('[PWA] Audio unlock failed:', e);
+        }
       }
-      document.addEventListener('click', unlockAudioNow, { once: false, capture: true });
-      document.addEventListener('touchstart', unlockAudioNow, { once: false, capture: true });
+      // ★ 使用 { once: true } 避免重复监听
+      const unlockHandler = () => { unlockAudioNow(); };
+      document.addEventListener('click', unlockHandler, { once: true, capture: true });
+      document.addEventListener('touchstart', unlockHandler, { once: true, capture: true });
+      document.addEventListener('keydown', unlockHandler, { once: true, capture: true });
     </script>
   </body>
 </html>

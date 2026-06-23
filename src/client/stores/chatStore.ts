@@ -415,14 +415,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
           // Check if we need to update
           if (freshMessages.length > 0 || hasReadStatusChanges) {
-            // Add only new messages (avoid duplicates)
-            const existingIds = new Set(updatedMessages.map((m) => m.id));
-            const toAdd = freshMessages.filter((m) => !existingIds.has(m.id));
-            console.log(`[ChatStore] Adding ${toAdd.length} new messages`);
-            
-            const finalMessages = [...updatedMessages, ...toAdd];
-            console.log(`[ChatStore] Updating messages, total: ${finalMessages.length}`);
-            set({ messages: finalMessages });
+            // ★ 已读状态变化：直接更新消息列表
+            if (hasReadStatusChanges && freshMessages.length === 0) {
+              set({ messages: updatedMessages });
+            }
+
+            // ★ 核心修复：新消息必须通过 addMessage 添加以触发通知
+            if (freshMessages.length > 0) {
+              const existingIds = new Set(updatedMessages.map((m) => m.id));
+              const toAdd = freshMessages.filter((m) => !existingIds.has(m.id));
+              console.log(`[ChatStore] Found ${toAdd.length} new messages via polling, dispatching via addMessage`);
+              for (const msg of toAdd) {
+                get().addMessage(msg);
+              }
+            }
           }
         } else {
           console.log('[ChatStore] Failed to get messages:', result.error);

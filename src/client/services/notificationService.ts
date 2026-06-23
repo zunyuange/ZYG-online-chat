@@ -1,6 +1,6 @@
 /**
  * 浏览器推送通知服务
- * 支持 Chrome / Firefox / Edge / Opera / Samsung Internet
+ * ★ 兼容 Chrome / Firefox / Edge / Safari / Opera / Samsung Internet
  * 
  * 功能：
  *   1. 请求通知权限 + 权限引导横幅
@@ -9,11 +9,22 @@
  *   4. 客服端：新访客上线时弹通知
  *   5. 通知点击 → 自动聚焦到对应标签页
  *   6. 音频联动：通知弹出时同步播放提示音
+ * 
+ * 浏览器差异处理：
+ *   - Safari: 不支持 vibrate，需在用户手势中请求权限
+ *   - Firefox: vibrate 在非 Android 上无效，静默忽略
+ *   - Chrome/Edge: 完整支持
+ *   - Samsung Internet: 基于 Chromium，支持良好
  */
 
 import { playNotificationSound } from '@client/utils/notificationSound';
 
 const NOTIFICATION_GRANTED_KEY = 'chat_notification_granted';
+
+/** ★ 检测浏览器是否支持振动（Safari/桌面Firefox不支持） */
+function supportsVibrate(): boolean {
+  return 'vibrate' in navigator;
+}
 
 /** 检查浏览器是否支持通知 */
 export function isNotificationSupported(): boolean {
@@ -82,19 +93,22 @@ async function showDesktopNotification(
 ): Promise<void> {
   if (!isNotificationSupported() || Notification.permission !== 'granted') return;
 
-  const finalOptions: NotificationOptions = {
+  const finalOptions: NotificationOptions & { vibrate?: number[] } = {
     body,
     icon: options?.icon || '/icons/icon-192.svg',
     badge: options?.badge || '/icons/icon-192.svg',
     tag: options?.tag || 'chat-message',
     data: options?.data,
     requireInteraction: options?.requireInteraction ?? false,
-    vibrate: [200, 100, 200],
     lang: document.documentElement.lang || 'zh-CN',
     dir: 'auto',
     silent: false,
-    // ★ 5-7秒后自动消失（浏览器默认行为，不设置 requireInteraction 即可）
   };
+
+  // ★ 仅在支持 vibrate 的浏览器上添加振动（Safari/桌面Firefox不支持）
+  if (supportsVibrate()) {
+    finalOptions.vibrate = [200, 100, 200];
+  }
 
   try {
     // 优先通过 Service Worker 显示通知（PWA 模式下更可靠）

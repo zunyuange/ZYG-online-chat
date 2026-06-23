@@ -70,6 +70,8 @@ let eventSource: EventSource | null = null;
 let pollingInterval: ReturnType<typeof setInterval> | null = null;
 // ★ 新访客检测：跟踪已见过的 session ID，用于发现新上线访客
 let seenSessionIds: Set<string> = new Set();
+// ★ 已知消息数追踪：记录每个 session 的最后已知消息数量，用于精确检测新消息
+let knownMessageCounts: Map<string, number> = new Map();
 
 export const useStaffStore = create<StaffState>((set, get) => ({
   // Initial state
@@ -218,95 +220,115 @@ export const useStaffStore = create<StaffState>((set, get) => ({
     const { currentSessionId, messages } = get();
 
     try {
-      // Refresh sessions list
+      // 1. 刷新会话列表
       const response = await authFetch('/api/staff/sessions?status=active');
       const result = await response.json();
 
-      if (result.success) {
-        const newSessions = result.data as SessionWithPreview[];
-        const totalUnread = newSessions.reduce((sum, s) => sum + s.unreadByStaff, 0);
-        
-        // Debug: Log unread counts from server
-        console.log('[StaffStore] Sessions from server:');
-        newSessions.forEach(s => {
-          console.log(`  - ${s.visitorName}: unreadByStaff=${s.unreadByStaff}`);
-        });
-        console.log(`[StaffStore] Total unread: ${totalUnread}`);
-        
-        // Check if current session is still active
-        const isCurrentSessionActive = newSessions.some((s) => s.id === currentSessionId);
-        
-        // If current session is no longer in the active list (it was closed), clear it
-        if (currentSessionId && !isCurrentSessionActive) {
-          console.log(`[StaffStore] Current session ${currentSessionId} is no longer active, clearing selection`);
-          set({ 
-            sessions: newSessions, 
-            totalUnread,
-            currentSessionId: null 
-          });
-          return;
-        }
-        
-        // ★ 新访客检测：发现之前未见过的 session，触发通知
-        if (seenSessionIds.size > 0) {
-          for (const s of newSessions) {
-            if (!seenSessionIds.has(s.id)) {
-              // 新上线访客！
-              console.log(`[StaffStore] New visitor detected: ${s.visitorName} (${s.id})`);
-              notifyNewVisitorSession(s.visitorName || '访客', s.id, s.businessSlug);
-            }
-          }
-        }
-        // 更新已见 session 列表
-        seenSessionIds = new Set(newSessions.map((s) => s.id));
+      if (!result.success) return;
 
-        set({ sessions: newSessions, totalUnread });
+      const newSessions = result.data as SessionWithPreview[];
+      const totalUnread = newSessions.reduce((sum, s) => sum + s.unreadByStaff, 0);
+      
+      // Debug: 打印未读数
+      if (totalUnread > 0) {
+        console.log('[StaffStore] Sessions with unread:',
+          newSessions.filter(s => s.unreadByStaff > 0).map(s => `${s.visitorName}(${s.unreadByStaff})`).join(', '));
       }
 
-      // If we have a selected session, check for new messages
-      if (currentSessionId) {
-        const params = new URLSearchParams({ sessionId: currentSessionId, limit: '50' });
-        const msgResponse = await authFetch(`/api/staff/messages?${params}`);
-        const msgResult = await msgResponse.json();
+      // 检查当前会话是否已关闭
+      const isCurrentSessionActive = newSessions.some((s) => s.id === currentSessionId);
+      if (currentSessionId && !isCurrentSessionActive) {
+        console.log(`[StaffStore] Current session ${currentSessionId} is no longer active, clearing selection`);
+        set({ sessions: newSessions, totalUnread, currentSessionId: null });
+        return;
+      }
 
-        if (msgResult.success && msgResult.data) {
+      // ★ 新访客检测：发现之前未见过的 session
+      if (seenSessionIds.size > 0) {
+        for (const s of newSessions) {
+          if (!seenSessionIds.has(s.id)) {
+            console.log(`[StaffStore] New visitor detected: ${s.visitorName} (${s.id})`);
+            notifyNewVisitorSession(s.visitorName || '访客', s.id, s.businessSlug);
+          }
+        }
+      }
+      seenSessionIds = new Set(newSessions.map((s) => s.id));
+
+      // ★ 2. 检测所有会话的消息变化（不只是选中会话）
+      //    对每个 unreadByStaff > 0 或已知消息数变化的 session，拉取新消息
+      const sessionsToCheck = newSessions.filter((s) => {
+        // 新会话（未在 messages Map 中）或无消息记录 → 一定需要检查
+        if (!messages.has(s.id)) return true;
+        const localMsgs = messages.get(s.id)!;
+        // 已知消息数不等于服务端返回的消息数 → 有新消息
+        // (用 knownMessageCounts 追踪上次拉取后的消息数)
+        const known = knownMessageCounts.get(s.id) || 0;
+        // 简单判断：unread > 0 或已知数不等于本地数
+        return s.unreadByStaff > 0 || localMsgs.length !== known;
+      });
+
+      if (sessionsToCheck.length > 0) {
+        console.log(`[StaffStore] Checking ${sessionsToCheck.length} session(s) for new messages:`,
+          sessionsToCheck.map(s => s.id.substring(0, 8)).join(', '));
+
+        // ★ 3. 并行拉取所有需检查会话的消息（最多 10 个，避免请求风暴）
+        const checkLimit = sessionsToCheck.slice(0, 10);
+        const results = await Promise.allSettled(
+          checkLimit.map(async (s) => {
+            const params = new URLSearchParams({ sessionId: s.id, limit: '50' });
+            const msgResponse = await authFetch(`/api/staff/messages?${params}`);
+            const msgResult = await msgResponse.json();
+            return { sessionId: s.id, data: msgResult };
+          })
+        );
+
+        // ★ 4. 处理每个会话的新消息
+        const currentMessages = get().messages;
+        const newMessagesMap = new Map(currentMessages);
+
+        for (const r of results) {
+          if (r.status !== 'fulfilled') continue;
+          const { sessionId, data: msgResult } = r.value;
+          if (!msgResult.success || !msgResult.data) continue;
+
           const serverMessages = msgResult.data as Message[];
-          const currentMsgs = messages.get(currentSessionId) || [];
-          
-          // Check if any messages have updated isRead status
-          let hasReadStatusChanges = false;
-          const updatedMessages = currentMsgs.map((localMsg) => {
+          const localMsgs = currentMessages.get(sessionId) || [];
+          const existingIds = new Set(localMsgs.map((m) => m.id));
+          const newMsgs = serverMessages.filter((m) => !existingIds.has(m.id));
+
+          // 更新已知消息数
+          knownMessageCounts.set(sessionId, serverMessages.length);
+
+          // 同步 isRead 状态
+          let hasReadChanges = false;
+          const updatedLocalMsgs = localMsgs.map((localMsg) => {
             const serverMsg = serverMessages.find((m) => m.id === localMsg.id);
             if (serverMsg && serverMsg.isRead !== localMsg.isRead) {
-              hasReadStatusChanges = true;
-              console.log(`[StaffStore] Message ${localMsg.id} read status changed from ${localMsg.isRead} to ${serverMsg.isRead}`);
+              hasReadChanges = true;
               return { ...localMsg, isRead: serverMsg.isRead };
             }
             return localMsg;
           });
 
-          // Find new messages
-          const existingIds = new Set(currentMsgs.map((m) => m.id));
-          const toAdd = serverMessages.filter((m) => !existingIds.has(m.id));
-
-          // Update read status changes
-          if (hasReadStatusChanges && toAdd.length === 0) {
-            const newMessages = new Map(messages);
-            newMessages.set(currentSessionId, updatedMessages);
-            set({ messages: newMessages });
+          if (newMsgs.length > 0 || hasReadChanges) {
+            newMessagesMap.set(sessionId, hasReadChanges ? updatedLocalMsgs : localMsgs);
           }
 
-          // ★ 关键修复：新消息必须通过 addMessage 添加以触发通知
-          if (toAdd.length > 0) {
-            console.log(`[StaffStore] Found ${toAdd.length} new messages via polling, dispatching via addMessage`);
-            for (const msg of toAdd) {
+          // ★ 核心：每个新消息通过 addMessage 触发通知
+          if (newMsgs.length > 0) {
+            console.log(`[StaffStore] Found ${newMsgs.length} new message(s) for session ${sessionId.substring(0, 8)}`);
+            for (const msg of newMsgs) {
               get().addMessage(msg);
             }
-            // Auto-mark as read after receiving new messages
-            get().markAsRead(currentSessionId);
+            // 消息添加到 Map 后更新（addMessage 会修改 Map）
+          } else if (hasReadChanges) {
+            // 仅 isRead 变化，直接更新 Map
+            set({ messages: newMessagesMap });
           }
         }
       }
+
+      set({ sessions: newSessions, totalUnread });
     } catch (error) {
       console.error('Polling error:', error);
     }
