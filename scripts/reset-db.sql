@@ -1,8 +1,3 @@
--- ==========================================
--- 数据库初始化脚本
--- 适用于 Cloudflare D1 数据库初始化
--- ==========================================
-
 -- Drop all tables in correct order (respecting foreign keys)
 DROP TABLE IF EXISTS messages;
 DROP TABLE IF EXISTS evaluations;
@@ -101,7 +96,6 @@ product_url TEXT,
 created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000));
 
 -- Create staff_users table for multi-user authentication (商家/客服表)
--- business_id = 0 表示商家主账号，business_id > 0 表示归属到该商家的客服
 CREATE TABLE IF NOT EXISTS staff_users (
 id INTEGER PRIMARY KEY AUTOINCREMENT, 
 business_id INTEGER NOT NULL DEFAULT 0, 
@@ -303,19 +297,6 @@ reject_reason TEXT,
 created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), 
 updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000));
 
--- Create visitor_custom_fields table for custom visitor field definitions
-CREATE TABLE IF NOT EXISTS visitor_custom_fields (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-business_id INTEGER NOT NULL DEFAULT 0,
-field_key TEXT NOT NULL,
-label TEXT NOT NULL,
-type TEXT NOT NULL DEFAULT 'text',
-remark TEXT,
-sort_order INTEGER NOT NULL DEFAULT 0,
-is_active INTEGER NOT NULL DEFAULT 1,
-created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
-updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000));
-
 -- Create indexes
 CREATE INDEX IF NOT EXISTS messages_session_id_idx ON messages(session_id);
 CREATE INDEX IF NOT EXISTS messages_created_at_idx ON messages(created_at);
@@ -355,3 +336,19 @@ INSERT OR REPLACE INTO roles (name, description, permissions, is_system, status)
 INSERT OR REPLACE INTO admin_config (key, value, description) VALUES ('siteName', 'CF智能多语言在线客服系统', '网站名称');
 INSERT OR REPLACE INTO admin_config (key, value, description) VALUES ('defaultLanguage', 'zh-CN', '默认语言');
 INSERT OR REPLACE INTO admin_config (key, value, description) VALUES ('enableAuth', 'true', '启用认证');
+
+-- Create visitor_custom_fields table for custom visitor field definitions
+CREATE TABLE IF NOT EXISTS visitor_custom_fields (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  business_id INTEGER NOT NULL DEFAULT 0,
+  field_key TEXT NOT NULL,
+  label TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'text',
+  remark TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+);
+CREATE INDEX IF NOT EXISTS visitor_custom_fields_business_id_idx ON visitor_custom_fields(business_id);
+CREATE INDEX IF NOT EXISTS visitor_custom_fields_field_key_idx ON visitor_custom_fields(business_id, field_key);

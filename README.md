@@ -228,16 +228,15 @@ wrangler r2 bucket create zyg-online-chat-uploads
 #### 3. 初始化数据库表
 
 ```bash
-# 使用完整初始化脚本（推荐新部署）
-wrangler d1 execute zyg-online-chat-db --file=src/server/shared/db-init.sql --remote
-
-# 或使用重置脚本（清空所有数据后重新初始化）
+# 使用完整初始化/重置脚本（建表 + 索引 + 初始数据）
 wrangler d1 execute zyg-online-chat-db --file=scripts/reset-db.sql --remote
 ```
 
 > **数据库初始化脚本说明：**
-> - `src/server/shared/db-init.sql` — 唯一数据库初始化脚本，包含完整建表 + 初始数据（默认管理员 admin/123456、默认商家），首次部署和重置数据库通用
+> - `scripts/reset-db.sql` — 完整数据库重置脚本，包含全部建表 + 索引 + 初始数据（默认管理员 admin/123456、默认商家），首次部署和重置数据库通用
 > - `scripts/d1-migrate-*.sql` — 增量迁移脚本，用于已有数据库的列/表补充
+> - `scripts/d1-fix-*.sql` — 紧急修复脚本，修复缺失关键列和数据结构问题
+> - `scripts/add-*.sql` — 单表/单列创建脚本
 > - **运行时自动初始化**：项目启动时 `db.ts` 会自动检测并创建缺失的表/列/索引，无需手动执行 SQL
 
 初始化后系统包含：
@@ -311,8 +310,7 @@ ZYG-online-chat/
 │   │   │   ├── translate-service.ts # 6 级翻译引擎链
 │   │   │   └── bark-service.ts     # Bark 推送通知
 │   │   └── shared/                 # 基础设施层
-│   │       ├── db.ts               # 数据库抽象层
-│   │       └── db-init.sql         # 数据库初始化 SQL
+│   │       └── db.ts               # 数据库抽象层（运行时自动初始化）
 │   │
 │   └── shared/                     # 共享类型与国际化
 │       ├── types.ts                # 核心类型定义
@@ -327,8 +325,10 @@ ZYG-online-chat/
 │   ├── INTERACTION.md              # 交互流程文档
 │   └── CLOUDFLARE_WORKERS_DEPLOYMENT.md  # 部署详细指南
 ├── scripts/                        # 脚本工具
-│   ├── reset-db.sql                # 数据库重置脚本
+│   ├── reset-db.sql                # 数据库完整重置脚本（建表+索引+初始数据）
 │   ├── d1-migrate-*.sql            # 数据库增量迁移脚本
+│   ├── d1-fix-*.sql                # 数据库紧急修复脚本
+│   ├── add-*.sql                   # 单表/单列创建脚本
 │   └── validate-all.ts             # 全量验证脚本
 ├── public/                         # 静态资源（PWA 图标、清单等）
 ├── wrangler.toml                   # Cloudflare Workers 配置
