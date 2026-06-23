@@ -10,7 +10,6 @@ binding = "ASSETS"
 # Environment variables
 [vars]
 BARK_API = "https://api.day.app"
-STAFF_URL_BASE = "https://zyg-online-chat.linzihai.workers.dev/staff"
 # Auth: Require login for staff panel
 REQUIRE_AUTH = "true"
 
@@ -32,7 +31,6 @@ name = "zyg-online-chat"
 
 [env.production.vars]
 BARK_API = "https://api.day.app"
-STAFF_URL_BASE = "https://zyg-online-chat.dyyz1993.workers.dev/staff"
 REQUIRE_AUTH = "true"
 
 [[env.production.d1_databases]]

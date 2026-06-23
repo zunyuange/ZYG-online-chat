@@ -96,7 +96,6 @@ binding = "ASSETS"
 # 环境变量（非敏感信息）
 [vars]
 BARK_API = "https://api.day.app"
-STAFF_URL_BASE = "https://your-app.workers.dev/staff"
 
 # D1 数据库绑定
 [[d1_databases]]
@@ -119,7 +118,6 @@ name = "zyg-online-chat-prod"
 
 [env.production.vars]
 BARK_API = "https://api.day.app"
-STAFF_URL_BASE = "https://your-app.workers.dev/staff"
 ```
 
 ### 关键配置说明
@@ -564,8 +562,9 @@ export class ChatRoom implements DurableObject {
 ```toml
 [vars]
 BARK_API = "https://api.day.app"
-STAFF_URL_BASE = "https://your-app.workers.dev/staff"
 ```
+
+> **注意**：`STAFF_URL_BASE` 无需配置，系统会根据请求的 `host` 头自动构建客服端 URL。
 
 ### 敏感变量（Secrets）
 
@@ -588,7 +587,6 @@ interface Env {
   // 环境变量
   BARK_KEY?: string;      // Secret
   BARK_API?: string;      // 非敏感
-  STAFF_URL_BASE?: string; // 非敏感
 }
 
 // 通过 c.env 访问

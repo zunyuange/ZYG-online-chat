@@ -10,6 +10,25 @@ let _barkApi: string = 'https://api.day.app';
 let _staffUrlBase: string = 'http://localhost:3010/staff';
 
 /**
+ * Dynamically set staff URL base from the request host
+ * This auto-adapts to any deployment environment:
+ * - Custom domain: https://{name}.linzihai.workers.dev/staff
+ * - Default domain: https://{name}.workers.dev/staff
+ * - Local dev: falls back to http://localhost:3010/staff
+ * 
+ * @param host - The host from the request (e.g., "zyg-online-chat.linzihai.workers.dev")
+ */
+export function setStaffUrlFromHost(host: string): void {
+  if (!host || host.includes('localhost') || host.includes('127.0.0.1')) {
+    // Keep local dev default
+    return;
+  }
+  // Build staff URL from the actual request host
+  _staffUrlBase = `https://${host}/staff`;
+  console.log('[Bark] Staff URL auto-detected:', _staffUrlBase);
+}
+
+/**
  * Initialize Bark service with environment variables
  * Call this from Workers context with c.env
  */

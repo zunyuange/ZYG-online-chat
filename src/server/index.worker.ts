@@ -19,7 +19,7 @@ import { faqRoutes } from './module-faq/routes/faq-routes';
 import { evaluationRoutes } from './module-evaluation/routes/evaluation-routes';
 import { initializeD1Db, getDb } from './shared/db';
 import { initializeR2Storage } from './shared/storage';
-import { initBarkService } from './services/bark-service';
+import { initBarkService, setStaffUrlFromHost } from './services/bark-service';
 import { initAuthService } from './module-auth/services/auth-service';
 import { initTranslateService } from './services/translate-service';
 
@@ -93,11 +93,11 @@ async function ensureInitialized(env: Env): Promise<void> {
     }
 
     // Initialize Bark service with environment variables
+    // Note: STAFF_URL_BASE is now auto-detected from request host per-request
     console.log('[Worker] Initializing Bark service...');
     initBarkService({
       BARK_KEY: env.BARK_KEY,
       BARK_API: env.BARK_API,
-      STAFF_URL_BASE: env.STAFF_URL_BASE,
     });
     console.log('[Worker] Bark service initialized');
 
@@ -174,6 +174,19 @@ app.use('*', cors({
 // Initialize before API routes
 app.use('*', async (c, next) => {
   await ensureInitialized(c.env);
+  await next();
+});
+
+// Auto-detect staff URL from request host (runs on every request)
+// This dynamically constructs STAFF_URL_BASE so it follows the project name
+// and custom domain settings automatically:
+//   - Custom domain: https://{name}.{custom}.workers.dev/staff
+//   - Default domain: https://{name}.workers.dev/staff
+app.use('*', async (c, next) => {
+  const host = c.req.header('host');
+  if (host) {
+    setStaffUrlFromHost(host);
+  }
   await next();
 });
 

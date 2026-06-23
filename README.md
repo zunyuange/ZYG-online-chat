@@ -383,8 +383,9 @@ ZYG-online-chat/
 | `JWT_SECRET` | JWT 签名密钥（至少 32 字符） | ✅ 必需 |
 | `BARK_API` | Bark 推送 API 地址 | ❌ 可选 |
 | `BARK_KEY` | Bark 推送密钥 | ❌ 可选 |
-| `STAFF_URL_BASE` | 客服端完整 URL（用于推送链接） | ❌ 可选 |
 | `REQUIRE_AUTH` | 是否要求客服登录（`"true"` / `"false"`） | ❌ 可选 |
+
+> **注意**：`STAFF_URL_BASE` 不再需要在配置文件中设置。系统会根据请求的 `host` 头自动构建客服端的完整 URL，自动适配自定义域名或默认 Workers 域名。
 
 ---
 
