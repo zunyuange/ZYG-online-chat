@@ -8,10 +8,11 @@ import { useEffect } from 'react';
 import { I18nProvider } from '@client/context/I18nContext';
 import { useI18n } from '@client/context/I18nContext';
 import { useSiteSettings } from '@client/hooks/useSiteSettings';
+import { LanguageSwitcher } from '@client/components/LanguageSwitcher';
 import { MessageCircle, Globe, Shield, Zap, Users, FileText, Link2, Code2, ArrowRight } from 'lucide-react';
 
 function HomeContent() {
-  const { t, locale, setLocale, supportedLocales } = useI18n();
+  const { t, supportedLocales } = useI18n();
   const { siteName } = useSiteSettings();
 
   const platformName = siteName || t('service_title');
@@ -124,36 +125,10 @@ function HomeContent() {
           {/* Language Switcher */}
           <div style={{
             display: 'flex',
-            alignItems: 'center',
             justifyContent: 'center',
-            gap: '8px',
             marginBottom: '24px',
-            flexWrap: 'wrap',
           }}>
-            <Globe size={16} color="rgba(255,255,255,0.55)" />
-            <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)', marginRight: '4px' }}>
-              {t('home_lang_switch')}:
-            </span>
-            {supportedLocales?.map((l) => (
-              <button
-                key={l.code}
-                onClick={() => setLocale(l.code as any)}
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  border: locale === l.code ? '1px solid rgba(24,144,255,0.5)' : '1px solid rgba(255,255,255,0.15)',
-                  backgroundColor: locale === l.code ? 'rgba(24,144,255,0.15)' : 'transparent',
-                  color: locale === l.code ? '#1890ff' : 'rgba(255,255,255,0.65)',
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  fontWeight: locale === l.code ? 600 : 400,
-                }}
-                title={l.name}
-              >
-                {l.nativeName}
-              </button>
-            ))}
+            <LanguageSwitcher />
           </div>
 
           {/* CTA Button */}
