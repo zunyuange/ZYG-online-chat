@@ -25,7 +25,7 @@ interface MessageItemProps {
   t?: (key: string) => string;
   /** 当前界面语言，用于翻译目标 */
   currentLang?: string;
-  /** 是否显示翻译按钮（仅非己方消息且无翻译时显示） */
+  /** 是否显示翻译渠道按钮（非己方文本消息时显示，点击可切换翻译引擎） */
   showTranslate?: boolean;
   /** 翻译完成回调，更新父组件消息列表 */
   onTranslated?: (messageId: number, translatedContent: string, translateEngine?: string) => void;
@@ -186,8 +186,10 @@ export function MessageItem({
   const effectiveTranslated = localTranslated || message.translatedContent;
   // 使用的翻译引擎
   const translateEngine = message.translateEngine || '';
-  // 是否显示翻译按钮：文本消息 + 尚无翻译 + 非己方消息 + 有目标语言
+  // 是否显示翻译渠道按钮：文本消息 + 尚无翻译 + 非己方消息 + 有目标语言
   const canTranslate = showTranslate && isTextMessage && !effectiveTranslated && !!currentLang && !isOwn;
+  // 是否已翻译且有内容显示（用于内嵌翻译下拉菜单）
+  const hasTranslation = showTranslate && isTextMessage && !!effectiveTranslated && !isOwn;
 
   const placeholderStyle: React.CSSProperties = {
     width: '180px',
@@ -492,23 +494,113 @@ export function MessageItem({
           </span>
         )}
         {canTranslate && (
-          <button
-            onClick={handleTranslate}
-            disabled={translating}
-            title={t('click_to_translate') || 'Translate'}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: translating ? 'default' : 'pointer',
-              padding: '2px',
-              display: 'flex',
-              alignItems: 'center',
-              opacity: translating ? 0.5 : 0.7,
-              transition: 'opacity 0.2s',
-            }}
-          >
-            <Languages size={14} />
-          </button>
+          <div ref={dropdownRef} style={{ position: 'relative', display: 'inline-flex' }}>
+            {/* 翻译渠道选择按钮 — 始终显示下拉菜单而非直接翻译 */}
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowEngineDropdown(!showEngineDropdown); }}
+              disabled={translating}
+              title={t('click_to_choose_engine') || '选择翻译渠道'}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '2px',
+                padding: '2px 5px',
+                border: '1px solid #d9d9d9',
+                borderRadius: '4px',
+                backgroundColor: translating ? '#f5f5f5' : '#fafafa',
+                cursor: translating ? 'default' : 'pointer',
+                fontSize: '11px',
+                color: '#1890ff',
+                transition: 'all 0.15s',
+              }}
+            >
+              <Languages size={12} />
+              <span>{t('translate') || '翻译'}</span>
+              <ChevronDown size={10} style={{ opacity: 0.5 }} />
+            </button>
+
+            {/* 翻译引擎下拉菜单 */}
+            {showEngineDropdown && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                marginTop: '4px',
+                backgroundColor: '#fff',
+                border: '1px solid #e8e8e8',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+                zIndex: 1000,
+                minWidth: '200px',
+                overflow: 'hidden',
+              }}>
+                {/* 标题 */}
+                <div style={{
+                  padding: '6px 12px',
+                  fontSize: '11px',
+                  color: '#999',
+                  borderBottom: '1px solid #f0f0f0',
+                  backgroundColor: '#fafbfc',
+                }}>
+                  {t('choose_translate_engine') || '选择翻译渠道'}
+                </div>
+
+                {/* 自动翻译（全部引擎） */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowEngineDropdown(false); handleTranslate(); }}
+                  disabled={translating}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: 'none',
+                    backgroundColor: '#e6f7ff',
+                    cursor: translating ? 'default' : 'pointer',
+                    fontSize: '12px',
+                    color: '#1890ff',
+                    textAlign: 'left',
+                    fontWeight: 500,
+                    borderBottom: '1px solid #e8e8e8',
+                    transition: 'background-color 0.15s',
+                  }}
+                >
+                  <span>🚀</span>
+                  <span style={{ flex: 1 }}>{t('auto_translate_all') || '自动翻译（推荐）'}</span>
+                </button>
+
+                {/* 各翻译引擎选项 */}
+                {TRANSLATE_ENGINES.map((eng) => (
+                  <button
+                    key={eng.key}
+                    onClick={(e) => { e.stopPropagation(); handleReTranslate(eng.key); }}
+                    disabled={translating}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: 'none',
+                      backgroundColor: '#fff',
+                      cursor: translating ? 'default' : 'pointer',
+                      fontSize: '12px',
+                      color: '#333',
+                      textAlign: 'left',
+                      transition: 'background-color 0.15s',
+                      borderBottom: '1px solid #f5f5f5',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#fafafa'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; }}
+                  >
+                    <span>{eng.icon}</span>
+                    <span style={{ flex: 1 }}>{eng.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
         {translateError && (
           <span style={{
