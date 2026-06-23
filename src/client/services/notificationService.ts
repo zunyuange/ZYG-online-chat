@@ -135,6 +135,7 @@ export async function notifyNewStaffMessage(
   staffName: string,
   messagePreview: string,
   sessionId?: string,
+  business?: string,
 ): Promise<void> {
   // 页面可见：只播放提示音，不弹通知
   if (!isPageHidden()) {
@@ -148,7 +149,7 @@ export async function notifyNewStaffMessage(
 
   await showDesktopNotification(title, body, {
     tag: sessionId ? `chat-${sessionId}` : 'chat-message',
-    data: sessionId ? { sessionId } : undefined,
+    data: { sessionId: sessionId || '', business: business || '', page: 'chat' },
   });
 }
 
@@ -212,13 +213,14 @@ export async function notifyTransferReceived(
   fromStaffName: string,
   visitorName: string,
   sessionId?: string,
+  business?: string,
 ): Promise<void> {
   const title = '【对话转接】';
   const body = `${fromStaffName} 将 ${visitorName || '访客'} 的对话转接给你`;
 
   await showDesktopNotification(title, body, {
     tag: sessionId ? `staff-transfer-${sessionId}` : 'staff-transfer',
-    data: { sessionId: sessionId || '', page: 'staff' },
+    data: { sessionId: sessionId || '', business: business || '', page: 'staff' },
     requireInteraction: true,
   });
 }

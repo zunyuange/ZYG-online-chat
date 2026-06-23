@@ -84,8 +84,19 @@ export function ChatPage() {
     );
     store.setState({ messages: updatedMessages });
   }, []);
+  // ★ 页面获得焦点时：通知点击导航 → 重新初始化URL会话 + 自动标记已读
   useEffect(() => {
     const handleFocus = () => {
+      // ★ SW 导航后 URL 中的 sessionId 可能与当前不同，需要重新匹配
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlSessionId = urlParams.get('s');
+      if (urlSessionId && session?.id !== urlSessionId) {
+        console.log('[ChatPage] Focus: URL session changed, re-initializing from URL', urlSessionId);
+        initSession();
+        return;
+      }
+
+      // 同一会话 → 自动标记已读
       if (session && session.unreadByVisitor > 0) {
         markAsRead();
       }
@@ -93,7 +104,7 @@ export function ChatPage() {
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [session, markAsRead]);
+  }, [session, markAsRead, initSession]);
 
   const handleSend = (content: string, type: ContentType) => {
     sendMessage(content, type);

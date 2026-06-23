@@ -172,15 +172,30 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // ★ 优先聚焦已有窗口
+      // ★ 优先聚焦已有窗口，同时导航到正确的 session URL
       for (const client of clientList) {
         const clientUrl = client.url;
         // 匹配同类型页面（staff 或 chat）
-        if (targetPage === 'staff' && clientUrl.includes('/staff') && 'focus' in client) {
-          return client.focus();
+        if (targetPage === 'staff' && clientUrl.includes('/staff')) {
+          if ('navigate' in client) {
+            // ★ 先导航到正确的 session URL，再聚焦
+            return client.navigate(url).then(() => {
+              if ('focus' in client) client.focus();
+            });
+          }
+          if ('focus' in client) {
+            return client.focus();
+          }
         }
-        if (targetPage === 'chat' && clientUrl.includes('/chat') && 'focus' in client) {
-          return client.focus();
+        if (targetPage === 'chat' && clientUrl.includes('/chat')) {
+          if ('navigate' in client) {
+            return client.navigate(url).then(() => {
+              if ('focus' in client) client.focus();
+            });
+          }
+          if ('focus' in client) {
+            return client.focus();
+          }
         }
       }
       // 无匹配窗口则打开新窗口

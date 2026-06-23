@@ -196,16 +196,26 @@ export function StaffPage() {
     };
   }, [isAuthenticated]);
 
-  // ★ 页面获得焦点时自动标记已读
+  // ★ 页面获得焦点时：通知点击导航 → 重新初始化URL会话 + 自动标记已读
   useEffect(() => {
     const handleFocus = () => {
+      // ★ SW 导航后 URL 中的 sessionId 可能与当前不同，需要重新匹配
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlSessionId = urlParams.get('s');
+      if (urlSessionId && urlSessionId !== currentSessionId) {
+        console.log('[StaffPage] Focus: URL session changed, re-initializing from URL', urlSessionId);
+        initFromUrl();
+        return;
+      }
+
+      // 同一会话 → 自动标记已读
       if (currentSessionId && totalUnread > 0) {
         markAsRead(currentSessionId);
       }
     };
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [currentSessionId, totalUnread, markAsRead]);
+  }, [currentSessionId, totalUnread, markAsRead, initFromUrl]);
 
   // Detect mobile on mount and resize
   useEffect(() => {

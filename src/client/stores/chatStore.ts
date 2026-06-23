@@ -567,7 +567,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const preview = typeof message.content === 'string'
         ? message.content
         : `[${message.contentType || 'message'}]`;
-      notifyNewStaffMessage(staffName, preview, session?.id);
+      notifyNewStaffMessage(staffName, preview, session?.id, session?.businessSlug);
 
       // 闪烁标题栏（未读消息数）
       if (updatedSession) {
