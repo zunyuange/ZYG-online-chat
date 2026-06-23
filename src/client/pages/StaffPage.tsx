@@ -223,7 +223,20 @@ export function StaffPage() {
     return () => window.removeEventListener('focus', handleFocus);
   }, [currentSessionId, totalUnread, markAsRead, initFromUrl]);
 
-  // Detect mobile on mount and resize
+  // ★ Service Worker postMessage 降级：当 SW 无法 navigate 时，通过消息通知页面自行导航
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'NOTIFICATION_NAVIGATE' && event.data?.url) {
+        const targetUrl = event.data.url as string;
+        console.log('[StaffPage] SW postMessage: navigating to', targetUrl);
+        // 直接用 window.location.href 跳转，触发 React Router 重新渲染
+        window.location.href = targetUrl;
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handleMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', handleMessage);
+  }, []);
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(isMobileDevice());

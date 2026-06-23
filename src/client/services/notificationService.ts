@@ -113,21 +113,46 @@ async function showDesktopNotification(
   try {
     // 优先通过 Service Worker 显示通知（PWA 模式下更可靠）
     if (swRegistration) {
+      console.log('[Notification] Using ServiceWorker to show notification, tag:', finalOptions.tag);
       await swRegistration.showNotification(title, finalOptions);
     } else {
       // 降级：直接使用 Notification API
+      console.log('[Notification] SW unavailable, using direct Notification API');
       const notification = new Notification(title, finalOptions);
+      // ★ 降级路径也必须支持点击导航
       notification.onclick = () => {
-        window.focus();
         notification.close();
+        const notifyData = finalOptions.data as Record<string, unknown> | undefined;
+        if (notifyData?.page && notifyData?.sessionId) {
+          // 构建目标 URL
+          let targetUrl = notifyData.page === 'staff' ? '/staff' : '/chat';
+          targetUrl += `?s=${encodeURIComponent(String(notifyData.sessionId))}`;
+          if (notifyData.business) {
+            targetUrl += `&business=${encodeURIComponent(String(notifyData.business))}`;
+          }
+          console.log('[Notification] Direct API onclick → navigating to:', targetUrl);
+          // 尝试导航当前窗口（如果已是目标页面）
+          if (window.location.pathname.includes(notifyData.page === 'staff' ? '/staff' : '/chat')) {
+            window.location.href = targetUrl;
+          } else {
+            window.open(targetUrl, '_blank');
+          }
+        } else {
+          window.focus();
+        }
       };
     }
-  } catch {
+  } catch (err) {
+    console.warn('[Notification] ServiceWorker path failed:', err, '→ trying fallback');
     // 降级再试一次
     try {
-      new Notification(title, finalOptions);
+      const fallbackNotification = new Notification(title, finalOptions);
+      fallbackNotification.onclick = () => {
+        fallbackNotification.close();
+        window.focus();
+      };
     } catch {
-      // 彻底失败，静默
+      console.error('[Notification] All notification paths failed');
     }
   }
 }

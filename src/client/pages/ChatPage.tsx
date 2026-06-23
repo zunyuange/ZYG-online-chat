@@ -109,6 +109,20 @@ export function ChatPage() {
     return () => window.removeEventListener('focus', handleFocus);
   }, [session, markAsRead, initSession]);
 
+  // ★ Service Worker postMessage 降级：当 SW 无法 navigate 时，通过消息通知页面自行导航
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'NOTIFICATION_NAVIGATE' && event.data?.url) {
+        const targetUrl = event.data.url as string;
+        console.log('[ChatPage] SW postMessage: navigating to', targetUrl);
+        window.location.href = targetUrl;
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handleMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', handleMessage);
+  }, []);
+
   const handleSend = (content: string, type: ContentType) => {
     sendMessage(content, type);
   };

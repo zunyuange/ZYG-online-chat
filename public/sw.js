@@ -154,6 +154,7 @@ self.addEventListener('notificationclick', (event) => {
 
   const data = event.notification.data || {};
   const action = event.action;
+  console.log('[SW] notificationclick', { action, data });
 
   if (action === 'close') return;
 
@@ -170,44 +171,84 @@ self.addEventListener('notificationclick', (event) => {
     url += `${sep}business=${encodeURIComponent(data.business)}`;
   }
 
+  console.log('[SW] Resolved URL:', url, 'targetPage:', targetPage);
+
+  const fullUrl = new URL(url, self.location.origin).href;
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // ★ 优先聚焦已有窗口，同时导航到正确的 session URL
+      console.log('[SW] Found', clientList.length, 'window(s):', clientList.map(c => c.url));
+      
+      // ★ 1. 优先查找同类型页面，通过 navigate 切换 session
       for (const client of clientList) {
         const clientUrl = client.url;
-        // 匹配同类型页面（staff 或 chat）
+        
         if (targetPage === 'staff' && clientUrl.includes('/staff')) {
-          if ('navigate' in client) {
-            // ★ 先导航到正确的 session URL，再聚焦
-            return client.navigate(url).then(() => {
-              if ('focus' in client) client.focus();
-            });
-          }
-          if ('focus' in client) {
-            return client.focus();
-          }
+          console.log('[SW] Matched staff window:', clientUrl);
+          return navigateAndFocus(client, fullUrl, url);
         }
         if (targetPage === 'chat' && clientUrl.includes('/chat')) {
-          if ('navigate' in client) {
-            return client.navigate(url).then(() => {
-              if ('focus' in client) client.focus();
-            });
-          }
-          if ('focus' in client) {
-            return client.focus();
-          }
+          console.log('[SW] Matched chat window:', clientUrl);
+          return navigateAndFocus(client, fullUrl, url);
         }
       }
-      // 无匹配窗口则打开新窗口
-      if (clients.openWindow) {
-        return clients.openWindow(url);
+
+      // ★ 2. 无同类型窗口 → 找任意窗口通过 postMessage 切换后再聚焦
+      for (const client of clientList) {
+        const clientUrl = client.url;
+        // 匹配主页或同类根路径
+        if (clientUrl.includes('/staff') || clientUrl.includes('/chat') || clientUrl === self.location.origin + '/') {
+          console.log('[SW] Fallback: postMessage navigate to', fullUrl);
+          client.postMessage({ type: 'NOTIFICATION_NAVIGATE', url: fullUrl });
+          if ('focus' in client) client.focus();
+          return;
+        }
       }
+
+      // ★ 3. 完全无匹配 → 打开新窗口
+      console.log('[SW] No matching window, opening new window:', fullUrl);
+      if (clients.openWindow) {
+        return clients.openWindow(fullUrl);
+      }
+    }).catch((err) => {
+      console.error('[SW] notificationclick error:', err);
     })
   );
 });
 
+/**
+ * ★ 尝试 navigate + focus，失败时降级到 postMessage
+ */
+function navigateAndFocus(client, fullUrl, relativeUrl) {
+  // 如果 URL 已经是目标 URL，直接聚焦即可
+  if (client.url === fullUrl) {
+    console.log('[SW] URL already matches, just focusing');
+    if ('focus' in client) return client.focus();
+    return;
+  }
+
+  if ('navigate' in client) {
+    // 先导航到正确 URL，再聚焦
+    return client.navigate(relativeUrl).then(() => {
+      console.log('[SW] Navigated successfully, now focusing');
+      if ('focus' in client) client.focus();
+    }).catch((err) => {
+      console.warn('[SW] navigate() failed:', err, '→ fallback to postMessage');
+      // 导航失败 → 尝试通过 postMessage 通知页面自行导航
+      client.postMessage({ type: 'NOTIFICATION_NAVIGATE', url: fullUrl });
+      if ('focus' in client) client.focus();
+    });
+  }
+
+  // 不支持 navigate → postMessage 降级
+  console.log('[SW] navigate not supported, using postMessage');
+  client.postMessage({ type: 'NOTIFICATION_NAVIGATE', url: fullUrl });
+  if ('focus' in client) return client.focus();
+}
+
 // Handle messages from clients
 self.addEventListener('message', (event) => {
+  console.log('[SW] message received:', event.data);
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
