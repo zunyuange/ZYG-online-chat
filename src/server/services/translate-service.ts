@@ -2,12 +2,11 @@
  * 免费翻译 API 服务（无需任何 API Key）
  * 
  * 翻译引擎优先级（自动翻译链）:
- * 1. PearApi AI万能翻译 ⭐（首选，基于大模型，智能翻译质量最高）
+ * 1. PearApi 万能翻译 ⭐（首选，自动检测语言，支持多翻译方向，免费稳定）
  * 2. SimplyTranslate AI（免费 RESTful，196+ 语言，100次/分钟）
- * 3. PearApi 万能翻译（免费，自动检测语言，支持13种翻译方向）
- * 4. Google Translate（免费稳定，CF Worker 上可靠）
- * 5. MyMemory（免费后备，每天 1000~10000 词）
- * 6. 返回原文（所有引擎均失败时降级）
+ * 3. Google Translate（免费稳定，CF Worker 上可靠）
+ * 4. MyMemory（免费后备，每天 1000~10000 词）
+ * 5. 返回原文（所有引擎均失败时降级）
  */
 import { getDb } from '@server/shared/db';
 
@@ -498,66 +497,8 @@ async function callPearApiTranslate(
   return text;
 }
 
-// ==========================================
-// 🟠 PearApi AI万能翻译 - 第5级
-// 免费，基于大模型的智能翻译
-// ==========================================
-async function callPearApiAITranslate(
-  text: string,
-  targetLang: string,
-  sourceLang: string = 'auto'
-): Promise<string> {
-  // 本地检测源语言，提供更精准的 source_lang 参数
-  let sl: string;
-  if (sourceLang !== 'auto') {
-    sl = sourceLang.split('-')[0].toLowerCase();
-  } else {
-    const detected = detectSourceLanguage(text);
-    sl = detected && detected !== 'unknown' ? detected.split('-')[0].toLowerCase() : '';
-  }
-  const tl = targetLang.split('-')[0].toLowerCase();
-  
-  let url = `https://api.pearapi.ai/api/translate/ai/?text=${encodeURIComponent(text)}&target_lang=${tl}`;
-  if (sl) url += `&source_lang=${sl}`;
-
-  console.log(`[TranslateService-PearApiAI] Calling: ${sl || 'auto'}→${tl}, textLen=${text.length}`);
-
-  let response: Response;
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
-    response = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeoutId);
-  } catch (fetchError: any) {
-    console.error('[TranslateService-PearApiAI] ❌ Network error:', fetchError?.name || 'Unknown', fetchError?.message || '');
-    return text;
-  }
-
-  if (!response.ok) {
-    console.error(`[TranslateService-PearApiAI] ❌ HTTP error: ${response.status}`);
-    return text;
-  }
-
-  try {
-    const result: any = await response.json();
-    // PearApi AI: code 是整数 200
-    if (result.code === 200 && result.data) {
-      const translated = typeof result.data === 'string' ? result.data : (result.data.translate || '');
-      if (translated && translated.trim() !== text.trim()) {
-        console.log(`[TranslateService-PearApiAI] ✅ Result: "${translated.substring(0, 50)}..."`);
-        return translated;
-      }
-    }
-    console.warn('[TranslateService-PearApiAI] ⚠️ Unexpected response:', JSON.stringify(result).substring(0, 200));
-  } catch (parseError) {
-    console.error('[TranslateService-PearApiAI] ❌ JSON parse error:', parseError);
-  }
-  return text;
-}
-
 /** 所有支持的翻译引擎列表（按推荐优先级排序，用于前端下拉菜单） */
 export const ALL_TRANSLATE_ENGINES = [
-  { key: 'pearapi_ai', label: 'PearApi AI万能翻译' },
   { key: 'pearapi', label: 'PearApi 万能翻译' },
   { key: 'simplytranslate', label: 'SimplyTranslate AI' },
   { key: 'google', label: 'Google Translate' },
@@ -597,9 +538,6 @@ export async function translateWithEngine(
         break;
       case 'pearapi':
         translated = await callPearApiTranslate(text, targetIso, 'auto');
-        break;
-      case 'pearapi_ai':
-        translated = await callPearApiAITranslate(text, targetIso, 'auto');
         break;
       default:
         return makeResult('');
@@ -793,18 +731,18 @@ export async function translateText(options: TranslateOptions): Promise<Translat
   const targetIso = toIso639Lang(to);
 
   // ==========================================
-  // 🥇 第1级：PearApi AI万能翻译 ⭐（首选，大模型翻译质量最高）
+  // 🥇 第1级：PearApi 万能翻译 ⭐（首选，自动检测语言+精确翻译方向）
   // ==========================================
-  console.log(`[TranslateService] 🥇 Trying PearApi AI (大模型): "${text.substring(0, 50)}..." → ${targetIso}`);
+  console.log(`[TranslateService] 🥇 Trying PearApi: "${text.substring(0, 50)}..." → ${targetIso}`);
   try {
-    const translated = await callPearApiAITranslate(text, targetIso, 'auto');
+    const translated = await callPearApiTranslate(text, targetIso, 'auto');
     if (translated !== text && translated.trim() !== text.trim()) {
-      console.log(`[TranslateService] ✅ PearApi AI success: "${translated.substring(0, 50)}..."`);
-      return { text: translated, engine: 'pearapi_ai', success: true };
+      console.log(`[TranslateService] ✅ PearApi success: "${translated.substring(0, 50)}..."`);
+      return { text: translated, engine: 'pearapi', success: true };
     }
-    console.log('[TranslateService] ⚡ PearApi AI returned same text, falling back...');
+    console.log('[TranslateService] ⚡ PearApi returned same text, falling back...');
   } catch (error) {
-    console.error('[TranslateService] ❌ PearApi AI exception, falling back:', error);
+    console.error('[TranslateService] ❌ PearApi exception, falling back:', error);
   }
 
   // ==========================================
@@ -823,24 +761,9 @@ export async function translateText(options: TranslateOptions): Promise<Translat
   }
 
   // ==========================================
-  // 🥉 第3级：PearApi 万能翻译（自动检测+精确翻译方向）
+  // 🥉 第3级：Google Translate（备选）
   // ==========================================
-  console.log(`[TranslateService] 🥉 Trying PearApi: "${text.substring(0, 50)}..." → ${targetIso}`);
-  try {
-    const translated = await callPearApiTranslate(text, targetIso, 'auto');
-    if (translated !== text && translated.trim() !== text.trim()) {
-      console.log(`[TranslateService] ✅ PearApi success: "${translated.substring(0, 50)}..."`);
-      return { text: translated, engine: 'pearapi', success: true };
-    }
-    console.log('[TranslateService] ⚡ PearApi returned same text, falling back...');
-  } catch (error) {
-    console.error('[TranslateService] ❌ PearApi exception, falling back:', error);
-  }
-
-  // ==========================================
-  // 🏅 第4级：Google Translate（备选）
-  // ==========================================
-  console.log(`[TranslateService] 🏅 Trying Google Translate: "${text.substring(0, 50)}..." → ${targetGoogle}`);
+  console.log(`[TranslateService] 🥉 Trying Google Translate: "${text.substring(0, 50)}..." → ${targetGoogle}`);
   try {
     const translated = await callGoogleTranslate(text, targetGoogle, 'auto');
     if (translated !== text && translated.trim() !== text.trim()) {
@@ -853,7 +776,7 @@ export async function translateText(options: TranslateOptions): Promise<Translat
   }
 
   // ==========================================
-  // 🏅 第5级：MyMemory（最后后备）
+  // 🏅 第4级：MyMemory（最后后备）
   // ==========================================
   console.log(`[TranslateService] 🏅 Trying MyMemory: "${text.substring(0, 50)}..." → ${targetIso}`);
   try {

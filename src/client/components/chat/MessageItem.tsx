@@ -8,7 +8,6 @@ import type { Message } from '@shared/types';
 
 /** 翻译引擎列表（与后端 ALL_TRANSLATE_ENGINES 保持一致，按推荐优先级排序） */
 const TRANSLATE_ENGINES = [
-  { key: 'pearapi_ai', label: 'PearApi AI万能翻译', icon: '🤖' },
   { key: 'pearapi', label: 'PearApi 万能翻译', icon: '🔄' },
   { key: 'simplytranslate', label: 'SimplyTranslate AI', icon: '🌍' },
   { key: 'google', label: 'Google Translate', icon: '🔍' },

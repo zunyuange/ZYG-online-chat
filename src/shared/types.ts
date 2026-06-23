@@ -99,7 +99,7 @@ export interface Message {
   contentType: ContentType;
   content: string;
   translatedContent?: string;  // 自动翻译后的内容
-  translateEngine?: string;    // 翻译引擎: 'simplytranslate' | 'google' | 'mymemory' | 'pearapi' | 'pearapi_ai'
+  translateEngine?: string;    // 翻译引擎: 'pearapi' | 'simplytranslate' | 'google' | 'mymemory'
   translatedAt?: number;       // 翻译时间戳
   thumbnailUrl?: string;
   fileName?: string;
