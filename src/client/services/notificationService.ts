@@ -15,15 +15,33 @@
  *   - Firefox: vibrate 在非 Android 上无效，静默忽略
  *   - Chrome/Edge: 完整支持
  *   - Samsung Internet: 基于 Chromium，支持良好
+ * 
+ * ★ 多语言：通知标题/内容自动跟随当前界面语言
  */
 
 import { playNotificationSound } from '@client/utils/notificationSound';
+import { translate } from '@shared/i18n';
 
 const NOTIFICATION_GRANTED_KEY = 'chat_notification_granted';
 
 /** ★ 检测浏览器是否支持振动（Safari/桌面Firefox不支持） */
 function supportsVibrate(): boolean {
   return 'vibrate' in navigator;
+}
+
+/** ★ 获取当前UI语言（通知标题/内容使用） */
+function getCurrentLocale(): string {
+  return localStorage.getItem('chat_locale') || document.documentElement.lang || 'zh-CN';
+}
+
+/** ★ 获取多语言通知文案 */
+function t(key: string, fallback: string): string {
+  try {
+    const locale = getCurrentLocale();
+    return translate(key as any, locale as any) || fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 /** 检查浏览器是否支持通知 */
@@ -181,7 +199,7 @@ export async function notifyNewStaffMessage(
     return;
   }
 
-  const title = `【新消息】${staffName || '客服'}`;
+  const title = t('notif_staff_msg_title', '【新消息】{name}').replace('{name}', staffName || t('staff', '客服'));
   const body = messagePreview.length > 60
     ? messagePreview.substring(0, 60) + '...'
     : messagePreview;
@@ -209,7 +227,7 @@ export async function notifyNewVisitorMessage(
     return;
   }
 
-  const title = `【新消息】${visitorName || '访客'}`;
+  const title = t('notif_visitor_msg_title', '【新消息】{name}').replace('{name}', visitorName || t('visitor', '访客'));
   const body = messagePreview.length > 60
     ? messagePreview.substring(0, 60) + '...'
     : messagePreview;
@@ -234,8 +252,8 @@ export async function notifyNewVisitorSession(
     return;
   }
 
-  const title = '【新访客提示】';
-  const body = `提示：${visitorName || '新访客'}进入，请及时接待`;
+  const title = t('notif_new_visitor_title', '【新访客提示】');
+  const body = t('notif_new_visitor_body', '提示：{name}进入，请及时接待').replace('{name}', visitorName || t('visitor', '新访客'));
 
   await showDesktopNotification(title, body, {
     tag: sessionId ? `staff-new-${sessionId}` : 'staff-new-visitor',
@@ -254,8 +272,10 @@ export async function notifyTransferReceived(
   sessionId?: string,
   business?: string,
 ): Promise<void> {
-  const title = '【对话转接】';
-  const body = `${fromStaffName} 将 ${visitorName || '访客'} 的对话转接给你`;
+  const title = t('notif_transfer_title', '【对话转接】');
+  const body = t('notif_transfer_body', '{from} 将 {visitor} 的对话转接给你')
+    .replace('{from}', fromStaffName)
+    .replace('{visitor}', visitorName || t('visitor', '访客'));
 
   await showDesktopNotification(title, body, {
     tag: sessionId ? `staff-transfer-${sessionId}` : 'staff-transfer',

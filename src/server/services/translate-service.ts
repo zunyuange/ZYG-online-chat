@@ -389,7 +389,7 @@ async function callSimplyTranslate(
 }
 
 // ==========================================
-// 🟡 Google Translate - 备选方案
+// 🟡 Google Translate - 备选方案（双URL容灾）
 // ==========================================
 async function callGoogleTranslate(
   text: string,
@@ -398,47 +398,57 @@ async function callGoogleTranslate(
 ): Promise<string> {
   const src = sourceLang === 'auto' ? '' : sourceLang;
   const encoded = encodeURIComponent(text);
-  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${src || 'auto'}&tl=${targetLang}&dt=t&q=${encoded}`;
 
-  console.log(`[TranslateService-Google] Calling: ${src || 'auto'}→${targetLang}, textLen=${text.length}`);
+  // ★ 双URL容灾：gtx 客户端为主，m 客户端为备
+  const urls = [
+    `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${src || 'auto'}&tl=${targetLang}&dt=t&q=${encoded}`,
+    `https://translate.google.com/translate_a/single?client=dict-chrome-ex&sl=${src || 'auto'}&tl=${targetLang}&dt=t&q=${encoded}`,
+  ];
 
-  let response: Response;
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
-    response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; CloudflareWorker/1.0)',
-      },
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-  } catch (fetchError: any) {
-    console.error('[TranslateService-Google] ❌ Network error:', fetchError?.name || 'Unknown', fetchError?.message || '');
-    return text;
-  }
+  for (let i = 0; i < urls.length; i++) {
+    const url = urls[i];
+    console.log(`[TranslateService-Google] 🔄 Attempt ${i + 1}/${urls.length}: ${src || 'auto'}→${targetLang}, textLen=${text.length}`);
 
-  if (!response.ok) {
-    console.error(`[TranslateService-Google] ❌ HTTP error: ${response.status}`);
-    return text;
-  }
-
-  try {
-    const result: any = await response.json();
-    if (Array.isArray(result) && result[0] && Array.isArray(result[0])) {
-      const translated = result[0]
-        .filter((item: any) => Array.isArray(item) && item[0])
-        .map((item: any[]) => item[0])
-        .join('');
-      if (translated && translated.trim() !== text.trim()) {
-        console.log(`[TranslateService-Google] ✅ Result: "${translated.substring(0, 50)}..."`);
-        return translated;
-      }
+    let response: Response;
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+    } catch (fetchError: any) {
+      console.error(`[TranslateService-Google] ❌ Attempt ${i + 1} network error:`, fetchError?.name || 'Unknown', fetchError?.message || '');
+      continue; // 尝试下一个URL
     }
-    console.warn('[TranslateService-Google] ⚠️ Unexpected response:', JSON.stringify(result).substring(0, 200));
-  } catch (parseError) {
-    console.error('[TranslateService-Google] ❌ JSON parse error:', parseError);
+
+    if (!response.ok) {
+      console.error(`[TranslateService-Google] ❌ Attempt ${i + 1} HTTP error: ${response.status}`);
+      continue;
+    }
+
+    try {
+      const result: any = await response.json();
+      if (Array.isArray(result) && result[0] && Array.isArray(result[0])) {
+        const translated = result[0]
+          .filter((item: any) => Array.isArray(item) && item[0])
+          .map((item: any[]) => item[0])
+          .join('');
+        if (translated && translated.trim() !== text.trim()) {
+          console.log(`[TranslateService-Google] ✅ Attempt ${i + 1} Result: "${translated.substring(0, 50)}..."`);
+          return translated;
+        }
+      }
+      console.warn(`[TranslateService-Google] ⚠️ Attempt ${i + 1} same text or unexpected response`);
+    } catch (parseError) {
+      console.error(`[TranslateService-Google] ❌ Attempt ${i + 1} JSON parse error:`, parseError);
+    }
   }
+
+  console.error('[TranslateService-Google] 🚫 All attempts failed, returning original text');
   return text;
 }
 

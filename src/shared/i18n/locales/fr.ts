@@ -718,4 +718,18 @@ export default {
   home_footer_admin_login: 'Connexion Admin',
   home_footer_docs: 'Documentation d\'Intégration',
   home_lang_switch: 'Langue',
+  // Translation engine
+  choose_translate_engine: 'Choisir le moteur de traduction',
+  click_to_choose_engine: 'Choisir le moteur de traduction',
+  click_to_translate: 'Cliquer pour traduire',
+  click_to_switch_engine: 'Cliquer pour changer de moteur',
+  current_engine: 'Moteur actuel',
+  retry_auto_translate: 'Réessayer la traduction automatique',
+  // Notifications
+  notif_staff_msg_title: '[Nouveau message] {name}',
+  notif_visitor_msg_title: '[Nouveau message] {name}',
+  notif_new_visitor_title: '[Nouveau visiteur]',
+  notif_new_visitor_body: '{name} est arrivé',
+  notif_transfer_title: '[Transfert]',
+  notif_transfer_body: '{from} a transféré la conversation de {visitor}',
 };

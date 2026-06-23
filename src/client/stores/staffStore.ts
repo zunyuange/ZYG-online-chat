@@ -496,12 +496,18 @@ export const useStaffStore = create<StaffState>((set, get) => ({
 
       // 桌面通知（页面后台时弹出）
       const session = newSessions.find((s) => s.id === sessionId);
-      const visitorName = session?.visitorName || '访客';
-      const preview = typeof message.content === 'string'
-        ? message.content
-        : `[${message.contentType || '消息'}]`;
 
-      notifyNewVisitorMessage(visitorName, preview, sessionId, session?.businessSlug);
+      // ★ 关键：仅当访客会话为活跃状态时才通知（访客离线/会话已关闭则跳过）
+      if (!session || session.status !== 'active') {
+        console.log('[StaffStore] Skipping notification - session not active:', sessionId, 'status:', session?.status);
+      } else {
+        const visitorName = session?.visitorName || '访客';
+        const preview = typeof message.content === 'string'
+          ? message.content
+          : `[${message.contentType || '消息'}]`;
+
+        notifyNewVisitorMessage(visitorName, preview, sessionId, session?.businessSlug);
+      }
 
       // 标题栏闪烁
       startUnreadTitleFlash(totalUnread);
