@@ -1,12 +1,12 @@
 /**
  * 免费翻译 API 服务（无需任何 API Key）
  * 
- * 翻译引擎优先级:
- * 1. SimplyTranslate AI（首选推荐，免费 RESTful，196+ 语言，100次/分钟）
- * 2. Google Translate（免费稳定，CF Worker 上可靠）
- * 3. MyMemory（免费后备，每天 1000~10000 词）
- * 4. PearApi 万能翻译（免费，自动检测语言，支持13种翻译方向）
- * 5. PearApi AI万能翻译（免费，基于大模型，自定义源语言和目标语言）
+ * 翻译引擎优先级（自动翻译链）:
+ * 1. PearApi AI万能翻译 ⭐（首选，基于大模型，智能翻译质量最高）
+ * 2. SimplyTranslate AI（免费 RESTful，196+ 语言，100次/分钟）
+ * 3. PearApi 万能翻译（免费，自动检测语言，支持13种翻译方向）
+ * 4. Google Translate（免费稳定，CF Worker 上可靠）
+ * 5. MyMemory（免费后备，每天 1000~10000 词）
  * 6. 返回原文（所有引擎均失败时降级）
  */
 import { getDb } from '@server/shared/db';
@@ -113,58 +113,127 @@ function toSimplyLang(localeCode: string): string {
 /**
  * 详细的文本语言检测：区分中文、日文、韩文、英文等
  * 用于决定是否需要跳过翻译（目标语言相同时节省 API 配额）
+ * 
+ * 检测策略（按信号强度排序）：
+ * 1. 平假名 → 日语（平假名是日语独有，即使只有1个也是强信号）
+ * 2. 片假名 > 15% → 日语（片假名占比高时才是日语）
+ * 3. 韩文谚文 > 25% → 韩语
+ * 4. CJK 汉字 > 30% 且无日语/韩语信号 → 中文
+ * 5. ASCII 字母占主导 → 英文
+ * 6. 否则 → 未知
  */
 export function detectSourceLanguage(text: string): string {
-  let chineseCount = 0;   // CJK 统一表意文字（中文+日文汉字）
-  let hiraganaCount = 0;  // 平假名（日语特有）
-  let katakanaCount = 0;  // 片假名（日语特有）
-  let koreanCount = 0;    // 韩文谚文
-  let asciiCount = 0;
+  let cjkCount = 0;        // CJK 统一表意文字（中文汉字 / 日文汉字 / 韩文汉字）
+  let hiraganaCount = 0;   // 平假名（日语独有）
+  let katakanaCount = 0;   // 片假名（日语独有）
+  let hangulCount = 0;     // 韩文谚文音节
+  let latinCount = 0;       // 英文字母 (A-Z, a-z)
+  let digitCount = 0;       // 数字
+  let otherCount = 0;       // 其他符号/标点
+  
   for (const char of text) {
     const code = char.charCodeAt(0);
-    if (code >= 0x4E00 && code <= 0x9FFF) {
-      chineseCount++;
-    } else if (code >= 0x3040 && code <= 0x309F) {
-      hiraganaCount++;
+    if (code >= 0x3040 && code <= 0x309F) {
+      hiraganaCount++;        // 平假名 → 日语独有
     } else if (code >= 0x30A0 && code <= 0x30FF) {
-      katakanaCount++;
+      katakanaCount++;        // 片假名 → 日语独有
     } else if (code >= 0xAC00 && code <= 0xD7AF) {
-      koreanCount++;
+      hangulCount++;          // 韩文谚文 → 韩语独有
+    } else if ((code >= 0x4E00 && code <= 0x9FFF) || (code >= 0x3400 && code <= 0x4DBF)) {
+      cjkCount++;             // CJK 统一汉字 + 扩展A区
+    } else if ((code >= 0x41 && code <= 0x5A) || (code >= 0x61 && code <= 0x7A)) {
+      latinCount++;           // 英文字母
+    } else if (code >= 0x30 && code <= 0x39) {
+      digitCount++;
     } else if (code < 128) {
-      asciiCount++;
+      otherCount++;           // ASCII 标点/符号
     }
   }
-  const total = chineseCount + hiraganaCount + katakanaCount + koreanCount + asciiCount;
-  if (total === 0) return 'unknown';
   
-  // 韩文：谚文字符占主导
-  if (koreanCount > 0 && koreanCount >= total * 0.5) return 'ko';
-  // 日语：假名占主导
-  if ((hiraganaCount + katakanaCount) > 0 && (hiraganaCount + katakanaCount) >= total * 0.5) return 'ja';
-  // 中文：CJK 汉字占主导
-  if (chineseCount > asciiCount && chineseCount > 0) return 'zh-CN';
-  // 英文/拉丁语系
-  return 'en';
+  // 有意义的字符总数（用于计算比例）
+  const meaningfulTotal = cjkCount + hiraganaCount + katakanaCount + hangulCount + latinCount;
+  if (meaningfulTotal === 0) {
+    // 纯数字/符号/空文本 → 尝试推断
+    if (digitCount > 0 && latinCount === 0 && cjkCount === 0) return 'en';
+    return 'unknown';
+  }
+  
+  // 🔴 日语检测：平假名是绝对信号
+  if (hiraganaCount > 0) {
+    console.log(`[detectSourceLanguage] 🇯🇵 Detected Japanese (hiragana: ${hiraganaCount}) | text: "${text.substring(0, 50)}"`);
+    return 'ja';
+  }
+  
+  // 🟠 日语检测：片假名占比高（避免误判含几个片假名的其他语言）
+  if (katakanaCount > 0 && katakanaCount / meaningfulTotal >= 0.15) {
+    console.log(`[detectSourceLanguage] 🇯🇵 Detected Japanese (katakana ratio: ${(katakanaCount / meaningfulTotal * 100).toFixed(1)}%) | text: "${text.substring(0, 50)}"`);
+    return 'ja';
+  }
+  
+  // 🔵 韩语检测：谚文占比高
+  if (hangulCount > 0 && hangulCount / meaningfulTotal >= 0.25) {
+    console.log(`[detectSourceLanguage] 🇰🇷 Detected Korean (hangul ratio: ${(hangulCount / meaningfulTotal * 100).toFixed(1)}%) | text: "${text.substring(0, 50)}"`);
+    return 'ko';
+  }
+  
+  // 🟢 中文检测：CJK 汉字占比 > 30%，且排除日语/韩语
+  if (cjkCount > 0 && cjkCount / meaningfulTotal >= 0.30) {
+    console.log(`[detectSourceLanguage] 🇨🇳 Detected Chinese (CJK ratio: ${(cjkCount / meaningfulTotal * 100).toFixed(1)}%) | text: "${text.substring(0, 50)}"`);
+    return 'zh-CN';
+  }
+  
+  // ⚪ 英文检测：拉丁字母占主导
+  if (latinCount > 0 && latinCount / meaningfulTotal >= 0.40) {
+    console.log(`[detectSourceLanguage] 🇬🇧 Detected English/Latin (latin ratio: ${(latinCount / meaningfulTotal * 100).toFixed(1)}%) | text: "${text.substring(0, 50)}"`);
+    return 'en';
+  }
+  
+  // 默认：比较拉丁字母和 CJK 汉字数量
+  if (cjkCount > latinCount && cjkCount > 0) {
+    console.log(`[detectSourceLanguage] 🇨🇳 Fallback Chinese (CJK:${cjkCount} > Latin:${latinCount}) | text: "${text.substring(0, 50)}"`);
+    return 'zh-CN';
+  }
+  if (latinCount > cjkCount && latinCount > 0) {
+    console.log(`[detectSourceLanguage] 🇬🇧 Fallback English (Latin:${latinCount} > CJK:${cjkCount}) | text: "${text.substring(0, 50)}"`);
+    return 'en';
+  }
+  
+  return 'unknown';
 }
 
 /**
  * 快速判断文本是否已经（很可能）是目标语言，无需翻译
- * 两个用途：
- * 1. 访客输入中文 → 客服也是中文 → 跳过翻译（节省配额）
- * 2. 访客输入韩文 → 客服是中文 → 仍需翻译（继续走引擎链）
+ * 
+ * 策略：
+ * 1. 文本过短（<3个有意义的字符）→ 不确定，仍走翻译链
+ * 2. 源语言检测结果与目标语言基础相同 → 跳过翻译
+ * 3. 检测结果为 unknown → 不走翻译链（可能是纯数字/表情）
  */
 export function isLikelyAlreadyInTargetLang(text: string, targetLang: string): boolean {
   const targetBase = (targetLang || '').split('-')[0].toLowerCase();
   if (!targetBase) return false;
   
+  // 短文本（分词后少于3个字符）语言检测不可靠，继续翻译
+  const stripped = text.replace(/[\s\d\p{P}\p{S}]/gu, '');
+  if (stripped.length < 3) {
+    console.log(`[TranslateService] 🔍 Short text (${stripped.length} meaningful chars), detection unreliable, will translate | text: "${text.substring(0, 50)}"`);
+    return false;
+  }
+  
   const detected = detectSourceLanguage(text);
-  // detected 可能是 'zh-CN', 'en', 'ko', 'ja', 'unknown'
   const detectedBase = (detected || 'unknown').split('-')[0].toLowerCase();
   
+  if (detected === 'unknown') {
+    console.log(`[TranslateService] 🔍 Unknown language detected, skipping translation | text: "${text.substring(0, 50)}"`);
+    return true; // 未知语言跳过翻译
+  }
+  
   if (detectedBase === targetBase) {
-    console.log(`[TranslateService] 🔍 Text likely already in target language: detected=${detected}, target=${targetLang}`);
+    console.log(`[TranslateService] 🔍 Text already in target language: detected=${detected}, target=${targetLang} | text: "${text.substring(0, 50)}"`);
     return true;
   }
+  
+  console.log(`[TranslateService] 🔍 Text needs translation: detected=${detected}, target=${targetLang} | text: "${text.substring(0, 50)}"`);
   return false;
 }
 
@@ -343,23 +412,39 @@ async function callMyMemoryTranslate(
 // 免费，自动识别输入语言并进行翻译
 // ==========================================
 
-/** 将语言方向短语映射到 PearApi type 参数值 */
+/** 将语言方向映射到 PearApi type 参数值（支持更精准的翻译方向） */
 function toPearApiType(sourceLang: string, targetLang: string): string {
   const from = (sourceLang || 'auto').split('-')[0].toLowerCase();
   const to = (targetLang || 'en').split('-')[0].toLowerCase();
   
+  // 如果源和目标相同，返回原文
+  if (from === to) return 'AUTO';
+  
   const map: Record<string, Record<string, string>> = {
-    'zh': { 'en': 'ZH_CN2EN', 'ja': 'ZH_CN2JA', 'ko': 'ZH_CN2KR', 'fr': 'ZH_CN2FR', 'ru': 'ZH_CN2RU', 'es': 'ZH_CN2SP' },
-    'en': { 'zh': 'EN2ZH_CN' },
-    'ja': { 'zh': 'JA2ZH_CN' },
-    'ko': { 'zh': 'KR2ZH_CN' },
-    'fr': { 'zh': 'FR2ZH_CN' },
-    'ru': { 'zh': 'RU2ZH_CN' },
-    'es': { 'zh': 'SP2ZH_CN' },
+    'zh': { 'en': 'ZH_CN2EN', 'ja': 'ZH_CN2JA', 'ko': 'ZH_CN2KR', 'fr': 'ZH_CN2FR', 'ru': 'ZH_CN2RU', 'es': 'ZH_CN2SP', 'de': 'ZH_CN2DE', 'pt': 'ZH_CN2PT', 'it': 'ZH_CN2IT', 'vi': 'ZH_CN2VI', 'th': 'ZH_CN2TH', 'id': 'ZH_CN2ID', 'ar': 'ZH_CN2AR' },
+    'en': { 'zh': 'EN2ZH_CN', 'ja': 'EN2JA', 'ko': 'EN2KO', 'fr': 'EN2FR', 'ru': 'EN2RU', 'es': 'EN2ES', 'de': 'EN2DE', 'pt': 'EN2PT', 'it': 'EN2IT' },
+    'ja': { 'zh': 'JA2ZH_CN', 'en': 'JA2EN' },
+    'ko': { 'zh': 'KR2ZH_CN', 'en': 'KR2EN' },
+    'fr': { 'zh': 'FR2ZH_CN', 'en': 'FR2EN' },
+    'ru': { 'zh': 'RU2ZH_CN', 'en': 'RU2EN' },
+    'es': { 'zh': 'SP2ZH_CN', 'en': 'SP2EN' },
+    'de': { 'zh': 'DE2ZH_CN', 'en': 'DE2EN' },
+    'pt': { 'zh': 'PT2ZH_CN', 'en': 'PT2EN' },
+    'it': { 'zh': 'IT2ZH_CN', 'en': 'IT2EN' },
+    'vi': { 'zh': 'VI2ZH_CN' },
+    'th': { 'zh': 'TH2ZH_CN' },
+    'id': { 'zh': 'ID2ZH_CN' },
+    'ar': { 'zh': 'AR2ZH_CN' },
   };
   
-  if (map[from]?.[to]) return map[from][to];
-  return 'AUTO'; // fallback to auto-detect
+  if (map[from]?.[to]) {
+    console.log(`[toPearApiType] ✅ Mapped ${from}→${to} as type=${map[from][to]}`);
+    return map[from][to];
+  }
+  
+  // fallback: 使用 AUTO 让 PearApi 自动检测
+  console.log(`[toPearApiType] ⚠️ No mapping for ${from}→${to}, using AUTO`);
+  return 'AUTO';
 }
 
 async function callPearApiTranslate(
@@ -367,10 +452,18 @@ async function callPearApiTranslate(
   targetLang: string,
   sourceLang: string = 'auto'
 ): Promise<string> {
-  const type = sourceLang === 'auto' ? 'AUTO' : toPearApiType(sourceLang, targetLang);
+  // 尝试本地检测源语言，匹配更精准的翻译方向（而非使用 AUTO 让后端猜）
+  let type: string;
+  if (sourceLang !== 'auto') {
+    type = toPearApiType(sourceLang, targetLang);
+  } else {
+    const detectedSource = detectSourceLanguage(text);
+    type = toPearApiType(detectedSource, targetLang);
+  }
+  
   const url = `https://api.pearapi.ai/api/translate/?text=${encodeURIComponent(text)}&type=${type}`;
 
-  console.log(`[TranslateService-PearApi] Calling: type=${type}, textLen=${text.length}`);
+  console.log(`[TranslateService-PearApi] Calling: type=${type}, detectedSource=${sourceLang === 'auto' ? 'auto→' + type : sourceLang}, textLen=${text.length}`);
 
   let response: Response;
   try {
@@ -414,7 +507,14 @@ async function callPearApiAITranslate(
   targetLang: string,
   sourceLang: string = 'auto'
 ): Promise<string> {
-  const sl = sourceLang === 'auto' ? '' : sourceLang.split('-')[0].toLowerCase();
+  // 本地检测源语言，提供更精准的 source_lang 参数
+  let sl: string;
+  if (sourceLang !== 'auto') {
+    sl = sourceLang.split('-')[0].toLowerCase();
+  } else {
+    const detected = detectSourceLanguage(text);
+    sl = detected && detected !== 'unknown' ? detected.split('-')[0].toLowerCase() : '';
+  }
   const tl = targetLang.split('-')[0].toLowerCase();
   
   let url = `https://api.pearapi.ai/api/translate/ai/?text=${encodeURIComponent(text)}&target_lang=${tl}`;
@@ -455,13 +555,13 @@ async function callPearApiAITranslate(
   return text;
 }
 
-/** 所有支持的翻译引擎列表（用于前端下拉菜单） */
+/** 所有支持的翻译引擎列表（按推荐优先级排序，用于前端下拉菜单） */
 export const ALL_TRANSLATE_ENGINES = [
+  { key: 'pearapi_ai', label: 'PearApi AI万能翻译' },
+  { key: 'pearapi', label: 'PearApi 万能翻译' },
   { key: 'simplytranslate', label: 'SimplyTranslate AI' },
   { key: 'google', label: 'Google Translate' },
   { key: 'mymemory', label: 'MyMemory' },
-  { key: 'pearapi', label: 'PearApi 万能翻译' },
-  { key: 'pearapi_ai', label: 'PearApi AI万能翻译' },
 ] as const;
 
 export type TranslateEngineKey = typeof ALL_TRANSLATE_ENGINES[number]['key'];
@@ -693,9 +793,24 @@ export async function translateText(options: TranslateOptions): Promise<Translat
   const targetIso = toIso639Lang(to);
 
   // ==========================================
-  // 🥇 第1级：SimplyTranslate AI（首选推荐）
+  // 🥇 第1级：PearApi AI万能翻译 ⭐（首选，大模型翻译质量最高）
   // ==========================================
-  console.log(`[TranslateService] 🥇 Trying SimplyTranslate AI: "${text.substring(0, 50)}..." → ${targetSimply}`);
+  console.log(`[TranslateService] 🥇 Trying PearApi AI (大模型): "${text.substring(0, 50)}..." → ${targetIso}`);
+  try {
+    const translated = await callPearApiAITranslate(text, targetIso, 'auto');
+    if (translated !== text && translated.trim() !== text.trim()) {
+      console.log(`[TranslateService] ✅ PearApi AI success: "${translated.substring(0, 50)}..."`);
+      return { text: translated, engine: 'pearapi_ai', success: true };
+    }
+    console.log('[TranslateService] ⚡ PearApi AI returned same text, falling back...');
+  } catch (error) {
+    console.error('[TranslateService] ❌ PearApi AI exception, falling back:', error);
+  }
+
+  // ==========================================
+  // 🥈 第2级：SimplyTranslate AI
+  // ==========================================
+  console.log(`[TranslateService] 🥈 Trying SimplyTranslate AI: "${text.substring(0, 50)}..." → ${targetSimply}`);
   try {
     const translated = await callSimplyTranslate(text, targetSimply, 'auto');
     if (translated !== text && translated.trim() !== text.trim()) {
@@ -708,9 +823,24 @@ export async function translateText(options: TranslateOptions): Promise<Translat
   }
 
   // ==========================================
-  // 🥈 第2级：Google Translate（备选）
+  // 🥉 第3级：PearApi 万能翻译（自动检测+精确翻译方向）
   // ==========================================
-  console.log(`[TranslateService] 🥈 Trying Google Translate: "${text.substring(0, 50)}..." → ${targetGoogle}`);
+  console.log(`[TranslateService] 🥉 Trying PearApi: "${text.substring(0, 50)}..." → ${targetIso}`);
+  try {
+    const translated = await callPearApiTranslate(text, targetIso, 'auto');
+    if (translated !== text && translated.trim() !== text.trim()) {
+      console.log(`[TranslateService] ✅ PearApi success: "${translated.substring(0, 50)}..."`);
+      return { text: translated, engine: 'pearapi', success: true };
+    }
+    console.log('[TranslateService] ⚡ PearApi returned same text, falling back...');
+  } catch (error) {
+    console.error('[TranslateService] ❌ PearApi exception, falling back:', error);
+  }
+
+  // ==========================================
+  // 🏅 第4级：Google Translate（备选）
+  // ==========================================
+  console.log(`[TranslateService] 🏅 Trying Google Translate: "${text.substring(0, 50)}..." → ${targetGoogle}`);
   try {
     const translated = await callGoogleTranslate(text, targetGoogle, 'auto');
     if (translated !== text && translated.trim() !== text.trim()) {
@@ -723,9 +853,9 @@ export async function translateText(options: TranslateOptions): Promise<Translat
   }
 
   // ==========================================
-  // 🥉 第3级：MyMemory（最后后备）
+  // 🏅 第5级：MyMemory（最后后备）
   // ==========================================
-  console.log(`[TranslateService] 🥉 Trying MyMemory: "${text.substring(0, 50)}..." → ${targetIso}`);
+  console.log(`[TranslateService] 🏅 Trying MyMemory: "${text.substring(0, 50)}..." → ${targetIso}`);
   try {
     const translated = await callMyMemoryTranslate(text, targetIso, 'auto');
     if (translated !== text && translated.trim() !== text.trim()) {
