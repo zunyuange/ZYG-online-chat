@@ -2,9 +2,22 @@
  * Message Item Component - Single message bubble
  */
 
-import React, { useState, useCallback } from 'react';
-import { Image, Video, FileText, Download, Languages } from 'lucide-react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { Image, Video, FileText, Download, Languages, ChevronDown } from 'lucide-react';
 import type { Message } from '@shared/types';
+
+/** 翻译引擎列表（与后端 ALL_TRANSLATE_ENGINES 保持一致） */
+const TRANSLATE_ENGINES = [
+  { key: 'google', label: 'Google Translate', icon: '🔍' },
+  { key: 'pearapi', label: 'PearApi 万能翻译', icon: '🔄' },
+  { key: 'pearapi_ai', label: 'PearApi AI翻译', icon: '🤖' },
+  { key: 'simplytranslate', label: 'SimplyTranslate AI', icon: '🌍' },
+  { key: 'mymemory', label: 'MyMemory', icon: '📚' },
+] as const;
+
+/** 引擎 key → 显示名称映射 */
+const ENGINE_LABEL: Record<string, string> = {};
+TRANSLATE_ENGINES.forEach((e) => { ENGINE_LABEL[e.key] = e.label; });
 
 interface MessageItemProps {
   message: Message;
@@ -30,6 +43,20 @@ export function MessageItem({
   const [translating, setTranslating] = useState(false);
   const [translateError, setTranslateError] = useState<string>('');
   const [localTranslated, setLocalTranslated] = useState<string | undefined>(message.translatedContent);
+  const [showEngineDropdown, setShowEngineDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // 点击外部关闭下拉菜单
+  useEffect(() => {
+    if (!showEngineDropdown) return;
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowEngineDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showEngineDropdown]);
 
   const formattedTime = new Date(message.createdAt).toLocaleTimeString(navigator.language || 'en', {
     hour: '2-digit',
@@ -110,6 +137,46 @@ export function MessageItem({
       const errMsg = err instanceof Error ? err.message : '网络错误';
       setTranslateError(errMsg);
       console.error('[MessageItem] Translate error:', err);
+    } finally {
+      setTranslating(false);
+    }
+  }, [message.id, currentLang, translating, onTranslated]);
+
+  // 使用指定引擎重新翻译（客服切换翻译渠道）
+  const handleReTranslate = useCallback(async (engine: string) => {
+    if (!currentLang || translating) return;
+    setShowEngineDropdown(false);
+    setTranslating(true);
+    setTranslateError('');
+    try {
+      const token = localStorage.getItem('staff_token');
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      
+      const response = await fetch(`/api/chat/messages/${message.id}/translate`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ to: currentLang, engine }),
+      });
+      const result = await response.json();
+      if (result.success && result.data) {
+        const tc = result.data.translatedContent;
+        const te = result.data.translateEngine;
+        if (te === 'same_language') {
+          setTranslateError(result.info || '文本已是目标语言，无需翻译');
+          return;
+        }
+        setLocalTranslated(tc);
+        onTranslated?.(message.id, tc, te);
+      } else {
+        const errMsg = result.error || '翻译失败';
+        setTranslateError(errMsg);
+        console.warn('[MessageItem] Re-translate failed:', errMsg);
+      }
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : '网络错误';
+      setTranslateError(errMsg);
+      console.error('[MessageItem] Re-translate error:', err);
     } finally {
       setTranslating(false);
     }
@@ -281,6 +348,9 @@ export function MessageItem({
       default:
         // 文本消息：如果有翻译内容，同时显示原文和翻译
         if (effectiveTranslated && message.contentType === 'text') {
+          const currentEngine = message.translateEngine || '';
+          const engineDisplayName = ENGINE_LABEL[currentEngine] || currentEngine || '';
+          
           return (
             <div>
               <div>{message.content}</div>
@@ -292,12 +362,114 @@ export function MessageItem({
                 fontSize: '0.92em',
                 fontStyle: 'italic',
               }}>
-                <span style={{
-                  fontSize: '0.75em',
-                  opacity: 0.6,
-                  marginRight: '4px',
-                  textTransform: 'uppercase',
-                }}>🌐 TR{translateEngine ? ` (${translateEngine})` : ''}</span>
+                <div ref={dropdownRef} style={{ display: 'inline', position: 'relative' }}>
+                  {/* 可点击的翻译标签 → 打开引擎切换菜单 */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowEngineDropdown(!showEngineDropdown); }}
+                    disabled={translating}
+                    title={t('click_to_switch_engine') || '点击切换翻译引擎'}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '2px',
+                      padding: '1px 5px',
+                      border: '1px solid #d9d9d9',
+                      borderRadius: '4px',
+                      backgroundColor: translating ? '#f5f5f5' : '#fafafa',
+                      cursor: translating ? 'default' : 'pointer',
+                      fontSize: '0.7em',
+                      color: '#666',
+                      verticalAlign: 'middle',
+                      marginRight: '4px',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    🌐 TR
+                    <ChevronDown size={10} style={{ opacity: 0.5 }} />
+                  </button>
+                  
+                  {/* 下拉菜单 */}
+                  {showEngineDropdown && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      marginTop: '4px',
+                      backgroundColor: '#fff',
+                      border: '1px solid #e8e8e8',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+                      zIndex: 1000,
+                      minWidth: '200px',
+                      overflow: 'hidden',
+                    }}>
+                      {/* 当前引擎标题 */}
+                      <div style={{
+                        padding: '6px 12px',
+                        fontSize: '11px',
+                        color: '#999',
+                        borderBottom: '1px solid #f0f0f0',
+                        backgroundColor: '#fafbfc',
+                      }}>
+                        {t('current_engine') || '当前引擎'}: {engineDisplayName || t('unknown') || '未知'}
+                      </div>
+                      
+                      {/* 引擎选项列表 */}
+                      {TRANSLATE_ENGINES.map((eng) => (
+                        <button
+                          key={eng.key}
+                          onClick={(e) => { e.stopPropagation(); handleReTranslate(eng.key); }}
+                          disabled={translating}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            width: '100%',
+                            padding: '8px 12px',
+                            border: 'none',
+                            backgroundColor: currentEngine === eng.key ? '#e6f7ff' : '#fff',
+                            cursor: translating ? 'default' : 'pointer',
+                            fontSize: '12px',
+                            color: '#333',
+                            textAlign: 'left',
+                            transition: 'background-color 0.15s',
+                            borderBottom: '1px solid #f5f5f5',
+                          }}
+                        >
+                          <span>{eng.icon}</span>
+                          <span style={{ flex: 1 }}>{eng.label}</span>
+                          {currentEngine === eng.key && (
+                            <span style={{ fontSize: '10px', color: '#52c41a' }}>✓</span>
+                          )}
+                        </button>
+                      ))}
+                      
+                      {/* 分隔 + 重新自动翻译 */}
+                      <div style={{ borderTop: '1px solid #e8e8e8' }} />
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleTranslate(); }}
+                        disabled={translating}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          width: '100%',
+                          padding: '8px 12px',
+                          border: 'none',
+                          backgroundColor: '#fff',
+                          cursor: translating ? 'default' : 'pointer',
+                          fontSize: '12px',
+                          color: '#1890ff',
+                          textAlign: 'left',
+                          fontWeight: 500,
+                        }}
+                      >
+                        <span>🔁</span>
+                        <span>{t('retry_auto_translate') || '重新自动翻译（全部引擎）'}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
                 {effectiveTranslated}
               </div>
             </div>

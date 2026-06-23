@@ -10,7 +10,7 @@ import * as sseService from '../services/sse-service'
 import * as queueService from '../services/queue-service'
 import * as transferService from '../services/transfer-service'
 import * as barkService from '@server/services/bark-service'
-import { translateText, isTranslationUseful, getTranslationSettings, detectSourceLanguage } from '@server/services/translate-service'
+import { translateText, translateWithEngine, isTranslationUseful, getTranslationSettings, detectSourceLanguage } from '@server/services/translate-service'
 import { searchKnowledge } from '@server/module-robot/services/robot-service'
 import { verifyToken } from '@server/module-auth/services/auth-service'
 import { getDb } from '@server/shared/db'
@@ -844,14 +844,15 @@ chatRoutes.post('/messages/:id/delete', requireAuth, async c => {
 
 // ==========================================
 // Manual Translate Message Route (手动翻译单条消息)
-// 用法: POST /api/chat/messages/:id/translate  body: { to: 'en-US' }
+// 用法: POST /api/chat/messages/:id/translate  body: { to: 'en-US', engine?: 'google'|'pearapi'|... }
+// engine 可选，指定后仅使用该引擎翻译（用于客服手动切换翻译渠道）
 // ==========================================
 
 chatRoutes.post('/messages/:id/translate', async c => {
   try {
     const messageId = parseInt(c.req.param('id'), 10)
     const body = await c.req.json()
-    const { to } = body as { to?: string }
+    const { to, engine } = body as { to?: string; engine?: string }
 
     if (!to) {
       return c.json({ success: false, error: 'Target language (to) is required' }, 400)
@@ -886,19 +887,33 @@ chatRoutes.post('/messages/:id/translate', async c => {
     // 4. 检测源语言（仅用于日志）
     const detectedSource = detectSourceLanguage(row.content)
 
-    // 5. 执行翻译
-    console.log('[ChatRoutes] 🈂️ Manual translate | messageId:', messageId,
-      '| content:', (row.content as string).substring(0, 40),
-      '| detected:', detectedSource,
-      '| to:', to,
-      '| businessId:', row.business_id)
-
-    const translateResult = await translateText({
-      text: row.content,
-      to,
-      businessId: row.business_id,
-      _settings: txSettings as any,
-    } as any)
+    // 5. 执行翻译 - 如果指定了 engine，则仅使用该引擎；否则走默认优先级链
+    const engineKey = engine?.toLowerCase() || '';
+    const validEngines = ['simplytranslate', 'google', 'mymemory', 'pearapi', 'pearapi_ai'];
+    
+    let translateResult: any;
+    
+    if (engineKey && validEngines.includes(engineKey)) {
+      console.log('[ChatRoutes] 🈂️ Manual translate (specific engine) | messageId:', messageId,
+        '| engine:', engineKey,
+        '| content:', (row.content as string).substring(0, 40),
+        '| to:', to);
+      
+      translateResult = await translateWithEngine(row.content, to, engineKey as any);
+    } else {
+      console.log('[ChatRoutes] 🈂️ Manual translate | messageId:', messageId,
+        '| content:', (row.content as string).substring(0, 40),
+        '| detected:', detectedSource,
+        '| to:', to,
+        '| businessId:', row.business_id);
+      
+      translateResult = await translateText({
+        text: row.content,
+        to,
+        businessId: row.business_id,
+        _settings: txSettings as any,
+      } as any);
+    }
 
     // 6. 检查翻译是否有意义（翻译结果与原文不同才算成功）
     if (!translateResult.success || !isTranslationUseful(row.content, translateResult.text)) {
