@@ -17,11 +17,44 @@ export function PWAInstallPrompt() {
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
+  // ★ 从 URL 读取 business 参数，用于动态设置 PWA start_url
+  const getBusinessParam = (): string | null => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('business');
+  };
+
   useEffect(() => {
     // Check if running as standalone PWA
     const standalone = window.matchMedia('(display-mode: standalone)').matches
       || (window.navigator as any).standalone === true;
     setIsStandalone(standalone);
+
+    // ★ 动态更新 manifest link 的 start_url，确保 PWA 安装时携带商家标识
+    const business = getBusinessParam();
+    if (business) {
+      const manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement;
+      if (manifestLink) {
+        // 动态生成包含 business 参数的 manifest URL
+        // 浏览器会在安装时使用当前页面的 URL 作为 start_url（覆盖 manifest 中的静态值）
+        // 但为了兼容性，我们也通过动态 blob URL 替换 manifest
+        try {
+          fetch('/manifest.json')
+            .then(res => res.json())
+            .then(manifest => {
+              manifest.start_url = `/chat?business=${encodeURIComponent(business)}`;
+              const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+              const blobUrl = URL.createObjectURL(blob);
+              manifestLink.href = blobUrl;
+              console.log('[PWAInstallPrompt] Updated manifest start_url:', manifest.start_url);
+            })
+            .catch(() => {
+              console.log('[PWAInstallPrompt] Could not fetch manifest.json, using default');
+            });
+        } catch (e) {
+          console.error('[PWAInstallPrompt] Error updating manifest:', e);
+        }
+      }
+    }
 
     // Check if iOS
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;

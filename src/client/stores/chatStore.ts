@@ -8,6 +8,7 @@ import type { Session, Message, ContentType } from '@shared/types';
 // LocalStorage keys
 const SESSION_ID_KEY = 'chat_session_id';
 const VISITOR_NAME_KEY = 'chat_visitor_name';
+const BUSINESS_SLUG_KEY = 'chat_business_slug'; // ★ 持久化商家标识，确保 PWA 重启后能找到正确商家
 
 // URL helper functions
 const getUrlSessionId = (): string | null => {
@@ -64,7 +65,18 @@ const updateUrlSessionId = (sessionId: string): void => {
       const originalValue = new URLSearchParams(window.location.search).get(param);
       if (originalValue) {
         url.searchParams.set(param, originalValue);
+      } else if (param === 'business') {
+        // ★ business 参数：如果 URL 里没有，尝试从 localStorage 恢复
+        const savedBusiness = localStorage.getItem(BUSINESS_SLUG_KEY);
+        if (savedBusiness) {
+          url.searchParams.set('business', savedBusiness);
+          console.log('[ChatStore] Restored business from localStorage:', savedBusiness);
+        }
       }
+    } else if (param === 'business' && value) {
+      // ★ 发现 URL 中有 business 参数，同步到 localStorage
+      localStorage.setItem(BUSINESS_SLUG_KEY, value);
+      console.log('[ChatStore] Synced business to localStorage:', value);
     }
   }
   window.history.replaceState({}, '', url.toString());
@@ -135,9 +147,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const urlSessionId = getUrlSessionId();
       const sessionId = urlSessionId || localStorage.getItem(SESSION_ID_KEY);
       const visitorName = localStorage.getItem(VISITOR_NAME_KEY) || undefined;
-      const business = getUrlBusiness();
+      // ★ PWA 归属修复：business 优先从 URL 读取，其次从 localStorage 恢复
+      //   PWA 安装后的 start_url 不携带 business 参数，需要从 localStorage 恢复
+      let business = getUrlBusiness();
+      if (!business) {
+        business = localStorage.getItem(BUSINESS_SLUG_KEY) || undefined;
+        if (business) {
+          console.log('[ChatStore] Recovered business from localStorage:', business);
+        }
+      }
       
-      console.log('[ChatStore] initSession: business from URL =', business);
+      console.log('[ChatStore] initSession: business from URL =', getUrlBusiness(), 'effective business =', business);
       console.log('[ChatStore] initSession: URL =', window.location.href);
       
       // 从 URL 获取访客自定义信息
@@ -204,7 +224,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
         if (result.data.visitorName) {
           localStorage.setItem(VISITOR_NAME_KEY, result.data.visitorName);
         }
-        // Sync session ID to URL
+        // ★ PWA 归属修复：保存 business slug 到 localStorage
+        //   确保 PWA 重启后能通过 localStorage 恢复商家归属
+        if (business) {
+          localStorage.setItem(BUSINESS_SLUG_KEY, business);
+          console.log('[ChatStore] Saved business to localStorage:', business);
+        } else if (result.data.businessSlug && result.data.businessSlug !== 'default') {
+          localStorage.setItem(BUSINESS_SLUG_KEY, result.data.businessSlug);
+          console.log('[ChatStore] Saved business from session.businessSlug:', result.data.businessSlug);
+        }
+        // Sync session ID and business to URL
         updateUrlSessionId(result.data.id);
         set({ session: result.data, loading: false });
 
@@ -284,7 +313,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       // First check session status
       console.log('[ChatStore] Fetching session status...');
-      const business = getUrlBusiness();
+      // ★ PWA 归属修复：business 优先从 URL 读取，其次从 localStorage 恢复
+      let business = getUrlBusiness();
+      if (!business) {
+        business = localStorage.getItem(BUSINESS_SLUG_KEY) || undefined;
+      }
       const sessionResponse = await fetch('/api/chat/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -665,13 +698,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
     get().stopPolling();
     get().disconnectSSE();
 
-    // Clear localStorage - remove both session ID and visitor name
+    // Clear localStorage - remove session ID and visitor name ONLY
+    // ★ 保留 BUSINESS_SLUG_KEY，确保 PWA 重启后商家归属不丢失
     localStorage.removeItem(SESSION_ID_KEY);
     localStorage.removeItem(VISITOR_NAME_KEY);
     
-    // Clear URL session param
+    // Clear URL session param but KEEP business param
     const url = new URL(window.location.href);
     url.searchParams.delete('s');
+    // ★ 确保 business 参数在 URL 中（从 localStorage 恢复）
+    if (!url.searchParams.get('business')) {
+      const savedBusiness = localStorage.getItem(BUSINESS_SLUG_KEY);
+      if (savedBusiness) {
+        url.searchParams.set('business', savedBusiness);
+      }
+    }
     window.history.replaceState({}, '', url.toString());
 
     // Reset state - clear all messages and session info
@@ -699,7 +740,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   checkStaffOnline: async () => {
     const { session } = get();
     try {
-      const business = getUrlBusiness();
+      // ★ PWA 归属修复：business 优先从 URL 读取，其次从 localStorage 恢复
+      let business = getUrlBusiness();
+      if (!business) {
+        business = localStorage.getItem(BUSINESS_SLUG_KEY) || undefined;
+      }
       const params = new URLSearchParams();
       if (business) {
         params.set('business', business);

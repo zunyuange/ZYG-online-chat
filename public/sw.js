@@ -6,9 +6,10 @@ const CACHE_NAME = 'chat-cache-v1';
 const STATIC_CACHE_NAME = 'chat-static-v1';
 
 // Static assets to cache
+// ★ 注意：不要缓存 /chat 路径，因为 PWA 启动时该路径不含商家参数
+//   商家归属通过 localStorage + chatStore.initSession 动态恢复
 const STATIC_ASSETS = [
   '/',
-  '/chat',
   '/manifest.json',
 ];
 
