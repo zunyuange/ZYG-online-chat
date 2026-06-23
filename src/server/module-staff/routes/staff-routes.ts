@@ -253,21 +253,29 @@ staffRoutes.post('/messages', async c => {
 
       if (txSettings?.enabled && targetLang) {
         const staffDetectedLang = detectSourceLanguage(content as string);
-        console.log('[StaffRoutes] 🈂️ Auto-translating staff message to visitor lang:', targetLang,
-          '| langSource:', targetLangSource,
-          '| detectedContentLang:', staffDetectedLang,
-          '| staffId:', bizCtx.businessId);
-        const translateResult = await translateText({
-          text: content,
-          to: targetLang,
-          businessId: txBusinessId,
-          _settings: txSettings as any,
-        } as any);
-        if (translateResult.engine === 'same_language') {
-          translatedContent = undefined;
-          console.log('[StaffRoutes] ⏭️ Auto-translate skipped: content already in target language',
-            '| detected:', staffDetectedLang, '| target:', targetLang);
-        } else if (!translateResult.success || !isTranslationUseful(content, translateResult.text)) {
+        // ★ 同语言跳过：如果客服消息内容语言与访客目标语言相同，直接跳过翻译
+        //   例如：客服打中文 → 访客也是中文，翻译没有意义且浪费额度
+        const staffDetectedBase = (staffDetectedLang || '').split('-')[0].toLowerCase();
+        const targetLangBase = (targetLang || '').split('-')[0].toLowerCase();
+        if (staffDetectedBase && targetLangBase && staffDetectedBase === targetLangBase) {
+          console.log('[StaffRoutes] ⏭️ Same language detected, skipping auto-translate entirely (save quota)',
+            '| detected:', staffDetectedLang, '| target:', targetLang,
+            '| content:', (content as string).substring(0, 40));
+        } else {
+          console.log('[StaffRoutes] 🈂️ Auto-translating staff message to visitor lang:', targetLang,
+            '| langSource:', targetLangSource,
+            '| detectedContentLang:', staffDetectedLang,
+            '| staffId:', bizCtx.businessId);
+          const translateResult = await translateText({
+            text: content,
+            to: targetLang,
+            businessId: txBusinessId,
+            _settings: txSettings as any,
+          } as any);
+          if (translateResult.engine === 'same_language') {
+            console.log('[StaffRoutes] ⏭️ Auto-translate skipped: content already in target language',
+              '| detected:', staffDetectedLang, '| target:', targetLang);
+          } else if (!translateResult.success || !isTranslationUseful(content, translateResult.text)) {
           translatedContent = undefined;
           console.log('[StaffRoutes] ❌ Translation failed or not useful',
             '| engine:', translateResult.engine || 'none',
@@ -281,6 +289,7 @@ staffRoutes.post('/messages', async c => {
           translateEngine = translateResult.engine;
           console.log(`[StaffRoutes] ✅ Translation stored via ${translateResult.engine}, length:`, translatedContent.length);
         }
+        } // ★ 闭合内层 else 块（非同语言时才进入翻译链）
       } else if (!txSettings?.enabled) {
         console.warn('[StaffRoutes] ⚠️ Translation DISABLED',
           '| queriedBusinessId:', txBusinessId,

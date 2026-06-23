@@ -341,15 +341,24 @@ chatRoutes.post('/messages', async c => {
           }
           // 记录翻译上下文（方便排查问题）
           const visitorDetectedLang = detectSourceLanguage(content as string);
-          console.log('[ChatRoutes] 🈂️ Auto-translating visitor→staff',
-            '| content:', (content as string).substring(0, 30),
-            '| detectedLang:', visitorDetectedLang,
-            '| visitorBrowserLang:', session.lang || '(empty)',
-            '| staff:', staffName,
-            '| targetLang:', targetLang,
-            '| assignedStaffId:', assignedStaffId,
-            '| txBusinessId:', txBusinessId);
-          const translateResult = await translateText({
+          // ★ 同语言跳过：如果访客消息内容语言与客服目标语言相同，直接跳过翻译
+          //   例如：访客打中文 → 客服也是中文，翻译没有意义且浪费额度
+          const visitorDetectedBase = (visitorDetectedLang || '').split('-')[0].toLowerCase();
+          const targetLangBase = (targetLang || '').split('-')[0].toLowerCase();
+          if (visitorDetectedBase && targetLangBase && visitorDetectedBase === targetLangBase) {
+            console.log('[ChatRoutes] ⏭️ Same language detected, skipping auto-translate entirely (save quota)',
+              '| detected:', visitorDetectedLang, '| target:', targetLang,
+              '| content:', (content as string).substring(0, 40));
+          } else {
+            console.log('[ChatRoutes] 🈂️ Auto-translating visitor→staff',
+              '| content:', (content as string).substring(0, 30),
+              '| detectedLang:', visitorDetectedLang,
+              '| visitorBrowserLang:', session.lang || '(empty)',
+              '| staff:', staffName,
+              '| targetLang:', targetLang,
+              '| assignedStaffId:', assignedStaffId,
+              '| txBusinessId:', txBusinessId);
+            const translateResult = await translateText({
             text: content,
             to: targetLang,
             businessId: txBusinessId,
@@ -369,6 +378,7 @@ chatRoutes.post('/messages', async c => {
             translateEngine = translateResult.engine;
             console.log(`[ChatRoutes] ✅ Visitor→${staffName} translated via ${translateResult.engine}:`, translatedContent.substring(0, 60));
           }
+          } // ★ 闭合内层 else 块（非同语言时才进入翻译链）
         } else {
           console.warn('[ChatRoutes] ⚠️ Translation DISABLED for txBusinessId:', txBusinessId,
             '| txSettings:', txSettings ? `enabled=${txSettings.enabled}` : 'NULL',
@@ -884,8 +894,26 @@ chatRoutes.post('/messages/:id/translate', async c => {
       }, 400)
     }
 
-    // 4. 检测源语言（仅用于日志）
-    const detectedSource = detectSourceLanguage(row.content)
+    // 4. 检测源语言
+    const detectedSource = detectSourceLanguage(row.content);
+    
+    // ★ 同语言跳过：如果消息内容语言与目标语言相同，无需翻译
+    const detectedBase = (detectedSource || '').split('-')[0].toLowerCase();
+    const targetBase = (to || '').split('-')[0].toLowerCase();
+    if (detectedBase && targetBase && detectedBase === targetBase) {
+      console.log('[ChatRoutes] ⏭️ Manual translate skipped: content already in target language',
+        '| detected:', detectedSource, '| to:', to,
+        '| content:', (row.content as string).substring(0, 40));
+      return c.json({
+        success: true,
+        data: {
+          id: messageId,
+          translatedContent: row.content,
+          translateEngine: 'same_language',
+          message: '内容已是目标语言，无需翻译',
+        },
+      });
+    }
 
     // 5. 执行翻译 - 如果指定了 engine，则仅使用该引擎；否则走默认优先级链
     const engineKey = engine?.toLowerCase() || '';

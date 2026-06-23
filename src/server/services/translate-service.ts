@@ -227,24 +227,29 @@ export function isLikelyAlreadyInTargetLang(text: string, targetLang: string): b
   const targetBase = (targetLang || '').split('-')[0].toLowerCase();
   if (!targetBase) return false;
   
-  // 短文本（分词后少于3个字符）语言检测不可靠，继续翻译
+  // ★ 短文本优化：对极短文本（1-2个有意义字符），仍先尝试检测
+  //   若检测结果明确且与目标语言匹配 → 跳过翻译（节省额度）
+  //   若检测失败（unknown）→ 才进入翻译链（老逻辑）
   const stripped = text.replace(/[\s\d\p{P}\p{S}]/gu, '');
-  if (stripped.length < 3) {
-    console.log(`[TranslateService] 🔍 Short text (${stripped.length} meaningful chars), detection unreliable, will translate | text: "${text.substring(0, 50)}"`);
-    return false;
-  }
+  const isShortText = stripped.length < 3;
   
   const detected = detectSourceLanguage(text);
   const detectedBase = (detected || 'unknown').split('-')[0].toLowerCase();
   
   if (detected === 'unknown') {
-    console.log(`[TranslateService] 🔍 Unknown language detected, skipping translation | text: "${text.substring(0, 50)}"`);
+    console.log(`[TranslateService] 🔍 Unknown language detected, skipping translation${isShortText ? ' (short text)' : ''} | text: "${text.substring(0, 50)}"`);
     return true; // 未知语言跳过翻译
   }
   
   if (detectedBase === targetBase) {
-    console.log(`[TranslateService] 🔍 Text already in target language: detected=${detected}, target=${targetLang} | text: "${text.substring(0, 50)}"`);
+    console.log(`[TranslateService] 🔍 Text already in target language: detected=${detected}, target=${targetLang}${isShortText ? ' (short text but script match is reliable)' : ''} | text: "${text.substring(0, 50)}"`);
     return true;
+  }
+  
+  // 短文本但检测结果与目标语言不匹配 → 让翻译引擎自行判断（可能是混合语言等边缘情况）
+  if (isShortText) {
+    console.log(`[TranslateService] 🔍 Short text (${stripped.length} chars), detection=${detected} ≠ target=${targetLang}, will let engines decide | text: "${text.substring(0, 50)}"`);
+    return false;
   }
   
   console.log(`[TranslateService] 🔍 Text needs translation: detected=${detected}, target=${targetLang} | text: "${text.substring(0, 50)}"`);
