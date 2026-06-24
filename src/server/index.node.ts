@@ -23,6 +23,7 @@ import { adminAuthRoutes, initAdminAuth } from './module-admin/routes/admin-auth
 import { robotRoutes } from './module-robot/routes/robot-routes';
 import { faqRoutes } from './module-faq/routes/faq-routes';
 import { evaluationRoutes } from './module-evaluation/routes/evaluation-routes';
+import { activityRoutes } from './module-activity/routes/activity-routes';
 import { initAuthService } from './module-auth/services/auth-service';
 
 // Load environment variables from .env.local, .env
@@ -105,6 +106,7 @@ app.route('/api/admin-auth', adminAuthRoutes);
 app.route('/api/robot', robotRoutes);
 app.route('/api/faq', faqRoutes);
 app.route('/api/evaluation', evaluationRoutes);
+app.route('/api/activity', activityRoutes);
 
 // Health check
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));

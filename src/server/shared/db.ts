@@ -582,6 +582,60 @@ async function createAllTables(database: Database): Promise<void> {
   await database.exec('CREATE INDEX IF NOT EXISTS visitor_custom_fields_business_id_idx ON visitor_custom_fields(business_id)')
   await database.exec('CREATE INDEX IF NOT EXISTS visitor_custom_fields_field_key_idx ON visitor_custom_fields(business_id, field_key)')
 
+  // Create activities table for lottery activities (抽奖活动表)
+  await database.exec(
+    'CREATE TABLE IF NOT EXISTS activities (' +
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+      'business_id INTEGER NOT NULL DEFAULT 1, ' +
+      'title TEXT NOT NULL, ' +
+      'description TEXT, ' +
+      'type TEXT NOT NULL DEFAULT "lottery", ' +
+      'start_time INTEGER NOT NULL, ' +
+      'end_time INTEGER NOT NULL, ' +
+      'max_participants INTEGER DEFAULT 0, ' +
+      'participants_count INTEGER DEFAULT 0, ' +
+      'daily_limit INTEGER DEFAULT 0, ' +
+      'status TEXT NOT NULL DEFAULT "draft", ' +
+      'created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), ' +
+      'updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))'
+  )
+  await database.exec('CREATE INDEX IF NOT EXISTS activities_business_id_idx ON activities(business_id)')
+  await database.exec('CREATE INDEX IF NOT EXISTS activities_status_idx ON activities(status)')
+
+  // Create activity_prizes table for lottery prizes (奖品表)
+  await database.exec(
+    'CREATE TABLE IF NOT EXISTS activity_prizes (' +
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+      'activity_id INTEGER NOT NULL, ' +
+      'name TEXT NOT NULL, ' +
+      'image_url TEXT, ' +
+      'quantity INTEGER NOT NULL DEFAULT 1, ' +
+      'remaining_quantity INTEGER NOT NULL DEFAULT 1, ' +
+      'probability REAL NOT NULL DEFAULT 0, ' +
+      'sort_order INTEGER NOT NULL DEFAULT 0, ' +
+      'is_empty INTEGER NOT NULL DEFAULT 0, ' +
+      'created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))'
+  )
+  await database.exec('CREATE INDEX IF NOT EXISTS activity_prizes_activity_id_idx ON activity_prizes(activity_id)')
+
+  // Create activity_winners table for lottery winners (中奖记录表)
+  await database.exec(
+    'CREATE TABLE IF NOT EXISTS activity_winners (' +
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+      'activity_id INTEGER NOT NULL, ' +
+      'prize_id INTEGER, ' +
+      'visitor_id TEXT NOT NULL, ' +
+      'visitor_name TEXT, ' +
+      'phone TEXT, ' +
+      'email TEXT, ' +
+      'session_id TEXT, ' +
+      'is_claimed INTEGER NOT NULL DEFAULT 0, ' +
+      'claimed_at INTEGER, ' +
+      'created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))'
+  )
+  await database.exec('CREATE INDEX IF NOT EXISTS activity_winners_activity_id_idx ON activity_winners(activity_id)')
+  await database.exec('CREATE INDEX IF NOT EXISTS activity_winners_visitor_id_idx ON activity_winners(visitor_id)')
+
   // Initialize default admin user (username: admin, password: 123456)
   await initializeDefaultAdmin(database)
 
@@ -696,6 +750,122 @@ async function runMigrations(database: Database): Promise<void> {
   await addColumnIfMissing('staff_users', 'business_id', 'INTEGER NOT NULL DEFAULT 0')
   await addColumnIfMissing('staff_users', 'enable_auto_trans', 'INTEGER NOT NULL DEFAULT 0')
   await addColumnIfMissing('staff_users', 'default_lang', "TEXT NOT NULL DEFAULT 'zh-CN'")
+
+  // Ensure activities table exists (抽奖活动表)
+  try {
+    const activitiesExists = await database.get<{ name: string }>(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='activities'"
+    )
+    if (!activitiesExists) {
+      await database.exec(
+        'CREATE TABLE IF NOT EXISTS activities (' +
+          'id INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+          'business_id INTEGER NOT NULL DEFAULT 1, ' +
+          'title TEXT NOT NULL, ' +
+          'description TEXT, ' +
+          'type TEXT NOT NULL DEFAULT "lottery", ' +
+          'start_time INTEGER NOT NULL, ' +
+          'end_time INTEGER NOT NULL, ' +
+          'max_participants INTEGER DEFAULT 0, ' +
+          'participants_count INTEGER DEFAULT 0, ' +
+          'daily_limit INTEGER DEFAULT 0, ' +
+          'status TEXT NOT NULL DEFAULT "draft", ' +
+          'created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000), ' +
+          'updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))'
+      )
+      await database.exec('CREATE INDEX IF NOT EXISTS activities_business_id_idx ON activities(business_id)')
+      await database.exec('CREATE INDEX IF NOT EXISTS activities_status_idx ON activities(status)')
+      console.log('[Migration] Created activities table and indexes')
+    }
+  } catch (error) {
+    console.error('[Migration] Failed to ensure activities table:', error)
+  }
+
+  // Ensure activity_prizes table exists (奖品表)
+  try {
+    const prizesExists = await database.get<{ name: string }>(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='activity_prizes'"
+    )
+    if (!prizesExists) {
+      await database.exec(
+        'CREATE TABLE IF NOT EXISTS activity_prizes (' +
+          'id INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+          'activity_id INTEGER NOT NULL, ' +
+          'name TEXT NOT NULL, ' +
+          'image_url TEXT, ' +
+          'quantity INTEGER NOT NULL DEFAULT 1, ' +
+          'remaining_quantity INTEGER NOT NULL DEFAULT 1, ' +
+          'probability REAL NOT NULL DEFAULT 0, ' +
+          'sort_order INTEGER NOT NULL DEFAULT 0, ' +
+          'is_empty INTEGER NOT NULL DEFAULT 0, ' +
+          'created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))'
+      )
+      await database.exec('CREATE INDEX IF NOT EXISTS activity_prizes_activity_id_idx ON activity_prizes(activity_id)')
+      console.log('[Migration] Created activity_prizes table and indexes')
+    }
+  } catch (error) {
+    console.error('[Migration] Failed to ensure activity_prizes table:', error)
+  }
+
+  // Ensure activity_winners table exists (中奖记录表)
+  try {
+    const winnersExists = await database.get<{ name: string }>(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='activity_winners'"
+    )
+    if (!winnersExists) {
+      await database.exec(
+        'CREATE TABLE IF NOT EXISTS activity_winners (' +
+          'id INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+          'activity_id INTEGER NOT NULL, ' +
+          'prize_id INTEGER, ' +
+          'visitor_id TEXT NOT NULL, ' +
+          'visitor_name TEXT, ' +
+          'phone TEXT, ' +
+          'email TEXT, ' +
+          'session_id TEXT, ' +
+          'is_claimed INTEGER NOT NULL DEFAULT 0, ' +
+          'claimed_at INTEGER, ' +
+          'card_code TEXT, ' +
+          'created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))'
+      )
+      await database.exec('CREATE INDEX IF NOT EXISTS activity_winners_activity_id_idx ON activity_winners(activity_id)')
+      await database.exec('CREATE INDEX IF NOT EXISTS activity_winners_visitor_id_idx ON activity_winners(visitor_id)')
+      console.log('[Migration] Created activity_winners table and indexes')
+    }
+  } catch (error) {
+    console.error('[Migration] Failed to ensure activity_winners table:', error)
+  }
+
+  // Add card_code column to activity_winners table if not exists
+  await addColumnIfMissing('activity_winners', 'card_code', 'TEXT')
+
+  // Ensure card_codes table exists (卡密表)
+  try {
+    const cardCodesExists = await database.get<{ name: string }>(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='card_codes'"
+    )
+    if (!cardCodesExists) {
+      await database.exec(
+        'CREATE TABLE IF NOT EXISTS card_codes (' +
+          'id INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+          'prize_id INTEGER NOT NULL, ' +
+          'code TEXT NOT NULL, ' +
+          'status TEXT NOT NULL DEFAULT "unused", ' +
+          'used_at INTEGER, ' +
+          'used_by TEXT, ' +
+          'winner_id INTEGER, ' +
+          'created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000))'
+      )
+      await database.exec('CREATE INDEX IF NOT EXISTS card_codes_prize_id_idx ON card_codes(prize_id)')
+      await database.exec('CREATE INDEX IF NOT EXISTS card_codes_status_idx ON card_codes(status)')
+      console.log('[Migration] Created card_codes table and indexes')
+    }
+  } catch (error) {
+    console.error('[Migration] Failed to ensure card_codes table:', error)
+  }
+
+  // Add is_card column to activity_prizes table if not exists
+  await addColumnIfMissing('activity_prizes', 'is_card', 'INTEGER NOT NULL DEFAULT 0')
 
   // Fix existing staff_users data: ensure admin user has correct role and business_id
   await ensureDefaultStaffData(database)

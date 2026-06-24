@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { MessageCircle, Users, User, LogOut, Code2, Settings, ArrowRightLeft, XCircle, ListChecks, Bell, BellOff } from 'lucide-react';
+import { MessageCircle, Users, User, LogOut, Code2, Settings, ArrowRightLeft, XCircle, ListChecks, Bell, BellOff, Gift } from 'lucide-react';
 import { useStaffStore } from '@client/stores/staffStore';
 import { SessionList } from '@client/components/staff/SessionList';
 import { StaffChatWindow, VisitorInfoPanel } from '@client/components/staff/StaffChatWindow';
@@ -15,6 +15,7 @@ import { StaffManagement } from '@client/components/staff/StaffManagement';
 import { StaffCode } from '@client/components/staff/StaffCode';
 import { StaffSettings } from '@client/components/staff/StaffSettings';
 import { VisitorFields } from '@client/components/staff/VisitorFields';
+import { ActivityManagement } from '@client/components/staff/ActivityManagement';
 import { useAuth } from '@client/hooks/useAuth';
 import { useSiteSettings } from '@client/hooks/useSiteSettings';
 import { useI18n } from '@client/context/I18nContext';
@@ -104,7 +105,7 @@ export function StaffPage() {
   const [showEndSessionConfirm, setShowEndSessionConfirm] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
-  const [currentPage, setCurrentPage] = useState<'home' | 'staff' | 'code' | 'settings' | 'visitorFields'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'staff' | 'code' | 'settings' | 'visitorFields' | 'activity'>('home');
   const [staffList, setStaffList] = useState<{ id: number; name: string; username: string }[]>([]);
   const [visitorFieldDefs, setVisitorFieldDefs] = useState<VisitorFieldDef[]>([]);
   const [profileForm, setProfileForm] = useState({
@@ -1211,6 +1212,15 @@ export function StaffPage() {
             <span>{t('staff_nav_visitor_fields')}</span>
           </div>
         )}
+        {userInfo?.role === 'admin' && (
+          <div
+            onClick={() => setCurrentPage('activity')}
+            style={navTabItemStyle(currentPage === 'activity')}
+          >
+            <Gift size={16} />
+            <span>{t('staff_nav_activity')}</span>
+          </div>
+        )}
         <div
           onClick={() => setCurrentPage('code')}
           style={navTabItemStyle(currentPage === 'code')}
@@ -1529,6 +1539,13 @@ export function StaffPage() {
         {currentPage === 'visitorFields' && (
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <VisitorFields />
+          </div>
+        )}
+
+        {/* Activity page */}
+        {currentPage === 'activity' && (
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <ActivityManagement />
           </div>
         )}
 
