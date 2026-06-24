@@ -12,6 +12,13 @@ binding = "ASSETS"
 BARK_API = "https://api.day.app"
 # Auth: Require login for staff panel
 REQUIRE_AUTH = "true"
+# Cloudflare API configuration for automatic subdomain binding
+# CF_API_TOKEN needs permissions: Zone:DNS (Edit), Zone:Zone (Read)
+CF_API_TOKEN = ""
+CF_ACCOUNT_ID = ""
+CF_ZONE_ID = ""
+CF_BASE_DOMAIN = "zygmail.icu"
+CF_WORKER_DOMAIN = "zyg-online-chat.linzihai.workers.dev"
 
 [[d1_databases]]
 binding = "DB"
@@ -32,6 +39,12 @@ name = "zyg-online-chat"
 [env.production.vars]
 BARK_API = "https://api.day.app"
 REQUIRE_AUTH = "true"
+# Cloudflare API configuration for automatic subdomain binding
+CF_API_TOKEN = ""
+CF_ACCOUNT_ID = ""
+CF_ZONE_ID = ""
+CF_BASE_DOMAIN = "zygmail.icu"
+CF_WORKER_DOMAIN = "zyg-online-chat.linzihai.workers.dev"
 
 [[env.production.d1_databases]]
 binding = "DB"

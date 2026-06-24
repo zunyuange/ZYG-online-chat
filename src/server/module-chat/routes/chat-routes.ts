@@ -81,10 +81,16 @@ chatRoutes.post('/session', async c => {
       return 'Desktop';
     };
 
+    const domainBusinessSlug = c.get('businessSlug');
+    const domainBusinessId = c.get('businessId');
+    const customDomain = c.get('customDomain');
+    
     const input = {
       visitorName: body.visitorName,
       sessionId: body.sessionId,
-      business: body.business, // 商家标识(slug)
+      business: domainBusinessSlug || body.business,
+      businessId: domainBusinessId,
+      customDomain: customDomain,
       // 访客自定义字段
       email: body.email,
       phone: body.phone,
@@ -97,6 +103,10 @@ chatRoutes.post('/session', async c => {
       device: body.device || (userAgent ? detectDevice(userAgent) : undefined),
       lang: body.lang,
       avatar: body.avatar,
+    }
+
+    if (domainBusinessSlug) {
+      console.log('[ChatRoutes] Session created via custom domain:', customDomain, '→ business:', domainBusinessSlug);
     }
 
     const session = await chatService.createOrGetSession(input)

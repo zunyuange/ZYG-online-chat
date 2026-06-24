@@ -317,10 +317,24 @@ export async function createOrGetSession(input: CreateSessionInput = {}): Promis
   }
 
   // ★ 以下为创建新会话逻辑（只在没有已有 session 时才会走到这里）
-  // Get business info based on slug or id
-  const business = await getBusinessBySlug(input.business)
+  // Get business info based on:
+  // 1. businessId from domain detection (highest priority)
+  // 2. business slug from input
+  let business = null;
   
-  console.log('[ChatService] createOrGetSession: business from getBusinessBySlug =', business ? JSON.stringify(business) : 'NULL')
+  if (input.businessId) {
+    const db = getDb();
+    business = await db.get<BusinessRow>(
+      'SELECT id, business_slug, business_name FROM staff_users WHERE id = ?',
+      [input.businessId]
+    );
+    console.log('[ChatService] createOrGetSession: business from domain businessId =', business ? JSON.stringify(business) : 'NULL');
+  }
+  
+  if (!business && input.business) {
+    business = await getBusinessBySlug(input.business);
+    console.log('[ChatService] createOrGetSession: business from getBusinessBySlug =', business ? JSON.stringify(business) : 'NULL');
+  }
   
   // ★ 如果没有找到匹配的商家，拒绝创建会话（不再回退到默认商家）
   if (!business) {

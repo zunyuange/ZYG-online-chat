@@ -5,12 +5,16 @@
 
 import { getDb } from '@server/shared/db';
 import { hashPassword } from '@server/shared/crypto';
+import { CFService } from '@server/services/cf-service';
 
 export interface StaffUser {
   id: number;
   business_id: number;
   business_slug: string | null;
   business_name: string | null;
+  custom_domain: string | null;
+  cf_zone_id: string | null;
+  cf_configured: number;
   username: string;
   password_hash: string;
   email: string | null;
@@ -20,6 +24,12 @@ export interface StaffUser {
   created_at: number;
   updated_at: number;
 }
+
+const cfApiToken = process.env.CF_API_TOKEN || '';
+const cfAccountId = process.env.CF_ACCOUNT_ID || '';
+const cfZoneId = process.env.CF_ZONE_ID || '';
+const cfBaseDomain = process.env.CF_BASE_DOMAIN || 'zygmail.icu';
+const cfWorkerDomain = process.env.CF_WORKER_DOMAIN || 'zyg-online-chat.linzihai.workers.dev';
 
 export interface CreateUserInput {
   username: string;
@@ -38,7 +48,7 @@ export interface UpdateUserInput {
   password?: string;
 }
 
-export async function createUser(input: CreateUserInput): Promise<{ success: boolean; error?: string; userId?: number }> {
+export async function createUser(input: CreateUserInput): Promise<{ success: boolean; error?: string; userId?: number; customDomain?: string }> {
   const db = getDb();
   
   try {
@@ -49,15 +59,13 @@ export async function createUser(input: CreateUserInput): Promise<{ success: boo
 
     const passwordHash = await hashPassword(input.password);
     
-    // Generate business_slug for new business users
     let businessSlug: string | null = null;
     let businessName: string | null = null;
+    let customDomain: string | null = null;
     let finalBusinessId = input.business_id || 0;
     
-    // For new business owner accounts (no business_id specified or business_id = 0)
     if (!input.business_id || input.business_id === 0) {
       finalBusinessId = 0;
-      // Generate a unique business_slug
       const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
       let attempts = 0;
       const maxAttempts = 10;
@@ -77,14 +85,32 @@ export async function createUser(input: CreateUserInput): Promise<{ success: boo
         return { success: false, error: '无法生成唯一的商家标识' };
       }
       businessName = input.name || input.username;
+      
+      if (cfApiToken && cfZoneId && businessSlug) {
+        const cfService = new CFService({
+          apiToken: cfApiToken,
+          accountId: cfAccountId,
+          zoneId: cfZoneId,
+        });
+        
+        const subdomain = `${businessSlug}.${cfBaseDomain}`;
+        const record = await cfService.createCNAMERecord(subdomain, cfWorkerDomain);
+        
+        if (record) {
+          customDomain = subdomain;
+          console.log(`[AdminService] Created custom domain: ${customDomain}`);
+        } else {
+          console.warn(`[AdminService] Failed to create custom domain for ${businessSlug}`);
+        }
+      }
     }
     
     const result = await db.run(
-      'INSERT INTO staff_users (username, password_hash, email, name, role, business_id, business_slug, business_name, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [input.username, passwordHash, input.email || null, input.name || null, input.role || 'staff', finalBusinessId, businessSlug, businessName, 'active', Date.now(), Date.now()]
+      'INSERT INTO staff_users (username, password_hash, email, name, role, business_id, business_slug, business_name, custom_domain, cf_zone_id, cf_configured, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [input.username, passwordHash, input.email || null, input.name || null, input.role || 'staff', finalBusinessId, businessSlug, businessName, customDomain, cfZoneId || null, customDomain ? 1 : 0, 'active', Date.now(), Date.now()]
     );
 
-    return { success: true, userId: result.lastInsertRowid };
+    return { success: true, userId: result.lastInsertRowid, customDomain };
   } catch (error) {
     console.error('[AdminService] Create user error:', error);
     return { success: false, error: '创建用户失败' };

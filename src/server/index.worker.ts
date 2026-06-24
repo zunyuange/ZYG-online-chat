@@ -22,6 +22,7 @@ import { initializeR2Storage } from './shared/storage';
 import { initBarkService, setStaffUrlFromHost } from './services/bark-service';
 import { initAuthService } from './module-auth/services/auth-service';
 import { initTranslateService } from './services/translate-service';
+import { detectBusinessFromDomain } from './middleware/domain-detection';
 
 // Cloudflare Workers bindings
 interface Env {
@@ -189,6 +190,10 @@ app.use('*', async (c, next) => {
   }
   await next();
 });
+
+// Domain-based business detection middleware
+// When a custom domain is used (e.g., {slug}.zygmail.icu), detect the business
+app.use('*', detectBusinessFromDomain);
 
 // Set correct Content-Type with UTF-8 encoding for JSON responses
 app.use('*', async (c, next) => {

@@ -19,7 +19,6 @@ import { adminRoutes } from './module-admin/routes/admin-routes';
 import { adminAuthRoutes } from './module-admin/routes/admin-auth-routes';
 import { businessRoutes } from './module-business/routes/business-routes';
 import { robotRoutes } from './module-robot/routes/robot-routes';
-import { activityRoutes } from './module-activity/routes/activity-routes';
 
 // Note: @hono/zod-openapi is installed but openAPI helper is not used in this simple setup
 // If you need OpenAPI docs, you can add: import { openAPI } from '@hono/zod-openapi';
@@ -135,7 +134,6 @@ const app = new Hono()
   .route('/api/robot', robotRoutes)
   .route('/api/admin', adminRoutes)
   .route('/api/admin-auth', adminAuthRoutes)
-  .route('/api/activity', activityRoutes)
   // Health check
   .get('/health', (c) => {
     return c.json({ status: 'ok', timestamp: new Date().toISOString() });

@@ -41,12 +41,6 @@ export default defineConfig(({ mode }) => {
           /^\/adminlogin/,
           /^\/(@[a-zA-Z0-9_-]+|src|node_modules|__inspect|index\.html)/,
         ],
-        include: [
-          // Ensure API routes go to Hono
-          /^\/api/,
-          /^\/uploads/,
-          /^\/health/,
-        ],
       }),
     ],
     // Configure public directory and static file serving

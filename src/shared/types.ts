@@ -112,6 +112,8 @@ export interface CreateSessionInput {
   visitorName?: string;
   sessionId?: string;
   business?: string; // 商家标识(slug)
+  businessId?: number; // 商家ID（从域名识别获取）
+  customDomain?: string; // 自定义域名
   // 访客自定义字段
   email?: string;
   phone?: string;
@@ -184,104 +186,4 @@ export interface PaginatedResponse<T> {
   data: T[];
   hasMore: boolean;
   error?: string;
-}
-
-// ==========================================
-// ACTIVITY TYPES (活动类型)
-// ==========================================
-
-export type ActivityType = 'lottery';
-export type ActivityStatus = 'draft' | 'active' | 'ended';
-
-export interface Activity {
-  id: number;
-  businessId: number;
-  title: string;
-  description?: string;
-  type: ActivityType;
-  startTime: Date;
-  endTime: Date;
-  maxParticipants: number;
-  participantsCount: number;
-  dailyLimit: number;
-  status: ActivityStatus;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface ActivityPrize {
-  id: number;
-  activityId: number;
-  name: string;
-  imageUrl?: string;
-  quantity: number;
-  remainingQuantity: number;
-  probability: number;
-  sortOrder: number;
-  isEmpty: boolean;
-  isCard: boolean;  // 是否是卡密奖品
-  createdAt: Date;
-}
-
-export interface CardCode {
-  id: number;
-  prizeId: number;
-  code: string;
-  status: 'unused' | 'used';
-  usedAt?: Date;
-  usedBy?: string;
-  winnerId?: number;
-  createdAt: Date;
-}
-
-export interface ActivityWinner {
-  id: number;
-  activityId: number;
-  prizeId?: number;
-  visitorId: string;
-  visitorName?: string;
-  phone?: string;
-  email?: string;
-  sessionId?: string;
-  isClaimed: boolean;
-  claimedAt?: Date;
-  cardCode?: string;  // 如果是卡密奖品，中奖时显示的卡密
-  createdAt: Date;
-  prize?: ActivityPrize;
-}
-
-export interface CreateActivityInput {
-  title: string;
-  description?: string;
-  type?: ActivityType;
-  startTime: number;
-  endTime: number;
-  maxParticipants?: number;
-  dailyLimit?: number;
-}
-
-export interface CreatePrizeInput {
-  activityId: number;
-  name: string;
-  imageUrl?: string;
-  quantity: number;
-  probability: number;
-  sortOrder?: number;
-  isEmpty?: boolean;
-  isCard?: boolean;  // 是否是卡密奖品
-}
-
-export interface CreateCardCodeInput {
-  prizeId: number;
-  code: string;
-}
-
-export interface BatchCreateCardCodeInput {
-  prizeId: number;
-  codes: string[];  // 批量导入卡密
-}
-
-export interface CanParticipateResult {
-  canParticipate: boolean;
-  message?: string;
 }

@@ -40,7 +40,12 @@ adminRoutes.post('/users', async (c) => {
     const result = await adminService.createUser({ username, password, email, name, role, business_id });
     
     if (result.success) {
-      return c.json({ success: true, message: '用户创建成功', userId: result.userId }, 201);
+      return c.json({ 
+        success: true, 
+        message: '用户创建成功', 
+        userId: result.userId,
+        customDomain: result.customDomain 
+      }, 201);
     } else {
       return c.json({ success: false, error: result.error }, 400);
     }
