@@ -25,11 +25,29 @@ export interface StaffUser {
   updated_at: number;
 }
 
-const cfApiToken = process.env.CF_API_TOKEN || '';
-const cfAccountId = process.env.CF_ACCOUNT_ID || '';
-const cfZoneId = process.env.CF_ZONE_ID || '';
-const cfBaseDomain = process.env.CF_BASE_DOMAIN || 'zygmail.icu';
-const cfWorkerDomain = process.env.CF_WORKER_DOMAIN || 'zyg-online-chat.linzihai.workers.dev';
+interface CFEnvConfig {
+  CF_API_TOKEN?: string;
+  CF_ACCOUNT_ID?: string;
+  CF_ZONE_ID?: string;
+  CF_BASE_DOMAIN?: string;
+  CF_WORKER_DOMAIN?: string;
+}
+
+function getCFConfig(env?: CFEnvConfig): {
+  apiToken: string;
+  accountId: string;
+  zoneId: string;
+  baseDomain: string;
+  workerDomain: string;
+} {
+  return {
+    apiToken: env?.CF_API_TOKEN || '',
+    accountId: env?.CF_ACCOUNT_ID || '',
+    zoneId: env?.CF_ZONE_ID || '',
+    baseDomain: env?.CF_BASE_DOMAIN || 'zygmail.icu',
+    workerDomain: env?.CF_WORKER_DOMAIN || 'zyg-online-chat.linzihai.workers.dev',
+  };
+}
 
 export interface CreateUserInput {
   username: string;
@@ -48,8 +66,9 @@ export interface UpdateUserInput {
   password?: string;
 }
 
-export async function createUser(input: CreateUserInput): Promise<{ success: boolean; error?: string; userId?: number; customDomain?: string }> {
+export async function createUser(input: CreateUserInput, env?: CFEnvConfig): Promise<{ success: boolean; error?: string; userId?: number; customDomain?: string }> {
   const db = getDb();
+  const cfConfig = getCFConfig(env);
   
   try {
     const existing = await db.get<StaffUser>('SELECT id FROM staff_users WHERE username = ?', [input.username]);
@@ -86,15 +105,15 @@ export async function createUser(input: CreateUserInput): Promise<{ success: boo
       }
       businessName = input.name || input.username;
       
-      if (cfApiToken && cfZoneId && businessSlug) {
+      if (cfConfig.apiToken && cfConfig.zoneId && businessSlug) {
         const cfService = new CFService({
-          apiToken: cfApiToken,
-          accountId: cfAccountId,
-          zoneId: cfZoneId,
+          apiToken: cfConfig.apiToken,
+          accountId: cfConfig.accountId,
+          zoneId: cfConfig.zoneId,
         });
         
-        const subdomain = `${businessSlug}.${cfBaseDomain}`;
-        const record = await cfService.createCNAMERecord(subdomain, cfWorkerDomain);
+        const subdomain = `${businessSlug}.${cfConfig.baseDomain}`;
+        const record = await cfService.createCNAMERecord(subdomain, cfConfig.workerDomain);
         
         if (record) {
           customDomain = subdomain;
@@ -107,7 +126,7 @@ export async function createUser(input: CreateUserInput): Promise<{ success: boo
     
     const result = await db.run(
       'INSERT INTO staff_users (username, password_hash, email, name, role, business_id, business_slug, business_name, custom_domain, cf_zone_id, cf_configured, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [input.username, passwordHash, input.email || null, input.name || null, input.role || 'staff', finalBusinessId, businessSlug, businessName, customDomain, cfZoneId || null, customDomain ? 1 : 0, 'active', Date.now(), Date.now()]
+      [input.username, passwordHash, input.email || null, input.name || null, input.role || 'staff', finalBusinessId, businessSlug, businessName, customDomain, cfConfig.zoneId || null, customDomain ? 1 : 0, 'active', Date.now(), Date.now()]
     );
 
     return { success: true, userId: result.lastInsertRowid, customDomain };

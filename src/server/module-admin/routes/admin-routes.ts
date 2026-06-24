@@ -37,7 +37,7 @@ adminRoutes.post('/users', async (c) => {
       return c.json({ success: false, error: '用户名和密码是必填项' }, 400);
     }
 
-    const result = await adminService.createUser({ username, password, email, name, role, business_id });
+    const result = await adminService.createUser({ username, password, email, name, role, business_id }, c.env);
     
     if (result.success) {
       return c.json({ 
@@ -165,7 +165,7 @@ adminRoutes.post('/staff-users', async (c) => {
       name, 
       role: role || 'staff',
       business_id
-    });
+    }, c.env);
     
     if (result.success) {
       return c.json({ success: true, message: '商家用户创建成功', userId: result.userId }, 201);
