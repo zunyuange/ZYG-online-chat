@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { MessageCircle, Users, User, LogOut, Code2, Settings, ArrowRightLeft, XCircle, ListChecks, Bell, BellOff } from 'lucide-react';
+import { MessageCircle, Users, User, LogOut, Code2, Settings, ArrowRightLeft, XCircle, ListChecks, Bell, BellOff, Globe } from 'lucide-react';
 import { useStaffStore } from '@client/stores/staffStore';
 import { SessionList } from '@client/components/staff/SessionList';
 import { StaffChatWindow, VisitorInfoPanel } from '@client/components/staff/StaffChatWindow';
@@ -14,6 +14,7 @@ import { QueueList } from '@client/components/staff/QueueList';
 import { StaffManagement } from '@client/components/staff/StaffManagement';
 import { StaffCode } from '@client/components/staff/StaffCode';
 import { StaffSettings } from '@client/components/staff/StaffSettings';
+import { DomainManager } from '@client/components/staff/DomainManager';
 import { VisitorFields } from '@client/components/staff/VisitorFields';
 import { useAuth } from '@client/hooks/useAuth';
 import { useSiteSettings } from '@client/hooks/useSiteSettings';
@@ -104,7 +105,7 @@ export function StaffPage() {
   const [showEndSessionConfirm, setShowEndSessionConfirm] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
-  const [currentPage, setCurrentPage] = useState<'home' | 'staff' | 'code' | 'settings' | 'visitorFields'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'staff' | 'code' | 'settings' | 'visitorFields' | 'domains'>('home');
   const [staffList, setStaffList] = useState<{ id: number; name: string; username: string }[]>([]);
   const [visitorFieldDefs, setVisitorFieldDefs] = useState<VisitorFieldDef[]>([]);
   const [profileForm, setProfileForm] = useState({
@@ -1227,6 +1228,15 @@ export function StaffPage() {
             <span>{t('staff_nav_settings')}</span>
           </div>
         )}
+        {userInfo?.role === 'admin' && (
+          <div
+            onClick={() => setCurrentPage('domains')}
+            style={navTabItemStyle(currentPage === 'domains')}
+          >
+            <Globe size={16} />
+            <span>{t('domain_management')}</span>
+          </div>
+        )}
       </div>
 
       {/* Clear messages confirmation modal */}
@@ -1536,6 +1546,18 @@ export function StaffPage() {
         {currentPage === 'settings' && (
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <StaffSettings />
+          </div>
+        )}
+
+        {/* Domains page */}
+        {currentPage === 'domains' && (
+          <div style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
+            <DomainManager
+              businessId={userInfo?.businessId || 1}
+              authToken={localStorage.getItem('staff_token') || ''}
+              t={t as any}
+              isPlatformAdmin={false}
+            />
           </div>
         )}
       </div>
