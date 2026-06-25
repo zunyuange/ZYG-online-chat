@@ -26,6 +26,7 @@ import { initTranslateService } from './services/translate-service';
 import { createDomainRouter, setDbGetter } from './middleware/domain-router';
 import { initTokenEncryption } from './shared/token-crypto';
 import { initAIRouter } from './services/ai-router';
+import { startSSEHeartbeat } from './module-chat/services/sse-service';
 
 // Cloudflare Workers bindings
 interface Env {
@@ -143,6 +144,9 @@ async function ensureInitialized(env: Env): Promise<void> {
 
     // 🆕 Set up domain router database getter
     setDbGetter(getDb);
+
+    // 🆕 Start SSE heartbeat (Node.js only, safe to call in Worker - checks env)
+    startSSEHeartbeat();
 
     initialized = true;
     console.log('[Worker] All services initialized successfully');
