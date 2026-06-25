@@ -437,6 +437,7 @@ businessRoutes.post('/create', async (c) => {
             console.warn(`[BusinessRoutes] ⚠️ Workers custom domain failed: API Token 缺少 Workers:Edit 权限`);
           } else if (errCode === 'missing_platform_config') {
             console.log(`[BusinessRoutes] ℹ️ Workers custom domain skipped: platform CF config not set`);
+          }
         }
       } else {
         autoDomainError = domainResult.error || '子域名创建失败';
