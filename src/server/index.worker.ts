@@ -390,7 +390,16 @@ export default {
       // For SPA routes, serve root (/) which contains the SPA
       if (isSpaRoute) {
         try {
-          const rootRequest = new Request(new URL('/', url.origin), request);
+          // 🔧 使用主域名获取静态资源，避免子域名触发循环重定向导致 522
+          // 子域名下 new URL('/', url.origin) 的请求会被 Worker 再次拦截并返回 302 重定向，形成死循环
+          const reqHost = (request.headers.get('host') || '').toLowerCase();
+          const reqHostname = reqHost.split(':')[0];
+          const isSubdomain = reqHostname &&
+            reqHostname !== 'zygonlinechat.zygmail.icu' &&
+            reqHostname !== 'www.zygonlinechat.zygmail.icu' &&
+            !reqHostname.endsWith('.workers.dev');
+          const assetOrigin = isSubdomain ? 'https://zygonlinechat.zygmail.icu' : url.origin;
+          const rootRequest = new Request(new URL('/', assetOrigin), request);
           const rootResponse = await env.ASSETS.fetch(rootRequest);
           if (rootResponse && (rootResponse.status === 200 || rootResponse.status === 304)) {
             return rootResponse;
