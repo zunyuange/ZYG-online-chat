@@ -46,7 +46,14 @@ export class CloudflareApiClient {
 
     if (!response.ok || !data.success) {
       const errors = data.errors?.map((e: any) => e.message).join(', ') || 'Unknown error';
-      throw new Error(`CF API Error [${response.status}]: ${errors}`);
+      const errorCode = data.errors?.[0]?.code || response.status;
+      const errorMsg = `CF API Error [${response.status}]: ${errors}`;
+      
+      // Include error code for better frontend handling
+      const enhancedError = new Error(errorMsg) as any;
+      enhancedError.cfErrorCode = errorCode;
+      enhancedError.cfStatusCode = response.status;
+      throw enhancedError;
     }
 
     return data;

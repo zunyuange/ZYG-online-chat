@@ -191,12 +191,27 @@ export class DomainService {
       const errorMsg = error instanceof Error ? error.message : String(error);
       console.error('[DomainService] bindCFDomain error:', errorMsg);
 
+      // Translate CF API errors into user-friendly messages
+      let userError = errorMsg;
+      const cfError = error as any;
+      if (cfError.cfStatusCode) {
+        const code = cfError.cfErrorCode;
+        const status = cfError.cfStatusCode;
+        if (status === 403 || code === 9103 || code === 9106) {
+          userError = 'cf_token_invalid';
+        } else if (status === 401 || code === 10000) {
+          userError = 'cf_token_expired';
+        } else if (code === 9109) {
+          userError = 'cf_token_no_permission';
+        }
+      }
+
       await this.logOperation(businessId, 0, 'bind_cf_failed', {
         domain,
         error: errorMsg,
       });
 
-      return { success: false, error: errorMsg };
+      return { success: false, error: userError };
     }
   }
 

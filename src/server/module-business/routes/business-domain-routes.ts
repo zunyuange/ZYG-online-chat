@@ -120,7 +120,14 @@ businessDomainRoutes.post('/bind-cf', async (c) => {
     });
 
     if (!result.success) {
-      return c.json({ success: false, error: result.error }, 400);
+      // 翻译 CF 错误码为友好提示
+      const errMap: Record<string, string> = {
+        'cf_token_invalid': 'Cloudflare API Token 无效，请检查 Token 是否正确',
+        'cf_token_expired': 'Cloudflare API Token 已过期或未激活',
+        'cf_token_no_permission': 'Cloudflare API Token 权限不足，需要 Zone:DNS:Edit 和 Account:Read 权限',
+      };
+      const friendlyError = errMap[result.error as string] || result.error;
+      return c.json({ success: false, error: friendlyError }, 400);
     }
 
     return c.json({

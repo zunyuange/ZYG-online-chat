@@ -24,6 +24,7 @@ async function requireAuth(c: any, next: any) {
     if (adminResult.valid) {
       // admin_users 的管理员 token，使用默认商家 id=1
       c.set('businessId', adminResult.userId || 1);
+      c.set('userId', adminResult.userId || 1);
       await next();
       return;
     }
@@ -37,9 +38,8 @@ async function requireAuth(c: any, next: any) {
     businessId = result.userId;
   }
   
-  if (businessId !== undefined) {
-    c.set('businessId', businessId);
-  }
+  c.set('businessId', businessId);
+  c.set('userId', result.userId || businessId);
 
   await next();
 }
