@@ -7,12 +7,16 @@ import { useState, useEffect } from 'react';
 import { 
   Shield, User, Users, Settings,
   UserPlus, Edit, Trash2, X, Check, Plus, 
-  Home, Key, Globe
+  Home, Key, Globe, Link, Copy, ExternalLink,
+  Loader2, AlertCircle, ChevronRight, ChevronLeft,
+  Cloud, Server
 } from 'lucide-react';
 import { useI18n } from '../context/I18nContext';
 import { useSiteSettings } from '@client/hooks/useSiteSettings';
 
-type TabType = 'dashboard' | 'staff' | 'admin' | 'roles' | 'settings';
+type TabType = 'dashboard' | 'staff' | 'admin' | 'roles' | 'settings' | 'domains';
+
+type DomainTypeLabel = 'auto_subdomain' | 'custom_cf' | 'custom_external';
 
 interface UserData {
   id: number;
@@ -67,6 +71,29 @@ interface RoleFormData {
   permissions: string[];
 }
 
+interface DomainData {
+  id: number;
+  businessId: number;
+  domainType: string;
+  domain: string;
+  subdomain: string | null;
+  domainPlatform: string;
+  verificationStatus: string;
+  sslStatus: string;
+  isPrimary: number;
+  status: string;
+  createdAt: number;
+  updatedAt: number;
+  errorMessage?: string;
+}
+
+interface DomainBindFormData {
+  domain: string;
+  platform: string;
+  cfApiToken: string;
+  step: number; // 1=输入域名, 2=授权(CF)/显示配置(手工), 3=完成
+}
+
 export function AdminPage() {
   const { t, locale, setLocale, supportedLocales } = useI18n();
   const { siteName: globalSiteName } = useSiteSettings();
@@ -117,6 +144,24 @@ export function AdminPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
+  // 🆕 Domain Management State
+  const [domains, setDomains] = useState<DomainData[]>([]);
+  const [domainsLoading, setDomainsLoading] = useState(false);
+  const [showDomainModal, setShowDomainModal] = useState(false);
+  const [domainBindForm, setDomainBindForm] = useState<DomainBindFormData>({
+    domain: '',
+    platform: 'cloudflare',
+    cfApiToken: '',
+    step: 1,
+  });
+  const [domainModalError, setDomainModalError] = useState<string | null>(null);
+  const [domainBindResult, setDomainBindResult] = useState<{
+    domain?: string;
+    dnsRecord?: { type: string; name: string; value: string };
+    verificationStatus?: string;
+  } | null>(null);
+  const [domainDetachConfirm, setDomainDetachConfirm] = useState<number | null>(null);
+
 
   const allPermissions = [
     { key: 'admin_view', label: t('permission_admin_view') },
@@ -131,6 +176,13 @@ export function AdminPage() {
   useEffect(() => {
     checkAuth();
   }, []);
+
+  // 🆕 切换到域名管理Tab时自动加载
+  useEffect(() => {
+    if (activeTab === 'domains' && !loading) {
+      loadDomains();
+    }
+  }, [activeTab, loading]);
 
   // ★ 定期向服务端发送心跳，保持客服在线状态
   // 管理后台没有 SSE 连接，需要主动 ping 来更新 last_active
@@ -236,6 +288,205 @@ export function AdminPage() {
     localStorage.removeItem('admin_token_expires');
     localStorage.removeItem('admin_username');
     window.location.href = '/adminlogin';
+  };
+
+  // 🆕 Domain Management Functions
+  const loadDomains = async () => {
+    setDomainsLoading(true);
+    try {
+      const token = localStorage.getItem('admin_token');
+      const res = await fetch('/api/business/domains', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDomains(data.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to load domains:', err);
+    } finally {
+      setDomainsLoading(false);
+    }
+  };
+
+  const handleDomainTabEnter = () => {
+    if (domains.length === 0) {
+      loadDomains();
+    }
+  };
+
+  const handleOpenDomainBind = () => {
+    setDomainBindForm({ domain: '', platform: 'cloudflare', cfApiToken: '', step: 1 });
+    setDomainModalError(null);
+    setDomainBindResult(null);
+    setShowDomainModal(true);
+  };
+
+  const handleDomainModalNext = () => {
+    if (domainBindForm.step === 1) {
+      if (!domainBindForm.domain.trim()) {
+        setDomainModalError(t('domain_input_hint'));
+        return;
+      }
+      if (domainBindForm.platform === 'cloudflare') {
+        setDomainBindForm({ ...domainBindForm, step: 2 });
+      } else {
+        // 手动绑定：直接跳到配置指引步骤（step 2 显示 DNS 配置）
+        setDomainBindForm({ ...domainBindForm, step: 2 });
+      }
+      setDomainModalError(null);
+    } else if (domainBindForm.step === 2 && domainBindForm.platform === 'cloudflare') {
+      if (!domainBindForm.cfApiToken.trim()) {
+        setDomainModalError(t('cf_api_token_hint'));
+        return;
+      }
+      handleBindDomain();
+    }
+  };
+
+  const handleDomainModalPrev = () => {
+    if (domainBindForm.step > 1) {
+      setDomainBindForm({ ...domainBindForm, step: domainBindForm.step - 1 });
+      setDomainModalError(null);
+    }
+  };
+
+  const handleBindDomain = async () => {
+    setDomainModalError(null);
+    setFormLoading(true);
+    try {
+      const token = localStorage.getItem('admin_token');
+      const endpoint =
+        domainBindForm.platform === 'cloudflare'
+          ? '/api/business/domains/bind-cf'
+          : '/api/business/domains/bind-manual';
+
+      const body: Record<string, string> = {
+        domain: domainBindForm.domain.trim(),
+        platform: domainBindForm.platform,
+      };
+      if (domainBindForm.platform === 'cloudflare' && domainBindForm.cfApiToken) {
+        body.cfApiToken = domainBindForm.cfApiToken;
+      }
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setDomainBindResult({
+          domain: data.domain,
+          dnsRecord: data.dnsRecord,
+          verificationStatus: data.verificationStatus,
+        });
+        setDomainBindForm({ ...domainBindForm, step: 3 });
+      } else {
+        setDomainModalError(data.error || t('domain_bind_failed'));
+      }
+    } catch (err) {
+      setDomainModalError(t('domain_bind_failed'));
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleVerifyDomain = async (domainId: number) => {
+    setFormLoading(true);
+    try {
+      const token = localStorage.getItem('admin_token');
+      const res = await fetch(`/api/business/domains/${domainId}/verify`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setError(null);
+        loadDomains();
+      } else {
+        setError(data.error || t('domain_operation_failed'));
+      }
+    } catch {
+      setError(t('domain_operation_failed'));
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleDetachDomain = async (domainId: number) => {
+    setFormLoading(true);
+    try {
+      const token = localStorage.getItem('admin_token');
+      const res = await fetch(`/api/business/domains/${domainId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDomainDetachConfirm(null);
+        loadDomains();
+      } else {
+        setError(data.error || t('domain_operation_failed'));
+      }
+    } catch {
+      setError(t('domain_operation_failed'));
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleSetPrimaryDomain = async (domainId: number) => {
+    setFormLoading(true);
+    try {
+      const token = localStorage.getItem('admin_token');
+      const res = await fetch(`/api/business/domains/${domainId}/primary`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await res.json();
+      if (data.success) {
+        loadDomains();
+      } else {
+        setError(data.error || t('domain_operation_failed'));
+      }
+    } catch {
+      setError(t('domain_operation_failed'));
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleCopyLink = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // Fallback
+      const el = document.createElement('textarea');
+      el.value = url;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+    }
+  };
+
+  const handleCloseDomainModal = () => {
+    setShowDomainModal(false);
+    setDomainBindForm({ domain: '', platform: 'cloudflare', cfApiToken: '', step: 1 });
+    setDomainModalError(null);
+    setDomainBindResult(null);
+    loadDomains(); // 刷新列表
   };
 
   const handleSaveSettings = async () => {
@@ -787,6 +1038,7 @@ export function AdminPage() {
     { key: 'staff' as const, label: t('staff_management'), icon: Users },
     { key: 'admin' as const, label: t('admin_management'), icon: User },
     { key: 'roles' as const, label: t('role_management'), icon: Key },
+    { key: 'domains' as const, label: t('domain_management'), icon: Globe },
     { key: 'settings' as const, label: t('settings'), icon: Settings },
   ];
 
@@ -886,6 +1138,22 @@ export function AdminPage() {
             <div style={{ textAlign: 'left' }}>
               <div style={{ fontWeight: 500 }}>{t('manage_roles')}</div>
               <div style={{ fontSize: '12px', opacity: 0.6 }}>{t('view_edit_roles')}</div>
+            </div>
+          </button>
+          <button 
+            onClick={() => setActiveTab('domains')}
+            style={{ 
+              ...buttonStyle('default'), 
+              padding: '16px', 
+              justifyContent: 'flex-start',
+              backgroundColor: '#fff',
+              border: '1px solid #e5e7eb',
+            }}
+          >
+            <Globe size={20} />
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontWeight: 500 }}>{t('manage_domains')}</div>
+              <div style={{ fontSize: '12px', opacity: 0.6 }}>{t('view_edit_domains')}</div>
             </div>
           </button>
           <button 
@@ -1305,6 +1573,294 @@ export function AdminPage() {
     </div>
   );
 
+  // 🆕 Domain Management Tab
+  const renderDomains = () => {
+    const autoDomains = domains.filter(d => d.domainType === 'auto_subdomain');
+    const customDomains = domains.filter(d => d.domainType !== 'auto_subdomain');
+
+    const domainTypeLabel = (type: string): string => {
+      const map: Record<string, string> = {
+        auto_subdomain: t('domain_auto_subdomain'),
+        custom_cf: t('domain_cf_auto'),
+        custom_external: t('domain_manual'),
+      };
+      return map[type] || type;
+    };
+
+    const statusBadgeStyle = (status: string): React.CSSProperties => {
+      const colorMap: Record<string, { bg: string; color: string; border: string }> = {
+        active: { bg: '#f6ffed', color: '#52c41a', border: '#b7eb8f' },
+        dns_verified: { bg: '#f6ffed', color: '#52c41a', border: '#b7eb8f' },
+        pending: { bg: '#fffbe6', color: '#faad14', border: '#ffe58f' },
+        dns_verifying: { bg: '#e6f7ff', color: '#1890ff', border: '#91d5ff' },
+        ssl_provisioning: { bg: '#e6f7ff', color: '#1890ff', border: '#91d5ff' },
+        failed: { bg: '#fff1f0', color: '#ff4d4f', border: '#ffa39e' },
+      };
+      const c = colorMap[status] || { bg: '#f5f5f5', color: '#999', border: '#d9d9d9' };
+      return {
+        padding: '2px 10px',
+        borderRadius: '4px',
+        fontSize: '12px',
+        backgroundColor: c.bg,
+        color: c.color,
+        border: `1px solid ${c.border}`,
+        display: 'inline-block',
+      };
+    };
+
+    const statusLabel = (status: string): string => {
+      const map: Record<string, string> = {
+        active: t('domain_active'),
+        pending: t('domain_pending'),
+        dns_verifying: t('domain_verifying'),
+        dns_verified: t('domain_active'),
+        ssl_provisioning: t('domain_ssl_provisioning'),
+        failed: t('domain_failed'),
+      };
+      return map[status] || status;
+    };
+
+    const platformLabel = (platform: string): string => {
+      const map: Record<string, string> = {
+        cloudflare: t('domain_platform_cloudflare'),
+        aliyun: t('domain_platform_aliyun'),
+        tencent: t('domain_platform_tencent'),
+        godaddy: t('domain_platform_godaddy'),
+        namesilo: t('domain_platform_namesilo'),
+        other: t('domain_platform_other'),
+      };
+      return map[platform] || platform;
+    };
+
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <h1 style={{ fontSize: '20px', fontWeight: 500 }}>{t('domain_management')}</h1>
+          <button 
+            onClick={handleOpenDomainBind}
+            style={{ ...buttonStyle('primary'), padding: '8px 20px' }}
+          >
+            <Plus size={16} /> {t('bind_domain')}
+          </button>
+        </div>
+
+        {domainsLoading ? (
+          <div style={{ textAlign: 'center', padding: '48px', color: '#999' }}>
+            <Loader2 size={32} className="animate-spin" style={{ margin: '0 auto 12px' }} />
+            <p>{t('loading')}</p>
+          </div>
+        ) : (
+          <>
+            {/* 平台专属域名（自动生成） */}
+            <div style={cardStyle}>
+              <h2 style={{ fontSize: '16px', fontWeight: 500, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Server size={18} /> {t('platform_domain')}
+              </h2>
+              {autoDomains.length === 0 ? (
+                <p style={{ color: '#999', fontSize: '14px' }}>{t('loading')}</p>
+              ) : (
+                <table style={tableStyle}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>{t('domain_url')}</th>
+                      <th style={thStyle}>{t('domain_type')}</th>
+                      <th style={thStyle}>{t('domain_status')}</th>
+                      <th style={thStyle}></th>
+                      <th style={{ ...thStyle, textAlign: 'center' }}>{t('domain_actions')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {autoDomains.map((d) => (
+                      <tr key={d.id} style={{ backgroundColor: d.isPrimary ? '#f6ffed' : 'transparent' }}>
+                        <td style={tdStyle}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <a 
+                              href={`https://${d.domain}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              style={{ color: '#1890ff', textDecoration: 'none' }}
+                            >
+                              {d.domain}
+                            </a>
+                            <ExternalLink size={14} style={{ color: '#999' }} />
+                            <button 
+                              onClick={() => handleCopyLink(`https://${d.domain}`)}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#999' }}
+                              title={t('copy_link')}
+                            >
+                              <Copy size={14} />
+                            </button>
+                          </div>
+                        </td>
+                        <td style={tdStyle}>
+                          <span style={{ fontSize: '13px', color: '#666' }}>
+                            {domainTypeLabel(d.domainType)}
+                          </span>
+                        </td>
+                        <td style={tdStyle}>
+                          <span style={statusBadgeStyle(d.verificationStatus)}>
+                            {statusLabel(d.verificationStatus)}
+                          </span>
+                        </td>
+                        <td style={tdStyle}>
+                          {d.isPrimary ? (
+                            <span style={{ ...roleBadgeStyle, backgroundColor: '#f6ffed', color: '#52c41a', border: '1px solid #b7eb8f' }}>
+                              {t('is_primary')}
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleSetPrimaryDomain(d.id)}
+                              style={{ ...buttonStyle('default'), fontSize: '12px', padding: '2px 8px' }}
+                              disabled={formLoading}
+                            >
+                              {t('set_as_primary')}
+                            </button>
+                          )}
+                        </td>
+                        <td style={{ ...tdStyle, textAlign: 'center' }}>
+                          <button
+                            onClick={() => handleCopyLink(`https://${d.domain}`)}
+                            style={{ ...buttonStyle('default'), fontSize: '12px', marginRight: '8px' }}
+                          >
+                            <Copy size={12} /> {t('copy_link')}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* 自定义域名 */}
+            <div style={cardStyle}>
+              <h2 style={{ fontSize: '16px', fontWeight: 500, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Globe size={18} /> {t('custom_domain')}
+              </h2>
+              {customDomains.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px', color: '#999' }}>
+                  <Link size={40} style={{ marginBottom: '12px', opacity: 0.3 }} />
+                  <p>{t('domain_no_custom')}</p>
+                </div>
+              ) : (
+                <table style={tableStyle}>
+                  <thead>
+                    <tr>
+                      <th style={thStyle}>{t('domain_url')}</th>
+                      <th style={thStyle}>{t('domain_type')}</th>
+                      <th style={thStyle}>{t('domain_platform_label')}</th>
+                      <th style={thStyle}>{t('domain_status')}</th>
+                      <th style={{ ...thStyle, textAlign: 'center' }}>{t('domain_actions')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customDomains.map((d) => (
+                      <tr key={d.id} style={{ backgroundColor: d.isPrimary ? '#f6ffed' : 'transparent' }}>
+                        <td style={tdStyle}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontWeight: 500 }}>{d.domain}</span>
+                            <button 
+                              onClick={() => handleCopyLink(`https://${d.domain}`)}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#999' }}
+                              title={t('copy_link')}
+                            >
+                              <Copy size={14} />
+                            </button>
+                          </div>
+                        </td>
+                        <td style={tdStyle}>
+                          <span style={{ fontSize: '13px', color: '#666' }}>
+                            {domainTypeLabel(d.domainType)}
+                          </span>
+                        </td>
+                        <td style={tdStyle}>
+                          <span style={{ fontSize: '13px', color: '#666' }}>
+                            {platformLabel(d.domainPlatform)}
+                          </span>
+                        </td>
+                        <td style={tdStyle}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span style={statusBadgeStyle(d.verificationStatus)}>
+                              {statusLabel(d.verificationStatus)}
+                            </span>
+                          </div>
+                        </td>
+                        <td style={{ ...tdStyle, textAlign: 'center' }}>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                            {d.verificationStatus === 'pending' && (
+                              <button
+                                onClick={() => handleVerifyDomain(d.id)}
+                                style={{ ...buttonStyle('primary'), fontSize: '12px' }}
+                                disabled={formLoading}
+                              >
+                                <Check size={12} /> {t('verify_domain')}
+                              </button>
+                            )}
+                            {!d.isPrimary && d.verificationStatus !== 'pending' && d.verificationStatus !== 'failed' && (
+                              <button
+                                onClick={() => handleSetPrimaryDomain(d.id)}
+                                style={{ ...buttonStyle('default'), fontSize: '12px' }}
+                                disabled={formLoading}
+                              >
+                                {t('set_as_primary')}
+                              </button>
+                            )}
+                            {d.isPrimary && (
+                              <span style={{ ...roleBadgeStyle, backgroundColor: '#f6ffed', color: '#52c41a', border: '1px solid #b7eb8f' }}>
+                                {t('is_primary')}
+                              </span>
+                            )}
+                            {d.domainType !== 'auto_subdomain' && (
+                              <button
+                                onClick={() => setDomainDetachConfirm(d.id)}
+                                style={{ ...buttonStyle('danger'), fontSize: '12px' }}
+                                disabled={formLoading}
+                              >
+                                <Trash2 size={12} /> {t('detach_domain')}
+                              </button>
+                            )}
+                          </div>
+                          {d.errorMessage && (
+                            <div style={{ marginTop: '4px', fontSize: '12px', color: '#ff4d4f' }}>
+                              <AlertCircle size={12} style={{ verticalAlign: 'middle' }} /> {d.errorMessage}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* 旧版链接提示 */}
+            <div style={{ ...cardStyle, backgroundColor: '#fafafa' }}>
+              <h2 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '12px', color: '#666', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <AlertCircle size={16} /> {t('domain_legacy_url')}
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: '#999' }}>
+                {autoDomains.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <code style={{ backgroundColor: '#fff', padding: '4px 8px', borderRadius: '4px', border: '1px solid #d9d9d9' }}>
+                      https://zygonlinechat.zygmail.icu/chat?business={autoDomains[0]?.subdomain || '...'}
+                    </code>
+                    <button 
+                      onClick={() => handleCopyLink(`https://zygonlinechat.zygmail.icu/chat?business=${autoDomains[0]?.subdomain || ''}`)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: '#999' }}
+                    >
+                      <Copy size={14} />
+                    </button>
+                  </div>
+                )}
+                <span>{t('domain_workers_dev_url')}: <code style={{ backgroundColor: '#fff', padding: '4px 8px', borderRadius: '4px', border: '1px solid #d9d9d9' }}>zyg-online-chat.linzihai.workers.dev</code></span>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div style={pageStyle}>
       {/* Header */}
@@ -1381,6 +1937,7 @@ export function AdminPage() {
         {activeTab === 'staff' && renderStaffManagement()}
         {activeTab === 'admin' && renderAdminManagement()}
         {activeTab === 'roles' && renderRoleManagement()}
+        {activeTab === 'domains' && renderDomains()}
         {activeTab === 'settings' && renderSettings()}
       </div>
 
@@ -1557,6 +2114,284 @@ export function AdminPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 🆕 Domain Bind Modal (Step Wizard) */}
+      {showDomainModal && (
+        <div style={modalOverlayStyle} onClick={handleCloseDomainModal}>
+          <div style={{ ...modalStyle, maxWidth: '560px' }} onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 500 }}>
+                {domainBindForm.platform === 'cloudflare' ? t('bind_cf_domain') : t('bind_manual_domain')}
+              </h2>
+              <button onClick={handleCloseDomainModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Step Indicator */}
+            {domainBindForm.step < 3 && (
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+                {[1, 2].map((s) => (
+                  <div key={s} style={{
+                    flex: 1,
+                    height: '4px',
+                    borderRadius: '2px',
+                    backgroundColor: domainBindForm.step >= s ? '#1890ff' : '#e5e7eb',
+                    transition: 'background-color 0.3s',
+                  }} />
+                ))}
+              </div>
+            )}
+
+            {domainModalError && (
+              <div style={{
+                backgroundColor: '#fff2f0',
+                border: '1px solid #ffccc7',
+                borderRadius: '4px',
+                padding: '12px',
+                marginBottom: '16px',
+                color: '#ff4d4f',
+                fontSize: '14px',
+              }}>
+                {domainModalError}
+              </div>
+            )}
+
+            {/* Step 1: 输入域名 */}
+            {domainBindForm.step === 1 && (
+              <div>
+                <label style={{ ...labelStyle, marginBottom: '8px' }}>{t('domain_platform_label')}</label>
+                <select
+                  value={domainBindForm.platform}
+                  onChange={(e) => setDomainBindForm({ ...domainBindForm, platform: e.target.value })}
+                  style={{ ...inputStyle, marginBottom: '16px' }}
+                >
+                  <option value="cloudflare">{t('domain_platform_cloudflare')}</option>
+                  <option value="aliyun">{t('domain_platform_aliyun')}</option>
+                  <option value="tencent">{t('domain_platform_tencent')}</option>
+                  <option value="godaddy">{t('domain_platform_godaddy')}</option>
+                  <option value="namesilo">{t('domain_platform_namesilo')}</option>
+                  <option value="other">{t('domain_platform_other')}</option>
+                </select>
+
+                <label style={labelStyle}>{t('domain_url')}</label>
+                <input
+                  type="text"
+                  value={domainBindForm.domain}
+                  onChange={(e) => setDomainBindForm({ ...domainBindForm, domain: e.target.value })}
+                  style={inputStyle}
+                  placeholder={t('domain_input_placeholder')}
+                />
+                <p style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>{t('domain_input_hint')}</p>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+                  <button type="button" onClick={handleCloseDomainModal} style={buttonStyle('default')}>
+                    {t('cancel')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDomainModalNext}
+                    style={buttonStyle('primary')}
+                  >
+                    {domainBindForm.platform === 'cloudflare' ? t('domain_step_next') : t('domain_step_next')}
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: 授权(CF) / DNS配置指引(手工) */}
+            {domainBindForm.step === 2 && (
+              <div>
+                {domainBindForm.platform === 'cloudflare' ? (
+                  <>
+                    <label style={labelStyle}>{t('cf_api_token')}</label>
+                    <input
+                      type="password"
+                      value={domainBindForm.cfApiToken}
+                      onChange={(e) => setDomainBindForm({ ...domainBindForm, cfApiToken: e.target.value })}
+                      style={inputStyle}
+                      placeholder="●●●●●●●●●●●●●●●●●●●●"
+                    />
+                    <p style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>{t('cf_api_token_hint')}</p>
+                    <div style={{
+                      backgroundColor: '#e6f7ff',
+                      border: '1px solid #91d5ff',
+                      borderRadius: '4px',
+                      padding: '12px',
+                      marginTop: '12px',
+                      fontSize: '13px',
+                      color: '#1890ff',
+                    }}>
+                      <strong>{t('cf_api_token_get')}</strong>
+                      <ol style={{ margin: '8px 0 0 16px', padding: 0 }}>
+                        <li>访问 dash.cloudflare.com → 右上角头像 → My Profile</li>
+                        <li>选择 API Tokens 标签 → Create Token</li>
+                        <li>权限选择: Zone:DNS:Edit + Account:Read</li>
+                        <li>创建后将Token粘贴到上方输入框</li>
+                      </ol>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{
+                      backgroundColor: '#fffbe6',
+                      border: '1px solid #ffe58f',
+                      borderRadius: '4px',
+                      padding: '16px',
+                      marginBottom: '16px',
+                    }}>
+                      <h3 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '8px' }}>
+                        <AlertCircle size={16} style={{ verticalAlign: 'middle', marginRight: '8px' }} />
+                        {t('domain_dns_config_guide')}
+                      </h3>
+                      <p style={{ fontSize: '13px', color: '#666', marginBottom: '12px' }}>
+                        {t('domain_dns_config_desc')}
+                      </p>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                        <tbody>
+                          <tr>
+                            <td style={{ padding: '6px 12px', border: '1px solid #f0f0f0', fontWeight: 500, backgroundColor: '#fff' }}>
+                              {t('domain_dns_type')}
+                            </td>
+                            <td style={{ padding: '6px 12px', border: '1px solid #f0f0f0', backgroundColor: '#fff', fontFamily: 'monospace' }}>
+                              CNAME
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style={{ padding: '6px 12px', border: '1px solid #f0f0f0', fontWeight: 500, backgroundColor: '#fff' }}>
+                              {t('domain_dns_name')}
+                            </td>
+                            <td style={{ padding: '6px 12px', border: '1px solid #f0f0f0', backgroundColor: '#fff', fontFamily: 'monospace' }}>
+                              {domainBindForm.domain.split('.')[0] || '@'}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style={{ padding: '6px 12px', border: '1px solid #f0f0f0', fontWeight: 500, backgroundColor: '#fff' }}>
+                              {t('domain_dns_value')}
+                            </td>
+                            <td style={{ padding: '6px 12px', border: '1px solid #f0f0f0', backgroundColor: '#fff', fontFamily: 'monospace' }}>
+                              zygonlinechat.zygmail.icu
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginTop: '24px' }}>
+                  <button type="button" onClick={handleDomainModalPrev} style={buttonStyle('default')}>
+                    <ChevronLeft size={16} /> {t('domain_step_prev')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDomainModalNext}
+                    style={buttonStyle('primary')}
+                    disabled={formLoading}
+                  >
+                    {formLoading ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : domainBindForm.platform === 'cloudflare' ? (
+                      t('domain_step_bind')
+                    ) : (
+                      t('domain_step_bind')
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: 绑定完成 */}
+            {domainBindForm.step === 3 && domainBindResult && (
+              <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                <div style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '50%',
+                  backgroundColor: '#f6ffed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 16px',
+                }}>
+                  <Check size={32} color="#52c41a" />
+                </div>
+                <h3 style={{ fontSize: '18px', fontWeight: 500, marginBottom: '8px' }}>
+                  {t('domain_bind_result_title')}
+                </h3>
+                <p style={{ fontSize: '14px', color: '#666', marginBottom: '16px' }}>
+                  {domainBindResult.domain || domainBindForm.domain}
+                </p>
+
+                <div style={{
+                  backgroundColor: '#f9f9f9',
+                  borderRadius: '8px',
+                  padding: '16px',
+                  marginBottom: '20px',
+                  textAlign: 'left',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '13px', color: '#666' }}>{t('domain_bind_result_dns')}</span>
+                    <span style={statusBadgeStyle('active')}>{t('domain_active')}</span>
+                  </div>
+                  {domainBindResult.dnsRecord && (
+                    <div style={{ fontSize: '12px', color: '#999', padding: '8px', backgroundColor: '#fff', borderRadius: '4px', fontFamily: 'monospace' }}>
+                      {domainBindResult.dnsRecord.type} {domainBindResult.dnsRecord.name} → {domainBindResult.dnsRecord.value}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyLink(`https://${domainBindResult.domain || domainBindForm.domain}`)}
+                    style={buttonStyle('default')}
+                  >
+                    <Copy size={14} /> {t('copy_link')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCloseDomainModal}
+                    style={buttonStyle('primary')}
+                  >
+                    {t('domain_step_finish')}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 🆕 Domain Detach Confirmation Modal */}
+      {domainDetachConfirm !== null && (
+        <div style={modalOverlayStyle} onClick={() => setDomainDetachConfirm(null)}>
+          <div style={{ ...modalStyle, maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ textAlign: 'center', padding: '16px 0' }}>
+              <AlertCircle size={48} color="#faad14" style={{ marginBottom: '16px' }} />
+              <h3 style={{ fontSize: '16px', fontWeight: 500, marginBottom: '8px' }}>{t('detach_domain')}</h3>
+              <p style={{ fontSize: '14px', color: '#666', marginBottom: '24px' }}>{t('detach_domain_confirm')}</p>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                <button
+                  onClick={() => setDomainDetachConfirm(null)}
+                  style={buttonStyle('default')}
+                >
+                  {t('cancel')}
+                </button>
+                <button
+                  onClick={() => handleDetachDomain(domainDetachConfirm)}
+                  style={buttonStyle('danger')}
+                  disabled={formLoading}
+                >
+                  {formLoading ? <Loader2 size={14} className="animate-spin" /> : t('detach_domain')}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

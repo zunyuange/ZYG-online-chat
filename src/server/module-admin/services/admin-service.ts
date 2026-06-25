@@ -5,16 +5,12 @@
 
 import { getDb } from '@server/shared/db';
 import { hashPassword } from '@server/shared/crypto';
-import { CFService } from '@server/services/cf-service';
 
 export interface StaffUser {
   id: number;
   business_id: number;
   business_slug: string | null;
   business_name: string | null;
-  custom_domain: string | null;
-  cf_zone_id: string | null;
-  cf_configured: number;
   username: string;
   password_hash: string;
   email: string | null;
@@ -23,30 +19,6 @@ export interface StaffUser {
   status: string;
   created_at: number;
   updated_at: number;
-}
-
-interface CFEnvConfig {
-  CF_API_TOKEN?: string;
-  CF_ACCOUNT_ID?: string;
-  CF_ZONE_ID?: string;
-  CF_BASE_DOMAIN?: string;
-  CF_WORKER_DOMAIN?: string;
-}
-
-function getCFConfig(env?: CFEnvConfig): {
-  apiToken: string;
-  accountId: string;
-  zoneId: string;
-  baseDomain: string;
-  workerDomain: string;
-} {
-  return {
-    apiToken: env?.CF_API_TOKEN || '',
-    accountId: env?.CF_ACCOUNT_ID || '',
-    zoneId: env?.CF_ZONE_ID || '',
-    baseDomain: env?.CF_BASE_DOMAIN || 'zygmail.icu',
-    workerDomain: env?.CF_WORKER_DOMAIN || 'zyg-online-chat.linzihai.workers.dev',
-  };
 }
 
 export interface CreateUserInput {
@@ -66,9 +38,8 @@ export interface UpdateUserInput {
   password?: string;
 }
 
-export async function createUser(input: CreateUserInput, env?: CFEnvConfig): Promise<{ success: boolean; error?: string; userId?: number; customDomain?: string }> {
+export async function createUser(input: CreateUserInput): Promise<{ success: boolean; error?: string; userId?: number }> {
   const db = getDb();
-  const cfConfig = getCFConfig(env);
   
   try {
     const existing = await db.get<StaffUser>('SELECT id FROM staff_users WHERE username = ?', [input.username]);
@@ -78,13 +49,15 @@ export async function createUser(input: CreateUserInput, env?: CFEnvConfig): Pro
 
     const passwordHash = await hashPassword(input.password);
     
+    // Generate business_slug for new business users
     let businessSlug: string | null = null;
     let businessName: string | null = null;
-    let customDomain: string | null = null;
     let finalBusinessId = input.business_id || 0;
     
+    // For new business owner accounts (no business_id specified or business_id = 0)
     if (!input.business_id || input.business_id === 0) {
       finalBusinessId = 0;
+      // Generate a unique business_slug
       const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
       let attempts = 0;
       const maxAttempts = 10;
@@ -104,32 +77,14 @@ export async function createUser(input: CreateUserInput, env?: CFEnvConfig): Pro
         return { success: false, error: '无法生成唯一的商家标识' };
       }
       businessName = input.name || input.username;
-      
-      if (cfConfig.apiToken && cfConfig.zoneId && businessSlug) {
-        const cfService = new CFService({
-          apiToken: cfConfig.apiToken,
-          accountId: cfConfig.accountId,
-          zoneId: cfConfig.zoneId,
-        });
-        
-        const subdomain = `${businessSlug}.${cfConfig.baseDomain}`;
-        const record = await cfService.createCNAMERecord(subdomain, cfConfig.workerDomain);
-        
-        if (record) {
-          customDomain = subdomain;
-          console.log(`[AdminService] Created custom domain: ${customDomain}`);
-        } else {
-          console.warn(`[AdminService] Failed to create custom domain for ${businessSlug}`);
-        }
-      }
     }
     
     const result = await db.run(
-      'INSERT INTO staff_users (username, password_hash, email, name, role, business_id, business_slug, business_name, custom_domain, cf_zone_id, cf_configured, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [input.username, passwordHash, input.email || null, input.name || null, input.role || 'staff', finalBusinessId, businessSlug, businessName, customDomain, cfConfig.zoneId || null, customDomain ? 1 : 0, 'active', Date.now(), Date.now()]
+      'INSERT INTO staff_users (username, password_hash, email, name, role, business_id, business_slug, business_name, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [input.username, passwordHash, input.email || null, input.name || null, input.role || 'staff', finalBusinessId, businessSlug, businessName, 'active', Date.now(), Date.now()]
     );
 
-    return { success: true, userId: result.lastInsertRowid, customDomain };
+    return { success: true, userId: result.lastInsertRowid };
   } catch (error) {
     console.error('[AdminService] Create user error:', error);
     return { success: false, error: '创建用户失败' };

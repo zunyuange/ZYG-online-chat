@@ -12,11 +12,22 @@ interface BusinessInfo {
   updated_at: number;
 }
 
+interface DomainInfo {
+  id: number;
+  domainType: string;
+  domain: string;
+  subdomain: string | null;
+  isPrimary: number;
+  verificationStatus: string;
+}
+
 export function StaffCode() {
   const { t } = useI18n();
   const [business, setBusiness] = useState<BusinessInfo | null>(null);
+  const [domains, setDomains] = useState<DomainInfo[]>([]);
   const [copied, setCopied] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'legacy' | 'subdomain'>('legacy');
 
   useEffect(() => {
     fetchBusiness();
@@ -25,19 +36,30 @@ export function StaffCode() {
   const fetchBusiness = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/business/info', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
-        },
-      });
-      const result = await response.json();
-      if (result.success) {
-        setBusiness(result.data);
+      const token = localStorage.getItem('staff_token');
+      const [bizRes, domainRes] = await Promise.all([
+        fetch('/api/business/info', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/business/domains', { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      const bizResult = await bizRes.json();
+      if (bizResult.success) {
+        setBusiness(bizResult.data);
       } else {
-        console.error('Failed to fetch business:', result.error);
+        console.error('Failed to fetch business:', bizResult.error);
+      }
+      const domainResult = await domainRes.json();
+      if (domainResult.success && domainResult.data?.length > 0) {
+        setDomains(domainResult.data);
+        // 如果有激活的三级子域名，默认使用
+        const activeSub = domainResult.data.find(
+          (d: DomainInfo) => d.domainType === 'auto_subdomain' && d.verificationStatus === 'active'
+        );
+        if (activeSub) {
+          setActiveTab('subdomain');
+        }
       }
     } catch (error) {
-      console.error('Failed to fetch business:', error);
+      console.error('Failed to fetch data:', error);
     } finally {
       setLoading(false);
     }
@@ -55,20 +77,37 @@ export function StaffCode() {
 
   const currentDomain = typeof window !== 'undefined' ? window.location.origin : 'https://zyg-online-chat.linzihai.workers.dev';
 
+  // 🆕 三级子域名（如果可用）
+  const activeSubdomain = domains.find(
+    d => d.domainType === 'auto_subdomain' && d.verificationStatus === 'active'
+  );
+  const subdomainUrl = activeSubdomain ? `https://${activeSubdomain.domain}` : null;
+  const primaryCustomDomain = domains.find(d => d.isPrimary && d.verificationStatus === 'active');
+
+  // 基础链接工厂
+  const getChatUrl = (): string => {
+    if (activeTab === 'subdomain' && subdomainUrl) return subdomainUrl;
+    if (activeTab === 'subdomain' && primaryCustomDomain) return `https://${primaryCustomDomain.domain}`;
+    return `${currentDomain}/chat?business=${business?.business_slug || 'default'}`;
+  };
+
+  const chatUrl = getChatUrl();
+  const legacyChatUrl = `${currentDomain}/chat?business=${business?.business_slug || 'default'}`;
+
   const embedCode = `<script>
 (function() {
   var script = document.createElement('script');
-  script.src = '${currentDomain}/embed/chat.js';
+  script.src = '${activeTab === 'subdomain' && subdomainUrl ? subdomainUrl : currentDomain}/embed/chat.js';
   script.async = true;
   script.dataset.business = '${business?.business_slug || 'default'}';
   document.head.appendChild(script);
 })();
 </script>`;
 
-  const directLink = `${currentDomain}/chat?business=${business?.business_slug || 'default'}`;
+  const directLink = chatUrl;
 
   const iframeCode = `<iframe 
-  src="${currentDomain}/chat?business=${business?.business_slug || 'default'}" 
+  src="${chatUrl}" 
   width="400" 
   height="500" 
   frameborder="0" 
@@ -151,6 +190,50 @@ export function StaffCode() {
         </div>
       </div>
 
+      {/* 🆕 Domain Tabs - 域名方式切换 */}
+      {activeSubdomain && (
+        <div style={{ marginBottom: '16px', display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => setActiveTab('subdomain')}
+            style={{
+              padding: '8px 16px',
+              border: activeTab === 'subdomain' ? '2px solid #1890ff' : '1px solid #d9d9d9',
+              borderRadius: '6px',
+              backgroundColor: activeTab === 'subdomain' ? '#e6f7ff' : '#fff',
+              color: activeTab === 'subdomain' ? '#1890ff' : '#666',
+              fontWeight: activeTab === 'subdomain' ? 500 : 400,
+              cursor: 'pointer',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <Globe size={14} />
+            {activeTab === 'subdomain' ? '🌟 ' : ''}{t('domain_platform_cloudflare') || 'Platform'} ({activeSubdomain.domain})
+          </button>
+          <button
+            onClick={() => setActiveTab('legacy')}
+            style={{
+              padding: '8px 16px',
+              border: activeTab === 'legacy' ? '2px solid #1890ff' : '1px solid #d9d9d9',
+              borderRadius: '6px',
+              backgroundColor: activeTab === 'legacy' ? '#e6f7ff' : '#fff',
+              color: activeTab === 'legacy' ? '#1890ff' : '#666',
+              fontWeight: activeTab === 'legacy' ? 500 : 400,
+              cursor: 'pointer',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <Link size={14} />
+            {activeTab === 'legacy' ? '🔧 ' : ''}{t('domain_legacy_url') || 'URL Parameter'}
+          </button>
+        </div>
+      )}
+
       {/* Direct Link */}
       <div style={{ backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '24px' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -194,6 +277,43 @@ export function StaffCode() {
           <p style={{ color: '#999', fontSize: '14px', marginTop: '12px' }}>
             {t('staff_code_direct_link_desc')}
           </p>
+          {/* 🆕 当使用子域名时，显示旧版链接作为备选 */}
+          {activeTab === 'subdomain' && (
+            <div style={{
+              marginTop: '12px',
+              padding: '10px 12px',
+              backgroundColor: '#fafafa',
+              borderRadius: '4px',
+              border: '1px solid #f0f0f0',
+              fontSize: '13px',
+              color: '#999',
+            }}>
+              <span style={{ marginRight: '8px' }}>🔒 {t('domain_legacy_url') || 'Legacy URL'}:</span>
+              <code style={{
+                backgroundColor: '#fff',
+                padding: '2px 6px',
+                borderRadius: '3px',
+                border: '1px solid #d9d9d9',
+                fontSize: '12px',
+                fontFamily: 'monospace',
+              }}>
+                {legacyChatUrl}
+              </code>
+              <button
+                onClick={() => copyToClipboard(legacyChatUrl, 'legacy')}
+                style={{
+                  marginLeft: '8px',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#999',
+                  padding: '2px',
+                }}
+              >
+                {copied === 'legacy' ? <Check size={14} color="#52c41a" /> : <Copy size={14} />}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

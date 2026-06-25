@@ -3,6 +3,7 @@ import { getDb } from '@server/shared/db';
 import { verifyToken } from '@server/module-auth/services/auth-service';
 import { verifyAdminToken } from '@server/module-admin/routes/admin-auth-routes';
 import { hashPassword } from '@server/shared/crypto';
+import { getDomainService } from '@server/services/domain-service';
 
 const businessRoutes = new Hono();
 
@@ -375,7 +376,35 @@ businessRoutes.post('/create', async (c) => {
 
     const newBusiness = await db.get('SELECT id, business_name as name, business_slug as slug, description, created_at FROM staff_users WHERE id = ?', [result.lastInsertRowid]);
 
-    return c.json({ success: true, message: '商家创建成功', data: newBusiness }, 201);
+    // 🆕 自动生成三级子域名
+    let chatUrl = `https://zygonlinechat.zygmail.icu/chat?business=${slug}`;
+    let autoDomain = null;
+    try {
+      const domainService = getDomainService();
+      const domainResult = await domainService.createAutoSubdomain(
+        Number(result.lastInsertRowid),
+        slug
+      );
+      if (domainResult.success && domainResult.domain) {
+        autoDomain = domainResult.domain;
+        chatUrl = `https://${autoDomain}`;
+        console.log(`[BusinessRoutes] Auto-generated domain for business ${slug}: ${autoDomain}`);
+      }
+    } catch (err) {
+      console.warn('[BusinessRoutes] Failed to auto-generate domain:', err);
+    }
+
+    return c.json({
+      success: true,
+      message: '商家创建成功',
+      data: {
+        ...newBusiness,
+        chatUrl,
+        autoDomain,
+        legacyChatUrl: `https://zygonlinechat.zygmail.icu/chat?business=${slug}`,
+        workersDevUrl: `https://zyg-online-chat.linzihai.workers.dev/chat?business=${slug}`,
+      },
+    }, 201);
   } catch (error) {
     console.error('Create business error:', error);
     return c.json({ success: false, error: '创建商家失败' }, 500);

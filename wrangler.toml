@@ -7,18 +7,27 @@ compatibility_flags = ["nodejs_compat"]
 directory = "./dist"
 binding = "ASSETS"
 
+# ===== 路由配置（🆕 自定义域名支持）=====
+# 平台主域名
+[[routes]]
+pattern = "zygonlinechat.zygmail.icu"
+zone_name = "zygmail.icu"
+
+# 三级子域名通配符（覆盖所有商家）
+[[routes]]
+pattern = "*.zygonlinechat.zygmail.icu"
+zone_name = "zygmail.icu"
+
+# 兼容旧的 workers.dev 域名（🔒 永久保留，开发调试和旧链接兜底）
+[[routes]]
+pattern = "zyg-online-chat.linzihai.workers.dev"
+zone_name = "linzihai.workers.dev"
+
 # Environment variables
 [vars]
 BARK_API = "https://api.day.app"
 # Auth: Require login for staff panel
 REQUIRE_AUTH = "true"
-# Cloudflare API configuration for automatic subdomain binding
-# CF_API_TOKEN needs permissions: Zone:DNS (Edit), Zone:Zone (Read)
-CF_API_TOKEN = ""
-CF_ACCOUNT_ID = ""
-CF_ZONE_ID = ""
-CF_BASE_DOMAIN = "zygmail.icu"
-CF_WORKER_DOMAIN = "zyg-online-chat.linzihai.workers.dev"
 
 [[d1_databases]]
 binding = "DB"
@@ -39,12 +48,6 @@ name = "zyg-online-chat"
 [env.production.vars]
 BARK_API = "https://api.day.app"
 REQUIRE_AUTH = "true"
-# Cloudflare API configuration for automatic subdomain binding
-CF_API_TOKEN = ""
-CF_ACCOUNT_ID = ""
-CF_ZONE_ID = ""
-CF_BASE_DOMAIN = "zygmail.icu"
-CF_WORKER_DOMAIN = "zyg-online-chat.linzihai.workers.dev"
 
 [[env.production.d1_databases]]
 binding = "DB"
@@ -60,3 +63,17 @@ bucket_name = "zyg-online-chat-uploads"
 
 [env.production.ai]
 binding = "AI"
+
+# 🆕 生产环境路由配置
+[[env.production.routes]]
+pattern = "zygonlinechat.zygmail.icu"
+zone_name = "zygmail.icu"
+
+[[env.production.routes]]
+pattern = "*.zygonlinechat.zygmail.icu"
+zone_name = "zygmail.icu"
+
+# 🔒 workers.dev 域名永久保留作为兜底入口
+[[env.production.routes]]
+pattern = "zyg-online-chat.linzihai.workers.dev"
+zone_name = "linzihai.workers.dev"

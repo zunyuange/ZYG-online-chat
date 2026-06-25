@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Globe, Save, Building } from 'lucide-react';
+import { Globe, Save, Building, Copy, Check } from 'lucide-react';
 import { useI18n } from '@client/context/I18nContext';
 
 interface TranslationSettings {
@@ -25,6 +25,8 @@ export function StaffSettings() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
+  const [domainInfo, setDomainInfo] = useState<{ domain: string; legacy: string } | null>(null);
+  const [copiedDomain, setCopiedDomain] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -33,17 +35,11 @@ export function StaffSettings() {
   const fetchSettings = async () => {
     setLoading(true);
     try {
-      const [settingsRes, infoRes] = await Promise.all([
-        fetch('/api/business/settings', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
-          },
-        }),
-        fetch('/api/business/info', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('staff_token')}`,
-          },
-        }),
+      const token = localStorage.getItem('staff_token');
+      const [settingsRes, infoRes, domainRes] = await Promise.all([
+        fetch('/api/business/settings', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/business/info', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/business/domains', { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
       const settingsResult = await settingsRes.json();
@@ -57,6 +53,20 @@ export function StaffSettings() {
           business_name: infoResult.data.business_name || '',
           business_slug: infoResult.data.business_slug || '',
         });
+      }
+
+      // 🆕 解析域名信息
+      const domainResult = await domainRes.json();
+      if (domainResult.success && domainResult.data?.length > 0) {
+        const activeSub = domainResult.data.find(
+          (d: any) => d.domainType === 'auto_subdomain' && d.verificationStatus === 'active'
+        );
+        if (activeSub) {
+          setDomainInfo({
+            domain: `https://${activeSub.domain}`,
+            legacy: `https://zygonlinechat.zygmail.icu/chat?business=${infoResult.data?.business_slug || ''}`,
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to fetch settings:', error);
@@ -228,6 +238,55 @@ export function StaffSettings() {
               {t('business_slug_desc').replace('{business_slug}', businessInfo.business_slug)}
             </p>
           </div>
+
+          {/* 🆕 接入域名信息 */}
+          {domainInfo && (
+            <div style={{
+              marginTop: '16px',
+              padding: '14px',
+              backgroundColor: '#f6ffed',
+              borderRadius: '6px',
+              border: '1px solid #b7eb8f',
+            }}>
+              <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: '8px', color: '#52c41a' }}>
+                🌟 专属接入域名
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <code style={{
+                  flex: 1,
+                  backgroundColor: '#fff',
+                  padding: '6px 10px',
+                  borderRadius: '4px',
+                  border: '1px solid #d9d9d9',
+                  fontSize: '13px',
+                  fontFamily: 'monospace',
+                  color: '#333',
+                }}>
+                  {domainInfo.domain}
+                </code>
+                <button
+                  onClick={async () => {
+                    try { await navigator.clipboard.writeText(domainInfo.domain); setCopiedDomain(true); setTimeout(() => setCopiedDomain(false), 2000); } catch {}
+                  }}
+                  style={{
+                    padding: '6px 10px',
+                    border: '1px solid #d9d9d9',
+                    borderRadius: '4px',
+                    backgroundColor: '#fff',
+                    cursor: 'pointer',
+                    color: '#666',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  {copiedDomain ? <Check size={14} color="#52c41a" /> : <Copy size={14} />}
+                </button>
+              </div>
+              <div style={{ fontSize: '12px', color: '#999' }}>
+                🔒 旧版链接（永久可用）: <code style={{ backgroundColor: '#fff', padding: '1px 4px', borderRadius: '3px', fontFamily: 'monospace', fontSize: '11px' }}>{domainInfo.legacy}</code>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -582,6 +582,72 @@ async function createAllTables(database: Database): Promise<void> {
   await database.exec('CREATE INDEX IF NOT EXISTS visitor_custom_fields_business_id_idx ON visitor_custom_fields(business_id)')
   await database.exec('CREATE INDEX IF NOT EXISTS visitor_custom_fields_field_key_idx ON visitor_custom_fields(business_id, field_key)')
 
+  // 🆕 Create business_domains table (商家域名绑定表)
+  await database.exec(
+    'CREATE TABLE IF NOT EXISTS business_domains (' +
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+      'business_id INTEGER NOT NULL, ' +
+      'staff_user_id INTEGER NOT NULL, ' +
+      "domain_type TEXT NOT NULL DEFAULT 'auto_subdomain', " +
+      'domain TEXT NOT NULL UNIQUE, ' +
+      'subdomain TEXT, ' +
+      "domain_platform TEXT DEFAULT 'cloudflare', " +
+      'cf_zone_id TEXT, ' +
+      'cf_zone_name TEXT, ' +
+      'cf_account_id TEXT, ' +
+      'cf_api_token_encrypted TEXT, ' +
+      'cf_dns_record_id TEXT, ' +
+      'cf_worker_route_id TEXT, ' +
+      "verification_status TEXT DEFAULT 'pending', " +
+      "ssl_status TEXT DEFAULT 'pending', " +
+      'is_primary INTEGER DEFAULT 0, ' +
+      "status TEXT DEFAULT 'active', " +
+      'error_message TEXT, ' +
+      'verified_at INTEGER, ' +
+      'created_at INTEGER DEFAULT (unixepoch()), ' +
+      'updated_at INTEGER DEFAULT (unixepoch()), ' +
+      'FOREIGN KEY (business_id) REFERENCES staff_users(id), ' +
+      'FOREIGN KEY (staff_user_id) REFERENCES staff_users(id))'
+  )
+  await database.exec('CREATE INDEX IF NOT EXISTS idx_business_domains_domain ON business_domains(domain)')
+  await database.exec('CREATE INDEX IF NOT EXISTS idx_business_domains_business_id ON business_domains(business_id)')
+  await database.exec('CREATE INDEX IF NOT EXISTS idx_business_domains_type_status ON business_domains(domain_type, status)')
+
+  // 🆕 Create business_ai_config table (商家AI配置表)
+  await database.exec(
+    'CREATE TABLE IF NOT EXISTS business_ai_config (' +
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+      'business_id INTEGER NOT NULL UNIQUE, ' +
+      "ai_mode TEXT DEFAULT 'platform', " +
+      'cf_account_id TEXT, ' +
+      'cf_ai_token_encrypted TEXT, ' +
+      'ai_gateway_url TEXT, ' +
+      'monthly_translate_count INTEGER DEFAULT 0, ' +
+      'monthly_translate_limit INTEGER DEFAULT 10000, ' +
+      'total_translate_count INTEGER DEFAULT 0, ' +
+      'reset_day INTEGER DEFAULT 1, ' +
+      "status TEXT DEFAULT 'active', " +
+      'created_at INTEGER DEFAULT (unixepoch()), ' +
+      'updated_at INTEGER DEFAULT (unixepoch()), ' +
+      'FOREIGN KEY (business_id) REFERENCES staff_users(id))'
+  )
+  await database.exec('CREATE INDEX IF NOT EXISTS idx_business_ai_config_business_id ON business_ai_config(business_id)')
+
+  // 🆕 Create domain_operation_logs table (域名操作日志表)
+  await database.exec(
+    'CREATE TABLE IF NOT EXISTS domain_operation_logs (' +
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+      'business_id INTEGER NOT NULL, ' +
+      'domain_id INTEGER, ' +
+      "operation TEXT NOT NULL, " +
+      'details TEXT, ' +
+      "status TEXT DEFAULT 'success', " +
+      'ip_address TEXT, ' +
+      'created_at INTEGER DEFAULT (unixepoch()))'
+  )
+  await database.exec('CREATE INDEX IF NOT EXISTS idx_domain_logs_business_id ON domain_operation_logs(business_id)')
+  await database.exec('CREATE INDEX IF NOT EXISTS idx_domain_logs_created_at ON domain_operation_logs(created_at)')
+
   // Initialize default admin user (username: admin, password: 123456)
   await initializeDefaultAdmin(database)
 
@@ -696,14 +762,131 @@ async function runMigrations(database: Database): Promise<void> {
   await addColumnIfMissing('staff_users', 'business_id', 'INTEGER NOT NULL DEFAULT 0')
   await addColumnIfMissing('staff_users', 'enable_auto_trans', 'INTEGER NOT NULL DEFAULT 0')
   await addColumnIfMissing('staff_users', 'default_lang', "TEXT NOT NULL DEFAULT 'zh-CN'")
-  
-  // Add custom domain related columns for automatic subdomain binding
-  await addColumnIfMissing('staff_users', 'custom_domain', 'TEXT')
-  await addColumnIfMissing('staff_users', 'cf_zone_id', 'TEXT')
-  await addColumnIfMissing('staff_users', 'cf_configured', 'INTEGER NOT NULL DEFAULT 0')
 
   // Fix existing staff_users data: ensure admin user has correct role and business_id
   await ensureDefaultStaffData(database)
+
+  // 🆕 迁移: 确保 business_domains 表存在
+  try {
+    const bdExists = await database.get<{ name: string }>(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='business_domains'"
+    )
+    if (!bdExists) {
+      await database.exec(
+        'CREATE TABLE IF NOT EXISTS business_domains (' +
+          'id INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+          'business_id INTEGER NOT NULL, ' +
+          'staff_user_id INTEGER NOT NULL, ' +
+          "domain_type TEXT NOT NULL DEFAULT 'auto_subdomain', " +
+          'domain TEXT NOT NULL UNIQUE, ' +
+          'subdomain TEXT, ' +
+          "domain_platform TEXT DEFAULT 'cloudflare', " +
+          'cf_zone_id TEXT, ' +
+          'cf_zone_name TEXT, ' +
+          'cf_account_id TEXT, ' +
+          'cf_api_token_encrypted TEXT, ' +
+          'cf_dns_record_id TEXT, ' +
+          'cf_worker_route_id TEXT, ' +
+          "verification_status TEXT DEFAULT 'pending', " +
+          "ssl_status TEXT DEFAULT 'pending', " +
+          'is_primary INTEGER DEFAULT 0, ' +
+          "status TEXT DEFAULT 'active', " +
+          'error_message TEXT, ' +
+          'verified_at INTEGER, ' +
+          'created_at INTEGER DEFAULT (unixepoch()), ' +
+          'updated_at INTEGER DEFAULT (unixepoch()), ' +
+          'FOREIGN KEY (business_id) REFERENCES staff_users(id), ' +
+          'FOREIGN KEY (staff_user_id) REFERENCES staff_users(id))'
+      )
+      await database.exec('CREATE INDEX IF NOT EXISTS idx_business_domains_domain ON business_domains(domain)')
+      await database.exec('CREATE INDEX IF NOT EXISTS idx_business_domains_business_id ON business_domains(business_id)')
+      await database.exec('CREATE INDEX IF NOT EXISTS idx_business_domains_type_status ON business_domains(domain_type, status)')
+      console.log('[Migration] Created business_domains table')
+    }
+  } catch (error) {
+    console.error('[Migration] Failed to ensure business_domains table:', error)
+  }
+
+  // 🆕 迁移: 确保 business_ai_config 表存在
+  try {
+    const aiExists = await database.get<{ name: string }>(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='business_ai_config'"
+    )
+    if (!aiExists) {
+      await database.exec(
+        'CREATE TABLE IF NOT EXISTS business_ai_config (' +
+          'id INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+          'business_id INTEGER NOT NULL UNIQUE, ' +
+          "ai_mode TEXT DEFAULT 'platform', " +
+          'cf_account_id TEXT, ' +
+          'cf_ai_token_encrypted TEXT, ' +
+          'ai_gateway_url TEXT, ' +
+          'monthly_translate_count INTEGER DEFAULT 0, ' +
+          'monthly_translate_limit INTEGER DEFAULT 10000, ' +
+          'total_translate_count INTEGER DEFAULT 0, ' +
+          'reset_day INTEGER DEFAULT 1, ' +
+          "status TEXT DEFAULT 'active', " +
+          'created_at INTEGER DEFAULT (unixepoch()), ' +
+          'updated_at INTEGER DEFAULT (unixepoch()), ' +
+          'FOREIGN KEY (business_id) REFERENCES staff_users(id))'
+      )
+      await database.exec('CREATE INDEX IF NOT EXISTS idx_business_ai_config_business_id ON business_ai_config(business_id)')
+      console.log('[Migration] Created business_ai_config table')
+    }
+  } catch (error) {
+    console.error('[Migration] Failed to ensure business_ai_config table:', error)
+  }
+
+  // 🆕 迁移: 确保 domain_operation_logs 表存在
+  try {
+    const logExists = await database.get<{ name: string }>(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='domain_operation_logs'"
+    )
+    if (!logExists) {
+      await database.exec(
+        'CREATE TABLE IF NOT EXISTS domain_operation_logs (' +
+          'id INTEGER PRIMARY KEY AUTOINCREMENT, ' +
+          'business_id INTEGER NOT NULL, ' +
+          'domain_id INTEGER, ' +
+          "operation TEXT NOT NULL, " +
+          'details TEXT, ' +
+          "status TEXT DEFAULT 'success', " +
+          'ip_address TEXT, ' +
+          'created_at INTEGER DEFAULT (unixepoch()))'
+      )
+      await database.exec('CREATE INDEX IF NOT EXISTS idx_domain_logs_business_id ON domain_operation_logs(business_id)')
+      await database.exec('CREATE INDEX IF NOT EXISTS idx_domain_logs_created_at ON domain_operation_logs(created_at)')
+      console.log('[Migration] Created domain_operation_logs table')
+    }
+  } catch (error) {
+    console.error('[Migration] Failed to ensure domain_operation_logs table:', error)
+  }
+
+  // 🆕 迁移: 为已有商家自动生成 auto_subdomain
+  try {
+    const businesses = await database.all<{ id: number; business_slug: string }>(
+      "SELECT id, business_slug FROM staff_users WHERE business_id = 0 AND business_slug IS NOT NULL AND business_slug != 'default'"
+    )
+    for (const biz of businesses) {
+      const domain = `${biz.business_slug}.zygonlinechat.zygmail.icu`
+      const existing = await database.get<{ id: number }>(
+        "SELECT id FROM business_domains WHERE business_id = ? AND domain_type = 'auto_subdomain'",
+        [biz.id]
+      )
+      if (!existing) {
+        await database.run(
+          `INSERT INTO business_domains
+           (business_id, staff_user_id, domain_type, domain, subdomain,
+            verification_status, ssl_status, is_primary, status)
+           VALUES (?, ?, 'auto_subdomain', ?, ?, 'active', 'active', 1, 'active')`,
+          [biz.id, biz.id, domain, biz.business_slug]
+        )
+        console.log(`[Migration] Auto-generated subdomain for business ${biz.id}: ${domain}`)
+      }
+    }
+  } catch (error) {
+    console.error('[Migration] Failed to auto-generate subdomains:', error)
+  }
 
   console.log('[Database] Migrations complete')
 }
