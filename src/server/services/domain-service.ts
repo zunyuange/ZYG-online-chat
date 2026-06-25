@@ -216,6 +216,7 @@ export class DomainService {
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
       const cfError = error as any;
+      const cfCode = cfError.cfStatusCode || cfError.cfErrorCode || 0;
       
       // 分析错误原因
       if (errMsg.includes('already exists') || errMsg.includes('duplicate')) {
@@ -223,16 +224,24 @@ export class DomainService {
         return { success: true, domainId: 'already_exists' };
       }
       
-      // 如果是因为通配符路由冲突，给出明确提示
-      if (errMsg.includes('route') || errMsg.includes('overlap') || errMsg.includes('conflict')) {
-        console.warn(`[DomainService] ⚠️ Workers custom domain registration blocked by wildcard route: ${hostname}`);
-        console.warn(`[DomainService] 💡 To enable individual custom domains, remove '*.zygonlinechat.zygmail.icu' from wrangler.toml routes and redeploy.`);
-        return { success: false, error: 'blocked_by_wildcard_route' };
+      // 403 权限不足（Token 缺少 Workers:Edit 权限）
+      if (cfCode === 403 || cfCode === 9109 || errMsg.includes('forbidden') || errMsg.includes('permission')) {
+        console.error(`[DomainService] ❌ Workers custom domain registration failed: API Token 缺少 Workers:Edit 权限`);
+        console.error(`[DomainService] 💡 修复方法: Dashboard → 我的个人资料 → API 令牌 → 编辑 → 添加 Workers:Edit 权限`);
+        return { success: false, error: 'cf_token_missing_workers_edit_permission' };
       }
       
+      // 路由冲突（通配符路由仍在 wrangler.toml 中）
+      if (cfCode === 10020 || errMsg.includes('route') || errMsg.includes('overlap') || errMsg.includes('conflict')) {
+        console.warn(`[DomainService] ⚠️ Workers custom domain blocked: 通配符路由 *.zygonlinechat.zygmail.icu 仍在 wrangler.toml 中！`);
+        console.warn(`[DomainService] 💡 修复方法: 注释掉 wrangler.toml 中的 *.zygonlinechat.zygmail.icu 路由，然后 npx wrangler deploy`);
+        return { success: false, error: 'blocked_by_wildcard_route_in_wrangler_toml' };
+      }
+      
+      // 其他 CF API 错误
       console.error(`[DomainService] ❌ Workers custom domain registration failed for ${hostname}:`, errMsg,
-        cfError.cfStatusCode ? `(CF status=${cfError.cfStatusCode})` : '');
-      return { success: false, error: errMsg };
+        cfCode ? `(CF=${cfCode})` : '');
+      return { success: false, error: `cf_api_error: ${errMsg}` };
     }
   }
 

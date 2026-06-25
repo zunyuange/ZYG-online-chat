@@ -149,15 +149,55 @@ async function ensureInitialized(env: Env): Promise<void> {
 
     // 🆕 Initialize platform CF config for Workers custom domain registration
     if (env.CF_API_TOKEN && env.CF_ACCOUNT_ID && env.CF_ZONE_ID) {
-      console.log('[Worker] Setting up platform CF config for Workers domain management...');
-      setPlatformCFConfig({
-        apiToken: env.CF_API_TOKEN,
-        accountId: env.CF_ACCOUNT_ID,
-        zoneId: env.CF_ZONE_ID,
-      });
-      console.log('[Worker] Platform CF config initialized');
+      // 移除可能的空白字符
+      const token = env.CF_API_TOKEN.trim();
+      const accountId = env.CF_ACCOUNT_ID.trim();
+      const zoneId = env.CF_ZONE_ID.trim();
+      
+      if (token && accountId && zoneId) {
+        console.log('[Worker] Setting up platform CF config for Workers domain management...');
+        setPlatformCFConfig({
+          apiToken: token,
+          accountId,
+          zoneId,
+        });
+        
+        // 🔍 启动时诊断：验证 Token 权限
+        try {
+          const { CloudflareApiClient } = await import('./services/cf-api-client');
+          const cfClient = new CloudflareApiClient(token);
+          const tokenInfo = await cfClient.verifyToken();
+          console.log(`[Worker] ✅ CF API Token valid (status: ${tokenInfo.status})`);
+          
+          // 检查 Workers:Edit 权限
+          try {
+            await cfClient.listWorkersDomains(accountId);
+            console.log('[Worker] ✅ Workers:Edit permission confirmed');
+          } catch (workersErr: any) {
+            const msg = workersErr?.message || String(workersErr);
+            if (msg.includes('403') || msg.includes('forbidden') || msg.includes('permission')) {
+              console.error('[Worker] ❌ API Token lacks Workers:Edit permission!');
+              console.error('[Worker] 💡 Go to: Dashboard → 我的个人资料 → API 令牌 → 编辑 → 添加 Workers:Edit 权限');
+            } else {
+              console.warn(`[Worker] ⚠️ Could not verify Workers:Edit: ${msg}`);
+            }
+          }
+        } catch (verifyErr: any) {
+          const msg = verifyErr?.message || String(verifyErr);
+          console.error(`[Worker] ❌ CF API Token verification failed: ${msg}`);
+          console.error('[Worker] 💡 Check that CF_API_TOKEN is a valid Cloudflare API Token');
+        }
+        
+        console.log('[Worker] Platform CF config initialized');
+      } else {
+        console.log('[Worker] Platform CF config values are empty strings, Workers custom domain registration will be skipped');
+        setPlatformCFConfig(null);
+      }
     } else {
       console.log('[Worker] Platform CF config not fully configured, Workers custom domain registration will be skipped');
+      console.log(`[Worker]   CF_API_TOKEN: ${env.CF_API_TOKEN ? '✓ set' : '✗ missing'}`);
+      console.log(`[Worker]   CF_ACCOUNT_ID: ${env.CF_ACCOUNT_ID ? '✓ set' : '✗ missing'}`);
+      console.log(`[Worker]   CF_ZONE_ID: ${env.CF_ZONE_ID ? '✓ set' : '✗ missing'}`);
       setPlatformCFConfig(null);
     }
 
@@ -307,6 +347,74 @@ app.route('/api/evaluation', evaluationRoutes);
 // Health check
 app.get('/health', (c) => {
   return c.json({ status: 'ok', timestamp: new Date().toISOString(), env: 'cloudflare-workers' });
+});
+
+// 🔍 CF 平台配置诊断接口
+app.get('/api/diagnostics/cf-config', async (c) => {
+  const { env } = c;
+  const result: Record<string, any> = {
+    wildcardRoute: {
+      status: 'unknown',
+      message: '检查 wrangler.toml 中 *.zygonlinechat.zygmail.icu 路由是否已注释',
+    },
+    config: {
+      CF_API_TOKEN: env.CF_API_TOKEN ? '✓ set' : '✗ missing',
+      CF_ACCOUNT_ID: env.CF_ACCOUNT_ID || '✗ missing',
+      CF_ZONE_ID: env.CF_ZONE_ID || '✗ missing',
+    },
+    tokenVerification: { status: 'unknown', detail: '' },
+    workersEditPermission: { status: 'unknown', detail: '' },
+    existingDomains: [] as string[],
+  };
+
+  if (env.CF_API_TOKEN && env.CF_ACCOUNT_ID && env.CF_ZONE_ID) {
+    try {
+      const { CloudflareApiClient } = await import('./services/cf-api-client');
+      const cfClient = new CloudflareApiClient(env.CF_API_TOKEN.trim());
+      
+      // Verify token
+      try {
+        const tokenInfo = await cfClient.verifyToken();
+        result.tokenVerification = { status: 'valid', detail: `Status: ${tokenInfo.status}, Expires: ${tokenInfo.expires_on || 'N/A'}` };
+      } catch (e: any) {
+        result.tokenVerification = { status: 'invalid', detail: e.message };
+      }
+
+      // Check Workers:Edit permission by listing domains
+      try {
+        const domains = await cfClient.listWorkersDomains(env.CF_ACCOUNT_ID.trim());
+        result.workersEditPermission = { status: 'ok', detail: `Found ${domains.length} existing custom domain(s)` };
+        result.existingDomains = domains.map(d => d.hostname);
+      } catch (e: any) {
+        const msg = e.message || String(e);
+        if (msg.includes('403') || msg.includes('forbidden')) {
+          result.workersEditPermission = {
+            status: 'forbidden',
+            detail: `❌ Token 缺少 Workers:Edit 权限！请到 Dashboard → API 令牌 → 添加 Workers:Edit 权限 (错误: ${msg})`,
+          };
+        } else {
+          result.workersEditPermission = { status: 'error', detail: msg };
+        }
+      }
+    } catch (e: any) {
+      result.tokenVerification = { status: 'error', detail: e.message };
+    }
+  }
+
+  // Overall assessment
+  const allConfigSet = env.CF_API_TOKEN && env.CF_ACCOUNT_ID && env.CF_ZONE_ID;
+  const tokenOk = result.tokenVerification.status === 'valid';
+  const permOk = result.workersEditPermission.status === 'ok';
+  
+  result.overall = allConfigSet && tokenOk && permOk
+    ? '✅ 配置正确，Workers 自定义域可以自动注册'
+    : '❌ 配置不完整，需要修复以下问题: ' + [
+        !allConfigSet && '缺少环境变量',
+        allConfigSet && !tokenOk && 'API Token 无效',
+        allConfigSet && tokenOk && !permOk && '缺少 Workers:Edit 权限',
+      ].filter(Boolean).join(', ');
+
+  return c.json(result);
 });
 
 // Test Bark API endpoint
