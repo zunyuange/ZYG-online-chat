@@ -15,10 +15,6 @@ let audioContext: AudioContext | null = null;
 let soundEnabled: boolean = true;
 let initAttempted: boolean = false;
 
-// ★ 提示音冷却（防止 3 秒轮询导致反复响铃）
-let lastSoundTime: number = 0;
-const SOUND_COOLDOWN_MS = 3000; // 同一来源 3 秒内最多响一次
-
 const STORAGE_KEY = 'chat_sound_enabled';
 
 /** 检测 AudioContext 构造函数（跨浏览器兼容） */
@@ -157,13 +153,6 @@ export { tryUnlockAudio };
  */
 export function playNotificationSound(): void {
   if (!soundEnabled) return;
-
-  // ★ 提示音冷却检查：防止短时间内重复响铃
-  const now = Date.now();
-  if (now - lastSoundTime < SOUND_COOLDOWN_MS) {
-    return;
-  }
-  lastSoundTime = now;
 
   try {
     const ctx = getAudioContext();

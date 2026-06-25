@@ -158,26 +158,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
           console.log('[ChatStore] Recovered business from localStorage:', business);
         }
       }
-      // ★ 域名自动识别：通过 Host 头解析商家（子域名/自定义域名无需 ?business= 参数）
-      if (!business) {
-        try {
-          const resolveResp = await fetch('/api/business/resolve-by-host');
-          if (resolveResp.ok) {
-            const resolveData = await resolveResp.json();
-            if (resolveData.success && resolveData.data?.slug) {
-              business = resolveData.data.slug;
-              localStorage.setItem(BUSINESS_SLUG_KEY, business);
-              console.log('[ChatStore] Detected business from domain host:', business);
-              // 同步到 URL，确保后续刷新和分享链接携带 business 参数
-              const url = new URL(window.location.href);
-              url.searchParams.set('business', business);
-              window.history.replaceState({}, '', url.toString());
-            }
-          }
-        } catch (err) {
-          console.log('[ChatStore] Domain host resolution skipped:', err);
-        }
-      }
       
       console.log('[ChatStore] initSession: business from URL =', getUrlBusiness(), 'effective business =', business);
       console.log('[ChatStore] initSession: URL =', window.location.href);
@@ -265,23 +245,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
         // Connect SSE (will fallback to polling if it fails)
         get().connectSSE();
       } else {
-        const rawErr = result.error || 'Failed to initialize session';
-        let displayError = rawErr;
-        if (rawErr.includes('BUSINESS_NOT_FOUND')) {
-          displayError = '该商家不存在或尚未激活，请确认访问链接是否正确';
-        }
-        set({ error: displayError, loading: false });
+        set({ error: result.error || 'Failed to initialize session', loading: false });
       }
     } catch (error) {
-      const rawMsg = error instanceof Error ? error.message : String(error);
-      let displayError = rawMsg;
-      if (rawMsg.includes('BUSINESS_NOT_FOUND')) {
-        displayError = '该商家不存在或尚未激活，请确认访问链接是否正确';
-      } else if (rawMsg.includes('Failed to fetch') || rawMsg.includes('NetworkError')) {
-        displayError = '网络连接失败，请检查网络后重试';
-      }
       set({
-        error: displayError,
+        error: error instanceof Error ? error.message : 'Unknown error',
         loading: false,
       });
     }
@@ -440,9 +408,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
             return hasChanges ? updated : localMsg;
           });
 
-          // Find messages newer than our last known message (use ID-based dedup)
-          const existingIds = new Set(updatedMessages.map((m) => m.id));
-          const freshMessages = serverMessages.filter((m) => !existingIds.has(m.id));
+          // Find messages newer than our last known message
+          const latestTime = messages.length > 0 ? messages[messages.length - 1].createdAt : 0;
+          const freshMessages = serverMessages.filter((m) => m.createdAt > latestTime);
           console.log(`[ChatStore] Found ${freshMessages.length} fresh messages`);
 
           // Check if we need to update
@@ -454,8 +422,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
             // ★ 核心修复：新消息必须通过 addMessage 添加以触发通知
             if (freshMessages.length > 0) {
-              console.log(`[ChatStore] Found ${freshMessages.length} new messages via polling, dispatching via addMessage`);
-              for (const msg of freshMessages) {
+              const existingIds = new Set(updatedMessages.map((m) => m.id));
+              const toAdd = freshMessages.filter((m) => !existingIds.has(m.id));
+              console.log(`[ChatStore] Found ${toAdd.length} new messages via polling, dispatching via addMessage`);
+              for (const msg of toAdd) {
                 get().addMessage(msg);
               }
             }
@@ -603,7 +573,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const preview = typeof message.content === 'string'
         ? message.content
         : `[${message.contentType || 'message'}]`;
-      notifyNewStaffMessage(staffName, preview, session?.id, session?.businessSlug, message.id);
+      notifyNewStaffMessage(staffName, preview, session?.id, session?.businessSlug);
 
       // 闪烁标题栏（未读消息数）
       if (updatedSession) {

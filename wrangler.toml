@@ -1,53 +1,17 @@
 name = "zyg-online-chat"
 main = "src/server/index.worker.ts"
-compatibility_date = "2025-03-01"
+compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
-# 显式启用 workers.dev 子域名（配置 [[routes]] 后默认关闭）
-workers_dev = true
 
 [assets]
 directory = "./dist"
 binding = "ASSETS"
-# 所有请求先经过 Worker 处理（API 路由自己响应，静态资源通过 env.ASSETS.fetch() 获取）
-run_worker_first = true
-
-# ===== 路由配置（🆕 自定义域名支持）=====
-# 平台主域名
-[[routes]]
-pattern = "zygonlinechat.zygmail.icu"
-zone_name = "zygmail.icu"
-
-# 🔧 三级子域名通配符（已启用 — 所有 *.zygonlinechat.zygmail.icu 自动路由到 Worker）
-# ⚠️ 前提条件：需在 Cloudflare DNS 中设置 CNAME *.zygonlinechat → zygonlinechat.zygmail.icu（橙色云朵）
-# ⚠️ 注意：启用通配符路由后，无法再用 Workers 自定义域 API 逐个注册子域名
-# 替代方案：商家自动子域名只需在 business_domains 表中记录即可，无需额外 API 调用
-[[routes]]
-pattern = "*.zygonlinechat.zygmail.icu"
-zone_name = "zygmail.icu"
-
-# ⚠️ workers.dev 域名由 Cloudflare 自动路由，无需在此配置 [[routes]]
-# 添加路由反而会导致 "Some triggers failed to deploy" 错误
 
 # Environment variables
 [vars]
 BARK_API = "https://api.day.app"
 # Auth: Require login for staff panel
 REQUIRE_AUTH = "true"
-# 🆕 Token encryption key (AES-GCM, 32 chars recommended)
-# ⚠️ 生产环境建议通过 wrangler secret put ENCRYPTION_KEY 设置
-ENCRYPTION_KEY = "dev-encryption-key-change-in-production"
-# 🆕 Cloudflare 平台级配置（用于 Workers 自定义域自动注册）
-# ⚠️ 不要在此填入明文！通过 wrangler secret put 设置：
-#   npx wrangler secret put CF_API_TOKEN     # API 令牌（需要 Workers:Edit + Zone:Read）
-#   npx wrangler secret put CF_ACCOUNT_ID    # 账户 ID: 65250bc17b07a43b589459630626dfa9
-#   npx wrangler secret put CF_ZONE_ID       # 区域 ID: da481c2793b34e658998f12b853c0a9b
-# 创建 API 令牌路径：Dashboard → 我的个人资料 → API 令牌 → 创建令牌
-#   权限模板：自定义 → Workers:Edit + Zone:Read
-#   区域资源：zygmail.icu（特定区域）
-# 本地开发测试可临时在此填写（部署时不要包含到仓库）
-CF_API_TOKEN = "cfut_ynO2YtZ657DG4nKX38WBYcf4Ji7JJKpG6gcc1L1q9351221d"
-CF_ACCOUNT_ID = "65250bc17b07a43b589459630626dfa9"
-CF_ZONE_ID = "da481c2793b34e658998f12b853c0a9b"
 
 [[d1_databases]]
 binding = "DB"
@@ -68,13 +32,6 @@ name = "zyg-online-chat"
 [env.production.vars]
 BARK_API = "https://api.day.app"
 REQUIRE_AUTH = "true"
-# ⚠️ 生产环境强烈建议使用 wrangler secret put ENCRYPTION_KEY 而非明文配置
-ENCRYPTION_KEY = "prod-placeholder-change-via-secret"
-# 🆕 生产环境 Cloudflare 平台配置（通过 wrangler secret put 设置，不要在代码中明文配置）
-# 生产环境必须使用 secrets:
-#   npx wrangler secret put CF_API_TOKEN --env production
-#   npx wrangler secret put CF_ACCOUNT_ID --env production
-#   npx wrangler secret put CF_ZONE_ID --env production
 
 [[env.production.d1_databases]]
 binding = "DB"
@@ -90,16 +47,3 @@ bucket_name = "zyg-online-chat-uploads"
 
 [env.production.ai]
 binding = "AI"
-
-# 🆕 生产环境路由配置
-[[env.production.routes]]
-pattern = "zygonlinechat.zygmail.icu"
-zone_name = "zygmail.icu"
-
-# 🔧 生产环境通配符路由（已启用）
-[[env.production.routes]]
-pattern = "*.zygonlinechat.zygmail.icu"
-zone_name = "zygmail.icu"
-
-# ⚠️ workers.dev 域名由 Cloudflare 自动路由，无需在此配置 [[routes]]
-# workers.dev 子域名：https://zyg-online-chat.linzihai.workers.dev 自动可用

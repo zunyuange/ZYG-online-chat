@@ -7,13 +7,12 @@ import { useState, useEffect } from 'react';
 import { 
   Shield, User, Users, Settings,
   UserPlus, Edit, Trash2, X, Check, Plus, 
-  Home, Key, Globe, Loader2, Zap, Building2, XCircle
+  Home, Key, Globe
 } from 'lucide-react';
 import { useI18n } from '../context/I18nContext';
 import { useSiteSettings } from '@client/hooks/useSiteSettings';
-import { DomainManager } from '@client/components/staff/DomainManager';
 
-type TabType = 'dashboard' | 'business' | 'staff' | 'admin' | 'roles' | 'settings' | 'domains';
+type TabType = 'dashboard' | 'staff' | 'admin' | 'roles' | 'settings';
 
 interface UserData {
   id: number;
@@ -68,37 +67,6 @@ interface RoleFormData {
   permissions: string[];
 }
 
-interface BusinessData {
-  id: number;
-  name: string;
-  slug: string;
-  description: string | null;
-  created_at: number;
-}
-
-interface BusinessFormData {
-  name: string;
-  description: string;
-  username: string;
-  password: string;
-}
-
-interface BusinessCreateResult {
-  success: boolean;
-  message: string;
-  data?: {
-    id: number;
-    name: string;
-    slug: string;
-    chatUrl: string;
-    autoDomain: string | null;
-    autoDomainError: string | null;
-    legacyChatUrl: string;
-    workersDevUrl: string;
-  };
-  error?: string;
-}
-
 export function AdminPage() {
   const { t, locale, setLocale, supportedLocales } = useI18n();
   const { siteName: globalSiteName } = useSiteSettings();
@@ -149,172 +117,6 @@ export function AdminPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
-  // 🆕 AI Config State
-  const [aiConfig, setAiConfig] = useState<{
-    aiMode: string;
-    cfAccountId: string | null;
-    hasToken: boolean;
-    monthlyTranslateCount: number;
-    monthlyTranslateLimit: number;
-    resetDay: number;
-  } | null>(null);
-  const [aiConfigLoading, setAiConfigLoading] = useState(false);
-  const [aiConfigForm, setAiConfigForm] = useState({
-    aiMode: 'platform' as string,
-    cfAccountId: '',
-    cfAiToken: '',
-  });
-  const [aiConfigMessage, setAiConfigMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  // 🆕 Business Management State
-  const [businesses, setBusinesses] = useState<BusinessData[]>([]);
-  const [businessesLoading, setBusinessesLoading] = useState(false);
-  const [showBusinessModal, setShowBusinessModal] = useState(false);
-  const [businessForm, setBusinessForm] = useState<BusinessFormData>({
-    name: '', description: '', username: '', password: '',
-  });
-  const [businessFormError, setBusinessFormError] = useState<string | null>(null);
-  const [businessResult, setBusinessResult] = useState<BusinessCreateResult | null>(null);
-
-  // 🆕 AI Config Functions
-  const loadAiConfig = async () => {
-    setAiConfigLoading(true);
-    try {
-      const token = localStorage.getItem('admin_token');
-      const res = await fetch('/api/business/ai-config', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success) {
-        setAiConfig(data.data);
-        setAiConfigForm({
-          aiMode: data.data.aiMode || 'platform',
-          cfAccountId: data.data.cfAccountId || '',
-          cfAiToken: '',
-        });
-      }
-    } catch (err) {
-      console.error('Failed to load AI config:', err);
-    } finally {
-      setAiConfigLoading(false);
-    }
-  };
-
-  const handleSaveAiConfig = async () => {
-    setAiConfigMessage(null);
-    setFormLoading(true);
-    try {
-      const token = localStorage.getItem('admin_token');
-      const body: Record<string, string | number> = {
-        aiMode: aiConfigForm.aiMode,
-      };
-      if (aiConfigForm.aiMode === 'own_cf') {
-        body.cfAccountId = aiConfigForm.cfAccountId;
-        if (aiConfigForm.cfAiToken) {
-          body.cfAiToken = aiConfigForm.cfAiToken;
-        }
-      }
-      const res = await fetch('/api/business/ai-config', {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setAiConfigMessage({ type: 'success', text: t('ai_config_saved') });
-        // 清除 token 输入
-        setAiConfigForm(prev => ({ ...prev, cfAiToken: '' }));
-        loadAiConfig(); // 刷新
-      } else {
-        setAiConfigMessage({ type: 'error', text: data.error || t('ai_config_save_failed') });
-      }
-    } catch {
-      setAiConfigMessage({ type: 'error', text: t('ai_config_save_failed') });
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
-  // 🆕 Business Management Functions
-  const loadBusinesses = async () => {
-    setBusinessesLoading(true);
-    try {
-      const token = localStorage.getItem('admin_token');
-      const res = await fetch('/api/business/list', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success) {
-        setBusinesses(data.data || []);
-      }
-    } catch (err) {
-      console.error('Failed to load businesses:', err);
-    } finally {
-      setBusinessesLoading(false);
-    }
-  };
-
-  const handleCreateBusiness = () => {
-    setBusinessForm({ name: '', description: '', username: '', password: '' });
-    setBusinessFormError(null);
-    setBusinessResult(null);
-    setShowBusinessModal(true);
-  };
-
-  const handleSubmitBusiness = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusinessFormError(null);
-    setBusinessResult(null);
-
-    if (!businessForm.name.trim()) {
-      setBusinessFormError(t('please_enter_name'));
-      return;
-    }
-    if (!businessForm.username.trim()) {
-      setBusinessFormError(t('please_enter_username'));
-      return;
-    }
-    if (!businessForm.password.trim()) {
-      setBusinessFormError(t('please_enter_password'));
-      return;
-    }
-
-    setFormLoading(true);
-
-    try {
-      const res = await fetch('/api/business/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: businessForm.name.trim(),
-          description: businessForm.description.trim(),
-          username: businessForm.username.trim(),
-          password: businessForm.password,
-        }),
-      });
-      const data: BusinessCreateResult = await res.json();
-
-      if (data.success) {
-        setBusinessResult(data);
-        loadBusinesses();
-      } else {
-        setBusinessFormError(data.error || t('operation_failed'));
-      }
-    } catch (err) {
-      setBusinessFormError(t('operation_failed'));
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
-  const handleCloseBusinessModal = () => {
-    setShowBusinessModal(false);
-    setBusinessResult(null);
-    setBusinessFormError(null);
-  };
 
   const allPermissions = [
     { key: 'admin_view', label: t('permission_admin_view') },
@@ -329,22 +131,6 @@ export function AdminPage() {
   useEffect(() => {
     checkAuth();
   }, []);
-
-  // 🆕 DomainManager 组件内部自行管理数据加载，无需在此触发
-
-  // 🆕 切换到设置Tab时自动加载AI配置
-  useEffect(() => {
-    if (activeTab === 'settings' && !loading) {
-      loadAiConfig();
-    }
-  }, [activeTab, loading]);
-
-  // 🆕 切换到商家管理Tab时自动加载商家列表
-  useEffect(() => {
-    if (activeTab === 'business' && !loading) {
-      loadBusinesses();
-    }
-  }, [activeTab, loading]);
 
   // ★ 定期向服务端发送心跳，保持客服在线状态
   // 管理后台没有 SSE 连接，需要主动 ping 来更新 last_active
@@ -998,11 +784,9 @@ export function AdminPage() {
 
   const navItems = [
     { key: 'dashboard' as const, label: t('dashboard'), icon: Home },
-    { key: 'business' as const, label: t('business_management') || '商家管理', icon: Building2 },
     { key: 'staff' as const, label: t('staff_management'), icon: Users },
     { key: 'admin' as const, label: t('admin_management'), icon: User },
     { key: 'roles' as const, label: t('role_management'), icon: Key },
-    { key: 'domains' as const, label: t('domain_management'), icon: Globe },
     { key: 'settings' as const, label: t('settings'), icon: Settings },
   ];
 
@@ -1102,22 +886,6 @@ export function AdminPage() {
             <div style={{ textAlign: 'left' }}>
               <div style={{ fontWeight: 500 }}>{t('manage_roles')}</div>
               <div style={{ fontSize: '12px', opacity: 0.6 }}>{t('view_edit_roles')}</div>
-            </div>
-          </button>
-          <button 
-            onClick={() => setActiveTab('domains')}
-            style={{ 
-              ...buttonStyle('default'), 
-              padding: '16px', 
-              justifyContent: 'flex-start',
-              backgroundColor: '#fff',
-              border: '1px solid #e5e7eb',
-            }}
-          >
-            <Globe size={20} />
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontWeight: 500 }}>{t('manage_domains')}</div>
-              <div style={{ fontSize: '12px', opacity: 0.6 }}>{t('view_edit_domains')}</div>
             </div>
           </button>
           <button 
@@ -1534,255 +1302,7 @@ export function AdminPage() {
           </div>
         </div>
       </div>
-
-      {/* 🆕 AI 翻译配置 */}
-      <div style={cardStyle}>
-        <h2 style={{ fontSize: '16px', fontWeight: 500, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Zap size={18} style={{ color: '#722ed1' }} />
-          {t('ai_config')}
-        </h2>
-        <p style={{ fontSize: '13px', color: '#999', marginBottom: '20px' }}>{t('ai_config_desc')}</p>
-
-        {aiConfigLoading ? (
-          <div style={{ textAlign: 'center', padding: '24px', color: '#999' }}>
-            <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px' }} />
-            <p>{t('loading')}</p>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gap: '20px' }}>
-            {/* AI 模式选择 */}
-            <div>
-              <label style={labelStyle}>{t('ai_mode_label')}</label>
-              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => setAiConfigForm(prev => ({ ...prev, aiMode: 'platform' }))}
-                  style={{
-                    flex: 1,
-                    padding: '16px',
-                    borderRadius: '8px',
-                    border: aiConfigForm.aiMode === 'platform' ? '2px solid #1890ff' : '1px solid #d9d9d9',
-                    backgroundColor: aiConfigForm.aiMode === 'platform' ? '#e6f7ff' : '#fff',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <div style={{ fontWeight: 500, fontSize: '14px', marginBottom: '4px', color: '#333' }}>
-                    🏢 {t('ai_platform_mode')}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#999' }}>{t('ai_mode_platform_desc')}</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAiConfigForm(prev => ({ ...prev, aiMode: 'own_cf' }))}
-                  style={{
-                    flex: 1,
-                    padding: '16px',
-                    borderRadius: '8px',
-                    border: aiConfigForm.aiMode === 'own_cf' ? '2px solid #722ed1' : '1px solid #d9d9d9',
-                    backgroundColor: aiConfigForm.aiMode === 'own_cf' ? '#f9f0ff' : '#fff',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <div style={{ fontWeight: 500, fontSize: '14px', marginBottom: '4px', color: '#333' }}>
-                    ☁️ {t('ai_own_cf_mode')}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#999' }}>{t('ai_mode_own_cf_desc')}</div>
-                </button>
-              </div>
-            </div>
-
-            {/* 自有CF AI 配置 */}
-            {aiConfigForm.aiMode === 'own_cf' && (
-              <>
-                <div>
-                  <label style={labelStyle}>{t('ai_cf_account_id')}</label>
-                  <input
-                    type="text"
-                    value={aiConfigForm.cfAccountId}
-                    onChange={(e) => setAiConfigForm(prev => ({ ...prev, cfAccountId: e.target.value }))}
-                    style={inputStyle}
-                    placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                  />
-                  <p style={{ fontSize: '12px', color: '#999', marginTop: '6px' }}>{t('ai_cf_account_id_hint')}</p>
-                </div>
-                <div>
-                  <label style={labelStyle}>{t('ai_cf_api_token')}</label>
-                  <input
-                    type="password"
-                    value={aiConfigForm.cfAiToken}
-                    onChange={(e) => setAiConfigForm(prev => ({ ...prev, cfAiToken: e.target.value }))}
-                    style={inputStyle}
-                    placeholder={aiConfig?.hasToken ? t('ai_cf_token_placeholder') : ''}
-                  />
-                  <p style={{ fontSize: '12px', color: '#999', marginTop: '6px' }}>
-                    {aiConfig?.hasToken && (
-                      <span style={{ color: '#52c41a', marginRight: '12px' }}>✓ {t('ai_token_saved')}</span>
-                    )}
-                    {t('ai_cf_api_token_hint')}
-                  </p>
-                </div>
-              </>
-            )}
-
-            {/* 用量统计 */}
-            {aiConfig && (aiConfig.aiMode !== 'platform' || aiConfig.monthlyTranslateCount > 0) && (
-              <div style={{
-                backgroundColor: '#f5f5f5',
-                borderRadius: '8px',
-                padding: '16px',
-                display: 'flex',
-                gap: '24px',
-                alignItems: 'center',
-              }}>
-                <div>
-                  <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>{t('ai_monthly_quota')}</div>
-                  <div style={{ fontSize: '24px', fontWeight: 600, color: '#333' }}>
-                    {aiConfig.monthlyTranslateCount.toLocaleString()}
-                    <span style={{ fontSize: '14px', fontWeight: 400, color: '#999' }}> / {aiConfig.monthlyTranslateLimit.toLocaleString()}</span>
-                  </div>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{
-                    height: '8px',
-                    backgroundColor: '#e5e7eb',
-                    borderRadius: '4px',
-                    overflow: 'hidden',
-                  }}>
-                    <div style={{
-                      height: '100%',
-                      width: `${Math.min((aiConfig.monthlyTranslateCount / aiConfig.monthlyTranslateLimit) * 100, 100)}%`,
-                      backgroundColor: aiConfig.monthlyTranslateCount / aiConfig.monthlyTranslateLimit > 0.8 ? '#ff4d4f' : '#52c41a',
-                      borderRadius: '4px',
-                      transition: 'width 0.3s',
-                    }} />
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
-                    {t('ai_quota_reset_day').replace('{day}', String(aiConfig.resetDay))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 提示消息 */}
-            {aiConfigMessage && (
-              <div style={{
-                padding: '10px 16px',
-                borderRadius: '4px',
-                fontSize: '13px',
-                backgroundColor: aiConfigMessage.type === 'success' ? '#f6ffed' : '#fff2f0',
-                border: `1px solid ${aiConfigMessage.type === 'success' ? '#b7eb8f' : '#ffccc7'}`,
-                color: aiConfigMessage.type === 'success' ? '#52c41a' : '#ff4d4f',
-              }}>
-                {aiConfigMessage.text}
-              </div>
-            )}
-
-            {/* 保存按钮 */}
-            <div>
-              <button
-                onClick={handleSaveAiConfig}
-                disabled={formLoading}
-                style={{
-                  ...buttonStyle('primary'),
-                  opacity: formLoading ? 0.6 : 1,
-                  cursor: formLoading ? 'not-allowed' : 'pointer',
-                }}
-              >
-                {formLoading ? <Loader2 size={14} className="animate-spin" style={{ marginRight: '8px' }} /> : null}
-                {t('ai_save_config')}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
     </div>
-  );
-
-  // 🆕 Business Management Tab
-  const renderBusinessManagement = () => (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '20px', fontWeight: 500 }}>{t('business_management') || '商家管理'}</h1>
-        <button onClick={handleCreateBusiness} style={buttonStyle('primary')}>
-          <Plus size={16} />
-          {t('add_business') || '添加商家'}
-        </button>
-      </div>
-
-      <div style={cardStyle}>
-        {businessesLoading ? (
-          <div style={{ textAlign: 'center', padding: '32px', color: '#999' }}>
-            <Loader2 size={32} className="animate-spin" style={{ margin: '0 auto 12px' }} />
-            <p>{t('loading')}</p>
-          </div>
-        ) : businesses.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '48px', color: '#999' }}>
-            <Building2 size={48} style={{ marginBottom: '16px', opacity: 0.3 }} />
-            <p style={{ fontSize: '16px', marginBottom: '8px' }}>{t('business_no_data') || '暂无商家'}</p>
-            <p style={{ fontSize: '14px', marginBottom: '24px' }}>{t('business_create_hint') || '点击上方按钮创建第一个商家'}</p>
-          </div>
-        ) : (
-          <table style={tableStyle}>
-            <thead>
-              <tr>
-                <th style={thStyle}>ID</th>
-                <th style={thStyle}>{t('name') || '商家名称'}</th>
-                <th style={thStyle}>Slug</th>
-                <th style={thStyle}>{t('description') || '描述'}</th>
-                <th style={thStyle}>{t('created_at') || '创建时间'}</th>
-                <th style={thStyle}>{t('domain_url') || '三级域名'}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {businesses.map((biz) => (
-                <tr key={biz.id}>
-                  <td style={tdStyle}>{biz.id}</td>
-                  <td style={tdStyle}><strong>{biz.name}</strong></td>
-                  <td style={tdStyle}>
-                    <code style={{ backgroundColor: '#f5f5f5', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>
-                      {biz.slug}
-                    </code>
-                  </td>
-                  <td style={tdStyle}>{biz.description || '-'}</td>
-                  <td style={tdStyle}>{new Date(biz.created_at).toLocaleDateString()}</td>
-                  <td style={tdStyle}>
-                    <a
-                      href={`https://${biz.slug}.zygonlinechat.zygmail.icu`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: '#1890ff', fontSize: '13px' }}
-                    >
-                      {biz.slug}.zygonlinechat.zygmail.icu
-                    </a>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {/* 提示信息 */}
-      <div style={{ ...cardStyle, backgroundColor: '#f6ffed', border: '1px solid #b7eb8f' }}>
-        <p style={{ fontSize: '13px', color: '#52c41a', margin: 0 }}>
-          ✅ {t('business_auto_domain_hint') || '创建商家时，系统会自动为其生成专属三级子域名 (slug.zygonlinechat.zygmail.icu)，无需额外配置。'}
-        </p>
-      </div>
-    </div>
-  );
-
-  // 🆕 Domain Management Tab - using shared DomainManager component
-  const renderDomains = () => (
-    <DomainManager
-      businessId={1}
-      authToken={localStorage.getItem('admin_token') || ''}
-      t={t as any}
-      isPlatformAdmin={true}
-    />
   );
 
   return (
@@ -1858,11 +1378,9 @@ export function AdminPage() {
         )}
 
         {activeTab === 'dashboard' && renderDashboard()}
-        {activeTab === 'business' && renderBusinessManagement()}
         {activeTab === 'staff' && renderStaffManagement()}
         {activeTab === 'admin' && renderAdminManagement()}
         {activeTab === 'roles' && renderRoleManagement()}
-        {activeTab === 'domains' && renderDomains()}
         {activeTab === 'settings' && renderSettings()}
       </div>
 
@@ -1971,160 +1489,6 @@ export function AdminPage() {
         </div>
       )}
 
-      {/* 🆕 Business Creation Modal */}
-      {showBusinessModal && (
-        <div style={modalOverlayStyle} onClick={handleCloseBusinessModal}>
-          <div style={{ ...modalStyle, maxWidth: businessResult ? '580px' : '500px' }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2 style={{ fontSize: '18px', fontWeight: 500 }}>
-                {t('add_business') || '添加商家'}
-              </h2>
-              <button onClick={handleCloseBusinessModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999' }}>
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* 结果展示 */}
-            {businessResult ? (
-              <div>
-                {businessResult.success ? (
-                  <div style={{ textAlign: 'center', padding: '16px 0' }}>
-                    <div style={{
-                      width: '64px', height: '64px', borderRadius: '50%',
-                      backgroundColor: '#f6ffed', display: 'flex', alignItems: 'center',
-                      justifyContent: 'center', margin: '0 auto 16px',
-                    }}>
-                      <Check size={32} color="#52c41a" />
-                    </div>
-                    <h3 style={{ fontSize: '18px', fontWeight: 500, marginBottom: '8px', color: '#52c41a' }}>
-                      {t('business_created') || '商家创建成功'}
-                    </h3>
-                    {businessResult.data && (
-                      <div style={{ textAlign: 'left', backgroundColor: '#f9f9f9', borderRadius: '8px', padding: '16px', marginTop: '16px' }}>
-                        <div style={{ marginBottom: '8px' }}>
-                          <span style={{ color: '#999', fontSize: '13px' }}>{t('name') || '商家名称'}: </span>
-                          <strong>{businessResult.data.name}</strong>
-                        </div>
-                        <div style={{ marginBottom: '8px' }}>
-                          <span style={{ color: '#999', fontSize: '13px' }}>Slug: </span>
-                          <code style={{ backgroundColor: '#fff', padding: '2px 6px', borderRadius: '4px' }}>{businessResult.data.slug}</code>
-                        </div>
-                        {businessResult.data.autoDomain ? (
-                          <div style={{ marginBottom: '8px' }}>
-                            <span style={{ color: '#999', fontSize: '13px' }}>{t('domain_auto_subdomain') || '专属三级域名'}: </span>
-                            <a href={`https://${businessResult.data.autoDomain}`} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff' }}>
-                              {businessResult.data.autoDomain}
-                            </a>
-                          </div>
-                        ) : businessResult.data.autoDomainError && (
-                          <div style={{ marginBottom: '8px', color: '#faad14', fontSize: '13px' }}>
-                            ⚠️ {t('domain_auto_failed') || '自动生成三级域名失败'}: {businessResult.data.autoDomainError}
-                          </div>
-                        )}
-                        <div style={{ marginBottom: '8px' }}>
-                          <span style={{ color: '#999', fontSize: '13px' }}>{t('domain_legacy_url') || '备用URL'}: </span>
-                          <code style={{ backgroundColor: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>
-                            {businessResult.data.legacyChatUrl}
-                          </code>
-                        </div>
-                      </div>
-                    )}
-                    <button
-                      onClick={handleCloseBusinessModal}
-                      style={{ ...buttonStyle('primary'), marginTop: '24px', padding: '8px 24px' }}
-                    >
-                      {t('domain_step_finish') || '完成'}
-                    </button>
-                  </div>
-                ) : (
-                  <div style={{ textAlign: 'center', padding: '16px 0' }}>
-                    <XCircle size={48} color="#ff4d4f" style={{ marginBottom: '16px' }} />
-                    <p style={{ color: '#ff4d4f', marginBottom: '16px' }}>
-                      {businessResult.error || t('operation_failed')}
-                    </p>
-                    <button
-                      onClick={() => setBusinessResult(null)}
-                      style={buttonStyle('default')}
-                    >
-                      {t('retry') || '重试'}
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <form onSubmit={handleSubmitBusiness}>
-                {businessFormError && (
-                  <div style={{
-                    backgroundColor: '#fff2f0', border: '1px solid #ffccc7',
-                    borderRadius: '4px', padding: '12px', marginBottom: '16px',
-                    color: '#ff4d4f', fontSize: '14px',
-                  }}>
-                    {businessFormError}
-                  </div>
-                )}
-
-                <label style={labelStyle}>{t('name') || '商家名称'} *</label>
-                <input
-                  type="text"
-                  value={businessForm.name}
-                  onChange={(e) => setBusinessForm({ ...businessForm, name: e.target.value })}
-                  style={inputStyle}
-                  placeholder={t('business_name_input_hint') || '例如: 某某科技'}
-                />
-
-                <label style={labelStyle}>{t('description') || '商家描述'}</label>
-                <input
-                  type="text"
-                  value={businessForm.description}
-                  onChange={(e) => setBusinessForm({ ...businessForm, description: e.target.value })}
-                  style={inputStyle}
-                  placeholder={t('business_desc_placeholder') || '可选，商家简要描述'}
-                />
-
-                <label style={labelStyle}>{t('username') || '管理员用户名'} *</label>
-                <input
-                  type="text"
-                  value={businessForm.username}
-                  onChange={(e) => setBusinessForm({ ...businessForm, username: e.target.value })}
-                  style={inputStyle}
-                  placeholder={t('business_admin_username_placeholder') || '商家管理员登录用户名'}
-                />
-                <p style={{ fontSize: '12px', color: '#999', marginTop: '-8px', marginBottom: '12px' }}>
-                  {t('business_admin_username_hint') || '此账号将作为该商家的管理员，可管理客服、域名、设置等'}
-                </p>
-
-                <label style={labelStyle}>{t('password') || '密码'} *</label>
-                <input
-                  type="password"
-                  value={businessForm.password}
-                  onChange={(e) => setBusinessForm({ ...businessForm, password: e.target.value })}
-                  style={inputStyle}
-                  placeholder={t('staff_mgmt_password_placeholder') || '请输入密码'}
-                />
-
-                <div style={{
-                  backgroundColor: '#e6f7ff', border: '1px solid #91d5ff',
-                  borderRadius: '4px', padding: '10px 12px', marginTop: '12px',
-                  fontSize: '12px', color: '#1890ff',
-                }}>
-                  💡 {t('business_auto_domain_note') || '创建后将自动为商家分配专属三级子域名 (slug.zygonlinechat.zygmail.icu) 和随机 Slug 标识'}
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                  <button type="button" onClick={handleCloseBusinessModal} style={buttonStyle('default')}>
-                    {t('cancel')}
-                  </button>
-                  <button type="submit" disabled={formLoading} style={{ ...buttonStyle('primary'), opacity: formLoading ? 0.6 : 1 }}>
-                    {formLoading ? <Loader2 size={14} className="animate-spin" style={{ marginRight: '8px' }} /> : null}
-                    {formLoading ? t('saving') : t('add_business') || '创建商家'}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Role Modal */}
       {showRoleModal && (
         <div style={modalOverlayStyle} onClick={() => setShowRoleModal(false)}>
@@ -2196,7 +1560,6 @@ export function AdminPage() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

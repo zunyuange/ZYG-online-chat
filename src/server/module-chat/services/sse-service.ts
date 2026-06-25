@@ -295,25 +295,8 @@ export function getConnectionStats(): {
   }
 }
 
-let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
-
-/**
- * Start SSE heartbeat interval (for Node.js environment only).
- * Must be called from within a handler/initializer, not at global scope,
- * because Cloudflare Workers disallow setInterval at the top level.
- */
-export function startSSEHeartbeat(): void {
-  if (typeof process !== 'undefined' && process.versions?.node) {
-    if (heartbeatTimer) return;
-    heartbeatTimer = setInterval(() => {
-      sendHeartbeat().catch(console.error);
-    }, 30000);
-  }
-}
-
-export function stopSSEHeartbeat(): void {
-  if (heartbeatTimer) {
-    clearInterval(heartbeatTimer);
-    heartbeatTimer = null;
-  }
+if (typeof process !== 'undefined' && process.versions?.node) {
+  setInterval(() => {
+    sendHeartbeat().catch(console.error)
+  }, 30000)
 }

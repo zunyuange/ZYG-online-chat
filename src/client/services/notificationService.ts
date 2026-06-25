@@ -24,14 +24,6 @@ import { translate } from '@shared/i18n';
 
 const NOTIFICATION_GRANTED_KEY = 'chat_notification_granted';
 
-// ★ 已通知消息 ID 集合（防止同一消息重复通知）
-const notifiedMessageIds = new Set<string>();
-const MAX_NOTIFIED_IDS = 1000; // 防止内存泄漏
-
-// ★ 每个 session 最后一次通知时间（防止通知风暴，最小间隔 2 秒）
-const lastNotificationTime = new Map<string, number>();
-const NOTIFICATION_COOLDOWN_MS = 2000;
-
 /** ★ 检测浏览器是否支持振动（Safari/桌面Firefox不支持） */
 function supportsVibrate(): boolean {
   return 'vibrate' in navigator;
@@ -84,52 +76,6 @@ export function isNotificationGranted(): boolean {
 /** 重置通知状态（清除 localStorage 标记） */
 export function resetNotificationState(): void {
   localStorage.removeItem(NOTIFICATION_GRANTED_KEY);
-}
-
-/**
- * ★ 检查消息是否已经触发过通知
- */
-export function hasMessageNotified(messageId: string | number): boolean {
-  return notifiedMessageIds.has(String(messageId));
-}
-
-/**
- * ★ 标记消息已通知
- */
-export function markMessageNotified(messageId: string | number): void {
-  const id = String(messageId);
-  notifiedMessageIds.add(id);
-  // 防止内存泄漏：超过上限时清理较老的 ID
-  if (notifiedMessageIds.size > MAX_NOTIFIED_IDS) {
-    const toDelete = Math.floor(MAX_NOTIFIED_IDS / 4);
-    let count = 0;
-    for (const key of notifiedMessageIds) {
-      if (count >= toDelete) break;
-      notifiedMessageIds.delete(key);
-      count++;
-    }
-  }
-}
-
-/**
- * ★ 检查 session 是否处于通知冷却期（防止通知风暴）
- * 返回 true 表示可以发送通知，返回 false 表示在冷却期内
- */
-export function checkNotificationCooldown(sessionId: string): boolean {
-  const now = Date.now();
-  const last = lastNotificationTime.get(sessionId) || 0;
-  if (now - last < NOTIFICATION_COOLDOWN_MS) {
-    return false; // 冷却期内，跳过
-  }
-  lastNotificationTime.set(sessionId, now);
-  return true;
-}
-
-/**
- * ★ 清除 session 的通知冷却记录（会话关闭/切换时调用）
- */
-export function clearNotificationCooldown(sessionId: string): void {
-  lastNotificationTime.delete(sessionId);
 }
 
 /**
@@ -241,35 +187,16 @@ export function isPageHidden(): boolean {
 /**
  * 访客端：收到客服消息时触发通知
  * 仅在页面不可见（后台标签页/PWA 最小化）时弹出桌面通知
- * @param messageId - 消息 ID，用于防止重复通知
  */
 export async function notifyNewStaffMessage(
   staffName: string,
   messagePreview: string,
   sessionId?: string,
   business?: string,
-  messageId?: string | number,
 ): Promise<void> {
   // 页面可见：只播放提示音，不弹通知
   if (!isPageHidden()) {
     return;
-  }
-
-  // ★ 防止同一消息重复通知
-  if (messageId && hasMessageNotified(messageId)) {
-    console.log('[Notification] Skipping duplicate notification for message:', messageId);
-    return;
-  }
-
-  // ★ 通知冷却检查
-  if (sessionId && !checkNotificationCooldown(sessionId)) {
-    console.log('[Notification] Cooldown active for session:', sessionId);
-    return;
-  }
-
-  // ★ 标记消息已通知
-  if (messageId) {
-    markMessageNotified(messageId);
   }
 
   const title = t('notif_staff_msg_title', '【新消息】{name}').replace('{name}', staffName || t('staff', '客服'));
@@ -288,35 +215,16 @@ export async function notifyNewStaffMessage(
 /**
  * ★ 客服端：收到访客新消息时触发
  * 场景：客服在浏览其他标签页/使用其他软件时，访客发了新消息
- * @param messageId - 消息 ID，用于防止重复通知
  */
 export async function notifyNewVisitorMessage(
   visitorName: string,
   messagePreview: string,
   sessionId?: string,
   business?: string,
-  messageId?: string | number,
 ): Promise<void> {
   // 页面可见 → 不弹桌面通知（客服正在看）
   if (!isPageHidden()) {
     return;
-  }
-
-  // ★ 防止同一消息重复通知
-  if (messageId && hasMessageNotified(messageId)) {
-    console.log('[Notification] Skipping duplicate visitor notification for message:', messageId);
-    return;
-  }
-
-  // ★ 通知冷却检查
-  if (sessionId && !checkNotificationCooldown(sessionId)) {
-    console.log('[Notification] Cooldown active for session:', sessionId);
-    return;
-  }
-
-  // ★ 标记消息已通知
-  if (messageId) {
-    markMessageNotified(messageId);
   }
 
   const title = t('notif_visitor_msg_title', '【新消息】{name}').replace('{name}', visitorName || t('visitor', '访客'));
@@ -342,14 +250,6 @@ export async function notifyNewVisitorSession(
   // 页面可见 → 不弹桌面通知
   if (!isPageHidden()) {
     return;
-  }
-
-  // ★ 防止同一 session 重复推送新访客通知
-  if (sessionId && hasMessageNotified(`session-${sessionId}`)) {
-    return;
-  }
-  if (sessionId) {
-    markMessageNotified(`session-${sessionId}`);
   }
 
   const title = t('notif_new_visitor_title', '【新访客提示】');
