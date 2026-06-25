@@ -83,7 +83,15 @@ export class DomainService {
 
   /**
    * 为商家自动生成三级子域名
-   * 在创建商家时调用，同时尝试注册为 Workers 自定义域
+   * 
+   * ★ 通配符路由模式下，无需调用 Workers API 逐个注册！
+   *   wrangler.toml 中已配置 *.zygonlinechat.zygmail.icu → Worker
+   *   任何 {slug}.zygonlinechat.zygmail.icu 自动路由到 Worker
+   *   domain-router 中间件从 Host 头提取 slug 并识别商家
+   * 
+   * ⚠️ 前提条件（需在 Cloudflare Dashboard 中手动设置）：
+   *   DNS: CNAME *.zygonlinechat → zygonlinechat.zygmail.icu（橙色云朵）
+   *   如果没有这条 DNS 记录，子域名将无法解析！
    */
   async createAutoSubdomain(
     businessId: number,
@@ -93,42 +101,25 @@ export class DomainService {
     const domain = `${slug}.zygonlinechat.zygmail.icu`;
 
     // 检查是否已存在
-    const existing = await db.get<{ id: number; cf_worker_route_id: string | null }>(
-      "SELECT id, cf_worker_route_id FROM business_domains WHERE domain = ?",
+    const existing = await db.get<{ id: number }>(
+      "SELECT id FROM business_domains WHERE domain = ?",
       [domain]
     );
     if (existing) {
-      // 🆕 如果已存在但未注册 Workers 自定义域，尝试补充注册
-      let cfWorkerDomainResult: { success: boolean; domainId?: string; error?: string } = { success: false };
-      if (!existing.cf_worker_route_id) {
-        try {
-          cfWorkerDomainResult = await this.registerWorkersCustomDomain(domain);
-          if (cfWorkerDomainResult.success && cfWorkerDomainResult.domainId) {
-            await db.run(
-              "UPDATE business_domains SET cf_worker_route_id = ? WHERE id = ?",
-              [cfWorkerDomainResult.domainId, existing.id]
-            );
-          }
-        } catch (err) {
-          cfWorkerDomainResult = { success: false, error: err instanceof Error ? err.message : String(err) };
-        }
-      } else {
-        cfWorkerDomainResult = { success: true, domainId: existing.cf_worker_route_id };
-      }
       return {
         success: true,
         domainId: existing.id,
         domain,
         verificationStatus: 'active',
         cfWorkerDomain: {
-          registered: cfWorkerDomainResult.success,
-          domainId: cfWorkerDomainResult.domainId,
-          error: cfWorkerDomainResult.error,
+          registered: true, // 通配符路由已覆盖
+          domainId: 'wildcard_route',
+          error: undefined,
         },
       };
     }
 
-    // 写入数据库
+    // 写入数据库（仅用于管理面板展示，路由由通配符处理）
     const result = await db.run(
       `INSERT INTO business_domains
        (business_id, staff_user_id, domain_type, domain, subdomain,
@@ -137,44 +128,24 @@ export class DomainService {
       [businessId, businessId, domain, slug]
     );
 
-    // 🆕 注册 Workers 自定义域
-    let cfWorkerDomainResult: { success: boolean; domainId?: string; error?: string } = { success: false };
-    try {
-      cfWorkerDomainResult = await this.registerWorkersCustomDomain(domain);
-    } catch (err) {
-      cfWorkerDomainResult = { success: false, error: err instanceof Error ? err.message : String(err) };
-    }
-
-    // 🆕 保存 Workers 自定义域 ID 到数据库
-    if (cfWorkerDomainResult.success && cfWorkerDomainResult.domainId) {
-      try {
-        await db.run(
-          "UPDATE business_domains SET cf_worker_route_id = ? WHERE id = ?",
-          [cfWorkerDomainResult.domainId, result.lastInsertRowid]
-        );
-      } catch (e) {
-        console.warn('[DomainService] Failed to save cf_worker_route_id:', e);
-      }
-    }
-
     // 记录操作日志
     await this.logOperation(businessId, Number(result.lastInsertRowid), 'auto_create', {
       domain,
       subdomain: slug,
-      cfWorkerDomainRegistered: cfWorkerDomainResult.success,
-      cfWorkerDomainError: cfWorkerDomainResult.error || null,
+      routeMode: 'wildcard',
     });
+
+    console.log(`[DomainService] ✅ Auto subdomain created: ${domain} (wildcard route)`);
 
     return {
       success: true,
       domainId: Number(result.lastInsertRowid),
       domain,
       verificationStatus: 'active',
-      // 🆕 返回 Workers 自定义域注册状态
       cfWorkerDomain: {
-        registered: cfWorkerDomainResult.success,
-        domainId: cfWorkerDomainResult.domainId,
-        error: cfWorkerDomainResult.error,
+        registered: true, // 通配符路由已覆盖
+        domainId: 'wildcard_route',
+        error: undefined,
       },
     };
   }

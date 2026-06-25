@@ -461,70 +461,44 @@ businessRoutes.post('/create', async (c) => {
 
     const newBusiness = await db.get('SELECT id, business_name as name, business_slug as slug, created_at FROM staff_users WHERE id = ?', [result.lastInsertRowid]);
 
-    // 🆕 自动生成三级子域名
-    let chatUrl = `https://zygonlinechat.zygmail.icu/chat?business=${slug}`;
-    let autoDomain = null;
+    // 🆕 自动生成三级子域名（通配符路由模式，无需 Workers API）
+    let chatUrl = `https://${slug}.zygonlinechat.zygmail.icu/chat`;
+    let autoDomain = `${slug}.zygonlinechat.zygmail.icu`;
     let autoDomainError: string | null = null;
-    let cfWorkerDomain: { registered: boolean; domainId?: string; error?: string } | null = null;
     try {
       const domainService = getDomainService();
       const domainResult = await domainService.createAutoSubdomain(
         Number(result.lastInsertRowid),
         slug
       );
-      if (domainResult.success && domainResult.domain) {
-        autoDomain = domainResult.domain;
-        chatUrl = `https://${autoDomain}`;
-        cfWorkerDomain = domainResult.cfWorkerDomain || null;
-        console.log(`[BusinessRoutes] ✅ Auto-generated domain for business ${slug}: ${autoDomain}`);
-        if (cfWorkerDomain?.registered) {
-          console.log(`[BusinessRoutes] ✅ Workers custom domain registered: ${autoDomain}`);
-        } else {
-          // 🔍 详细错误诊断
-          const errCode = cfWorkerDomain?.error;
-          if (errCode === 'blocked_by_wildcard_route' || errCode === 'blocked_by_wildcard_route_in_wrangler_toml') {
-            console.warn(`[BusinessRoutes] ⚠️ Workers custom domain blocked: *.zygonlinechat.zygmail.icu 通配符路由仍在 wrangler.toml 中！`);
-          } else if (errCode === 'cf_token_missing_workers_edit_permission') {
-            console.warn(`[BusinessRoutes] ⚠️ Workers custom domain failed: API Token 缺少 Workers:Edit 权限`);
-          } else if (errCode === 'missing_platform_config') {
-            console.log(`[BusinessRoutes] ℹ️ Workers custom domain skipped: platform CF config not set`);
-          }
-        }
+      if (domainResult.success) {
+        console.log(`[BusinessRoutes] ✅ Auto subdomain recorded: ${autoDomain} (wildcard route)`);
       } else {
-        autoDomainError = domainResult.error || '子域名创建失败';
-        console.warn(`[BusinessRoutes] ⚠️ Auto-subdomain creation unsuccessful for ${slug}:`, autoDomainError);
+        autoDomainError = domainResult.error || '子域名数据库记录失败';
+        console.warn(`[BusinessRoutes] ⚠️ Auto-subdomain DB insert failed for ${slug}:`, autoDomainError);
       }
     } catch (err) {
       autoDomainError = err instanceof Error ? err.message : String(err);
-      console.error(`[BusinessRoutes] ❌ Auto-subdomain creation failed for ${slug}:`, autoDomainError);
-    }
-
-    // 🔍 生成 Workers 自定义域注册状态的友好描述
-    let cfDomainHint: string | null = null;
-    if (cfWorkerDomain && !cfWorkerDomain.registered) {
-      const err = cfWorkerDomain.error || '';
-      if (err.includes('wildcard_route')) {
-        cfDomainHint = '通配符路由 *.zygonlinechat.zygmail.icu 仍在 wrangler.toml 中，请注释后执行 npx wrangler deploy';
-      } else if (err.includes('missing_workers_edit')) {
-        cfDomainHint = 'API Token 缺少 Workers:Edit 权限，请到 Cloudflare Dashboard → API 令牌 → 添加权限';
-      } else if (err.includes('missing_platform_config')) {
-        cfDomainHint = '未配置 CF_API_TOKEN / CF_ACCOUNT_ID / CF_ZONE_ID 环境变量';
-      }
+      console.error(`[BusinessRoutes] ❌ Auto-subdomain creation error for ${slug}:`, autoDomainError);
     }
 
     return c.json({
       success: true,
-      message: '商家创建成功' + (autoDomainError ? ` (但自动生成三级域名失败: ${autoDomainError})` : ''),
+      message: '商家创建成功',
       data: {
         ...newBusiness,
         chatUrl,
         autoDomain,
         autoDomainError,
+        // 兜底链接
         legacyChatUrl: `https://zygonlinechat.zygmail.icu/chat?business=${slug}`,
         workersDevUrl: `https://zyg-online-chat.linzihai.workers.dev/chat?business=${slug}`,
-        // 🆕 Workers 自定义域注册状态
-        cfWorkerDomain: cfWorkerDomain || { registered: false, error: autoDomainError || 'unknown' },
-        cfDomainHint,
+        // ★ 通配符路由说明
+        routeInfo: {
+          mode: 'wildcard',
+          subdomain: `${slug}.zygonlinechat.zygmail.icu`,
+          note: '子域名通过 *.zygonlinechat.zygmail.icu 通配符路由自动生效',
+        },
       },
     }, 201);
   } catch (error) {

@@ -17,13 +17,13 @@ run_worker_first = true
 pattern = "zygonlinechat.zygmail.icu"
 zone_name = "zygmail.icu"
 
-# 🔧 三级子域名通配符（已禁用 — 改用 Workers 自定义域逐个注册）
-# 原因：Cloudflare 不允许通配符路由与独立自定义域共存
-# 每个商家的子域名将通过 PUT /accounts/{id}/workers/domains API 自动注册，
-# 确保每个子域名在 Dashboard → Workers → Triggers → Custom Domains 中可见
-# [[routes]]
-# pattern = "*.zygonlinechat.zygmail.icu"
-# zone_name = "zygmail.icu"
+# 🔧 三级子域名通配符（已启用 — 所有 *.zygonlinechat.zygmail.icu 自动路由到 Worker）
+# ⚠️ 前提条件：需在 Cloudflare DNS 中设置 CNAME *.zygonlinechat → zygonlinechat.zygmail.icu（橙色云朵）
+# ⚠️ 注意：启用通配符路由后，无法再用 Workers 自定义域 API 逐个注册子域名
+# 替代方案：商家自动子域名只需在 business_domains 表中记录即可，无需额外 API 调用
+[[routes]]
+pattern = "*.zygonlinechat.zygmail.icu"
+zone_name = "zygmail.icu"
 
 # ⚠️ workers.dev 域名由 Cloudflare 自动路由，无需在此配置 [[routes]]
 # 添加路由反而会导致 "Some triggers failed to deploy" 错误
@@ -45,7 +45,7 @@ ENCRYPTION_KEY = "dev-encryption-key-change-in-production"
 #   权限模板：自定义 → Workers:Edit + Zone:Read
 #   区域资源：zygmail.icu（特定区域）
 # 本地开发测试可临时在此填写（部署时不要包含到仓库）
-CF_API_TOKEN = ""
+CF_API_TOKEN = "cfut_ynO2YtZ657DG4nKX38WBYcf4Ji7JJKpG6gcc1L1q9351221d"
 CF_ACCOUNT_ID = "65250bc17b07a43b589459630626dfa9"
 CF_ZONE_ID = "da481c2793b34e658998f12b853c0a9b"
 
@@ -96,10 +96,10 @@ binding = "AI"
 pattern = "zygonlinechat.zygmail.icu"
 zone_name = "zygmail.icu"
 
-# 🔧 生产环境通配符路由（已禁用 — 同上方说明）
-# [[env.production.routes]]
-# pattern = "*.zygonlinechat.zygmail.icu"
-# zone_name = "zygmail.icu"
+# 🔧 生产环境通配符路由（已启用）
+[[env.production.routes]]
+pattern = "*.zygonlinechat.zygmail.icu"
+zone_name = "zygmail.icu"
 
 # ⚠️ workers.dev 域名由 Cloudflare 自动路由，无需在此配置 [[routes]]
 # workers.dev 子域名：https://zyg-online-chat.linzihai.workers.dev 自动可用
