@@ -8,7 +8,7 @@
  */
 
 import { getDb } from '@server/shared/db';
-import { decryptToken } from '@server/shared/token-crypto';
+import { decryptToken, encryptToken } from '@server/shared/token-crypto';
 
 export type AIMode = 'platform' | 'own_cf';
 
@@ -154,7 +154,7 @@ export class AIRouter {
         values.push(config.cfAccountId);
       }
       if (config.cfAiToken) {
-        const encrypted = await import('@server/shared/token-crypto').then(m => m.encryptToken(config.cfAiToken!));
+        const encrypted = await encryptToken(config.cfAiToken!);
         updates.push('cf_ai_token_encrypted = ?');
         values.push(encrypted);
       }
@@ -170,7 +170,7 @@ export class AIRouter {
         await db.run(`UPDATE business_ai_config SET ${updates.join(', ')} WHERE business_id = ?`, values);
       }
     } else {
-      const encryptedToken = config.cfAiToken ? await import('@server/shared/token-crypto').then(m => m.encryptToken(config.cfAiToken!)) : null;
+      const encryptedToken = config.cfAiToken ? await encryptToken(config.cfAiToken!) : null;
 
       await db.run(
         `INSERT INTO business_ai_config

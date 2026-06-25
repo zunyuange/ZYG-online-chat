@@ -18,16 +18,17 @@ zone_name = "zygmail.icu"
 pattern = "*.zygonlinechat.zygmail.icu"
 zone_name = "zygmail.icu"
 
-# 兼容旧的 workers.dev 域名（🔒 永久保留，开发调试和旧链接兜底）
-[[routes]]
-pattern = "zyg-online-chat.linzihai.workers.dev"
-zone_name = "linzihai.workers.dev"
+# ⚠️ workers.dev 域名由 Cloudflare 自动路由，无需在此配置 [[routes]]
+# 添加路由反而会导致 "Some triggers failed to deploy" 错误
 
 # Environment variables
 [vars]
 BARK_API = "https://api.day.app"
 # Auth: Require login for staff panel
 REQUIRE_AUTH = "true"
+# 🆕 Token encryption key (AES-GCM, 32 chars recommended)
+# ⚠️ 生产环境建议通过 wrangler secret put ENCRYPTION_KEY 设置
+ENCRYPTION_KEY = "dev-encryption-key-change-in-production"
 
 [[d1_databases]]
 binding = "DB"
@@ -48,6 +49,8 @@ name = "zyg-online-chat"
 [env.production.vars]
 BARK_API = "https://api.day.app"
 REQUIRE_AUTH = "true"
+# ⚠️ 生产环境强烈建议使用 wrangler secret put ENCRYPTION_KEY 而非明文配置
+ENCRYPTION_KEY = "prod-placeholder-change-via-secret"
 
 [[env.production.d1_databases]]
 binding = "DB"
@@ -73,7 +76,5 @@ zone_name = "zygmail.icu"
 pattern = "*.zygonlinechat.zygmail.icu"
 zone_name = "zygmail.icu"
 
-# 🔒 workers.dev 域名永久保留作为兜底入口
-[[env.production.routes]]
-pattern = "zyg-online-chat.linzihai.workers.dev"
-zone_name = "linzihai.workers.dev"
+# ⚠️ workers.dev 域名由 Cloudflare 自动路由，无需在此配置 [[routes]]
+# workers.dev 子域名：https://zyg-online-chat.linzihai.workers.dev 自动可用
