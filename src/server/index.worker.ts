@@ -356,6 +356,7 @@ export { app };
 // Default export for Workers - handles both API and static assets
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    try {
     const url = new URL(request.url);
     const path = url.pathname;
 
@@ -422,6 +423,13 @@ export default {
 
     // Fallback to Hono for other routes
     return app.fetch(request, env, ctx);
+    } catch (err) {
+      console.error('[Worker] FATAL fetch error:', err instanceof Error ? err.message : String(err), err instanceof Error ? err.stack : '');
+      return new Response(JSON.stringify({ success: false, error: 'Internal server error', detail: err instanceof Error ? err.message : String(err) }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
   },
 };
 
