@@ -33,3 +33,6 @@ INSERT OR REPLACE INTO roles (name, description, permissions, is_system, status)
 INSERT OR REPLACE INTO admin_config (key, value, description) VALUES ('siteName', 'CF智能多语言在线客服系统', '网站名称');
 INSERT OR REPLACE INTO admin_config (key, value, description) VALUES ('defaultLanguage', 'zh-CN', '默认语言');
 INSERT OR REPLACE INTO admin_config (key, value, description) VALUES ('enableAuth', 'true', '启用认证');
+-- 默认商家三级域名
+INSERT OR REPLACE INTO business_domains (business_id, staff_user_id, domain_type, domain, subdomain, verification_status, ssl_status, is_primary, status)
+VALUES (1, 1, 'auto_subdomain', 'default.zygonlinechat.zygmail.icu', 'default', 'active', 'active', 1, 'active');
