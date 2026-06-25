@@ -122,13 +122,16 @@ export class DomainService {
     }
 
     const cfClient = new CloudflareApiClient(cfApiToken);
+    let currentStep = '';
 
     try {
       // Step 1: 验证 Token
+      currentStep = 'verifyToken';
       console.log('[DomainService] Step 1: Verifying API Token...');
       await cfClient.verifyToken();
 
       // Step 2: 获取 Zone 列表并匹配域名
+      currentStep = 'listZones';
       console.log('[DomainService] Step 2: Finding zone for domain:', domain);
       const rootDomain = this.extractRootDomain(domain);
       const zones = await cfClient.listZones({ name: rootDomain });
@@ -142,18 +145,19 @@ export class DomainService {
       }
 
       // Step 3: 获取 Account ID（可选，仅用于数据库记录）
-      // 注意：需要 Account:Read 权限才能获取，如果没有此权限也不影响 DNS 操作
+      currentStep = 'getAccountId';
+      console.log('[DomainService] Step 3: Getting Account ID (optional)...');
       let accountId: string | null = null;
       try {
         accountId = await cfClient.getAccountId();
         console.log('[DomainService] Account ID obtained:', accountId);
       } catch (err) {
-        // Account ID 获取失败不影响 DNS 绑定，仅记录警告
         const msg = err instanceof Error ? err.message : String(err);
         console.warn('[DomainService] Could not get Account ID (non-blocking):', msg);
       }
 
       // Step 4: 创建 DNS CNAME 记录
+      currentStep = 'createDnsRecord';
       console.log('[DomainService] Step 4: Creating DNS CNAME record...');
       const subdomain = this.extractSubdomain(domain, rootDomain);
       const dnsRecord = await cfClient.createDnsRecord(targetZone.id, {
@@ -198,20 +202,28 @@ export class DomainService {
       };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      console.error('[DomainService] bindCFDomain error:', errorMsg);
+      const cfError = error as any;
+      console.error(`[DomainService] bindCFDomain error at step=${currentStep}:`, errorMsg,
+        cfError.cfStatusCode ? `(CF status=${cfError.cfStatusCode}, code=${cfError.cfErrorCode})` : '');
 
       // Translate CF API errors into user-friendly messages
       let userError = errorMsg;
-      const cfError = error as any;
       if (cfError.cfStatusCode) {
         const code = cfError.cfErrorCode;
         const status = cfError.cfStatusCode;
-        if (status === 403 || code === 9103 || code === 9106) {
+        // ★ 注意顺序：先检查具体错误码，再检查通用状态码
+        if (code === 9109 || code === 1008) {
+          // 9109: 权限不足（如用「读取所有资源」Token 做写入操作）
+          // 1008: 对该资源没有访问权限
+          userError = 'cf_token_no_permission';
+        } else if (code === 9103 || code === 9106) {
+          // 9103: Token 格式无效 / 9106: Token 不可用
           userError = 'cf_token_invalid';
+        } else if (status === 403) {
+          // 403 未匹配到具体错误码，可能是 Token 范围限制
+          userError = 'cf_token_no_permission';
         } else if (status === 401 || code === 10000) {
           userError = 'cf_token_expired';
-        } else if (code === 9109) {
-          userError = 'cf_token_no_permission';
         }
       }
 
