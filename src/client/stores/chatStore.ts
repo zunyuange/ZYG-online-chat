@@ -408,9 +408,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
             return hasChanges ? updated : localMsg;
           });
 
-          // Find messages newer than our last known message
-          const latestTime = messages.length > 0 ? messages[messages.length - 1].createdAt : 0;
-          const freshMessages = serverMessages.filter((m) => m.createdAt > latestTime);
+          // Find messages newer than our last known message (use ID-based dedup)
+          const existingIds = new Set(updatedMessages.map((m) => m.id));
+          const freshMessages = serverMessages.filter((m) => !existingIds.has(m.id));
           console.log(`[ChatStore] Found ${freshMessages.length} fresh messages`);
 
           // Check if we need to update
@@ -422,10 +422,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
             // ★ 核心修复：新消息必须通过 addMessage 添加以触发通知
             if (freshMessages.length > 0) {
-              const existingIds = new Set(updatedMessages.map((m) => m.id));
-              const toAdd = freshMessages.filter((m) => !existingIds.has(m.id));
-              console.log(`[ChatStore] Found ${toAdd.length} new messages via polling, dispatching via addMessage`);
-              for (const msg of toAdd) {
+              console.log(`[ChatStore] Found ${freshMessages.length} new messages via polling, dispatching via addMessage`);
+              for (const msg of freshMessages) {
                 get().addMessage(msg);
               }
             }
@@ -573,7 +571,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const preview = typeof message.content === 'string'
         ? message.content
         : `[${message.contentType || 'message'}]`;
-      notifyNewStaffMessage(staffName, preview, session?.id, session?.businessSlug);
+      notifyNewStaffMessage(staffName, preview, session?.id, session?.businessSlug, message.id);
 
       // 闪烁标题栏（未读消息数）
       if (updatedSession) {

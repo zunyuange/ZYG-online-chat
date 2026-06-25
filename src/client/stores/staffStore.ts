@@ -506,7 +506,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
           ? message.content
           : `[${message.contentType || '消息'}]`;
 
-        notifyNewVisitorMessage(visitorName, preview, sessionId, session?.businessSlug);
+        notifyNewVisitorMessage(visitorName, preview, sessionId, session?.businessSlug, message.id);
       }
 
       // 标题栏闪烁
