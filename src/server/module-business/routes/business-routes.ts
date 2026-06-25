@@ -4,6 +4,7 @@ import { verifyToken } from '@server/module-auth/services/auth-service';
 import { verifyAdminToken } from '@server/module-admin/routes/admin-auth-routes';
 import { hashPassword } from '@server/shared/crypto';
 import { getDomainService } from '@server/services/domain-service';
+import { getAIRouter } from '@server/services/ai-router';
 
 const businessRoutes = new Hono();
 
@@ -408,6 +409,89 @@ businessRoutes.post('/create', async (c) => {
   } catch (error) {
     console.error('Create business error:', error);
     return c.json({ success: false, error: '创建商家失败' }, 500);
+  }
+});
+
+// 🆕 AI配置中间件（需要认证）
+businessRoutes.use('/ai-config', requireAuth);
+
+// 🆕 GET /api/business/ai-config - 获取商家AI配置
+businessRoutes.get('/ai-config', async (c) => {
+  try {
+    const businessId = c.get('businessId');
+    if (!businessId) {
+      return c.json({ success: false, error: '未找到商家ID' }, 400);
+    }
+
+    const aiRouter = getAIRouter();
+    const config = await aiRouter.getBusinessAIConfig(businessId);
+
+    return c.json({
+      success: true,
+      data: config ? {
+        businessId: config.businessId,
+        aiMode: config.aiMode,
+        cfAccountId: config.cfAccountId,
+        // 不返回加密token
+        hasToken: !!config.cfAiTokenEncrypted,
+        monthlyTranslateCount: config.monthlyTranslateCount,
+        monthlyTranslateLimit: config.monthlyTranslateLimit,
+        resetDay: config.resetDay,
+      } : {
+        businessId,
+        aiMode: 'platform',
+        cfAccountId: null,
+        hasToken: false,
+        monthlyTranslateCount: 0,
+        monthlyTranslateLimit: 10000,
+        resetDay: 1,
+      },
+    });
+  } catch (error) {
+    console.error('Get AI config error:', error);
+    return c.json({ success: false, error: '获取AI配置失败' }, 500);
+  }
+});
+
+// 🆕 PUT /api/business/ai-config - 更新商家AI配置
+businessRoutes.put('/ai-config', async (c) => {
+  try {
+    const businessId = c.get('businessId');
+    if (!businessId) {
+      return c.json({ success: false, error: '未找到商家ID' }, 400);
+    }
+
+    const body = await c.req.json();
+    const { aiMode, cfAccountId, cfAiToken, monthlyTranslateLimit } = body;
+
+    // 验证
+    if (aiMode && !['platform', 'own_cf'].includes(aiMode)) {
+      return c.json({ success: false, error: '无效的AI模式' }, 400);
+    }
+
+    if (aiMode === 'own_cf') {
+      if (!cfAccountId) {
+        return c.json({ success: false, error: '使用自有CF AI需要提供Account ID' }, 400);
+      }
+      if (!cfAiToken) {
+        return c.json({ success: false, error: '使用自有CF AI需要提供API Token' }, 400);
+      }
+    }
+
+    const aiRouter = getAIRouter();
+    await aiRouter.upsertBusinessAIConfig(businessId, {
+      aiMode: aiMode || 'platform',
+      cfAccountId,
+      cfAiToken,
+      monthlyTranslateLimit: monthlyTranslateLimit || 10000,
+    });
+
+    console.log(`[BusinessRoutes] AI config updated for business ${businessId}: mode=${aiMode}`);
+
+    return c.json({ success: true, message: 'AI配置更新成功' });
+  } catch (error) {
+    console.error('Update AI config error:', error);
+    return c.json({ success: false, error: '更新AI配置失败' }, 500);
   }
 });
 

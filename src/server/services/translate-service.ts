@@ -10,6 +10,7 @@
  * 6. 返回原文（所有引擎均失败时降级）
  */
 import { getDb } from '@server/shared/db';
+import { getAIRouter } from '@server/services/ai-router';
 
 // ==========================================
 // Cloudflare Workers AI 模块级存储
@@ -622,7 +623,8 @@ export type TranslateEngineKey = typeof ALL_TRANSLATE_ENGINES[number]['key'];
 export async function translateWithEngine(
   text: string,
   to: string,
-  engine: TranslateEngineKey
+  engine: TranslateEngineKey,
+  businessId?: number
 ): Promise<TranslateResult> {
   const makeResult = (e: string): TranslateResult => ({ text, engine: e, success: false });
   if (!text?.trim()) return makeResult('');
@@ -635,8 +637,25 @@ export async function translateWithEngine(
 
   try {
     let translated: string;
+    let resultEngine: string = engine;
     switch (engine) {
       case 'cloudflare':
+        // 🆕 尝试通过 AIRouter（支持商家自有CF AI）
+        if (businessId) {
+          try {
+            const aiResult = await getAIRouter().translate(
+              text,
+              detectSourceLanguage(text),
+              toM2M100Lang(to),
+              businessId
+            );
+            if (aiResult.translatedText !== text && aiResult.translatedText.trim() !== text.trim()) {
+              console.log(`[TranslateService] ✅ AI Router [${aiResult.engine}] success: "${aiResult.translatedText.substring(0, 50)}..."`);
+              return { text: aiResult.translatedText, engine: aiResult.engine, success: true };
+            }
+          } catch { /* fall through to direct binding */ }
+        }
+        // 回退到直接平台AI绑定
         translated = await callCloudflareAITranslate(text, targetIso, 'auto');
         break;
       case 'simplytranslate':
@@ -656,8 +675,8 @@ export async function translateWithEngine(
     }
     
     if (translated !== text && translated.trim() !== text.trim()) {
-      console.log(`[TranslateService] ✅ ${engine} success: "${translated.substring(0, 50)}..."`);
-      return { text: translated, engine, success: true };
+      console.log(`[TranslateService] ✅ ${resultEngine} success: "${translated.substring(0, 50)}..."`);
+      return { text: translated, engine: resultEngine, success: true };
     }
     console.log(`[TranslateService] ⚡ ${engine} returned same text`);
     return makeResult(engine);
@@ -845,19 +864,24 @@ export async function translateText(options: TranslateOptions): Promise<Translat
   const targetIso = toIso639Lang(to);
 
   // ==========================================
-  // ⭐ 第0级：Cloudflare Workers AI（内网直连，最稳定，零延迟）
+  // ⭐ 第0级：AI Router（自动选择平台AI或商家自有CF AI）
   // ==========================================
   if (cloudflareAiBinding) {
-    console.log(`[TranslateService] ⭐ Trying Cloudflare AI: "${text.substring(0, 50)}..." → ${targetIso}`);
+    console.log(`[TranslateService] ⭐ Trying AI Router: "${text.substring(0, 50)}..." → ${targetIso} | businessId=${options.businessId}`);
     try {
-      const translated = await callCloudflareAITranslate(text, targetIso, 'auto');
-      if (translated !== text && translated.trim() !== text.trim()) {
-        console.log(`[TranslateService] ✅ Cloudflare AI success: "${translated.substring(0, 50)}..."`);
-        return { text: translated, engine: 'cloudflare', success: true };
+      const aiResult = await getAIRouter().translate(
+        text,
+        detectSourceLanguage(text),
+        toM2M100Lang(to),
+        options.businessId || 0
+      );
+      if (aiResult.translatedText !== text && aiResult.translatedText.trim() !== text.trim()) {
+        console.log(`[TranslateService] ✅ AI Router success [${aiResult.engine}]: "${aiResult.translatedText.substring(0, 50)}..."`);
+        return { text: aiResult.translatedText, engine: aiResult.engine, success: true };
       }
-      console.log('[TranslateService] ⚡ Cloudflare AI returned same text, falling back...');
+      console.log('[TranslateService] ⚡ AI Router returned same text, falling back...');
     } catch (error) {
-      console.error('[TranslateService] ❌ Cloudflare AI exception, falling back:', error);
+      console.error('[TranslateService] ❌ AI Router exception, falling back:', error);
     }
   } else {
     console.log('[TranslateService] ⚠️ Cloudflare AI binding not available, skipping to next engine');

@@ -9,7 +9,7 @@ import {
   UserPlus, Edit, Trash2, X, Check, Plus, 
   Home, Key, Globe, Link, Copy, ExternalLink,
   Loader2, AlertCircle, ChevronRight, ChevronLeft,
-  Cloud, Server
+  Cloud, Server, Zap
 } from 'lucide-react';
 import { useI18n } from '../context/I18nContext';
 import { useSiteSettings } from '@client/hooks/useSiteSettings';
@@ -162,6 +162,91 @@ export function AdminPage() {
   } | null>(null);
   const [domainDetachConfirm, setDomainDetachConfirm] = useState<number | null>(null);
 
+  // 🆕 AI Config State
+  const [aiConfig, setAiConfig] = useState<{
+    aiMode: string;
+    cfAccountId: string | null;
+    hasToken: boolean;
+    monthlyTranslateCount: number;
+    monthlyTranslateLimit: number;
+    resetDay: number;
+  } | null>(null);
+  const [aiConfigLoading, setAiConfigLoading] = useState(false);
+  const [aiConfigForm, setAiConfigForm] = useState({
+    aiMode: 'platform' as string,
+    cfAccountId: '',
+    cfAiToken: '',
+  });
+  const [aiConfigMessage, setAiConfigMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // 🆕 AI Config Functions
+  const loadAiConfig = async () => {
+    setAiConfigLoading(true);
+    try {
+      const token = localStorage.getItem('admin_token');
+      const res = await fetch('/api/business/ai-config', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAiConfig(data.data);
+        setAiConfigForm({
+          aiMode: data.data.aiMode || 'platform',
+          cfAccountId: data.data.cfAccountId || '',
+          cfAiToken: '',
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load AI config:', err);
+    } finally {
+      setAiConfigLoading(false);
+    }
+  };
+
+  const handleSaveAiConfig = async () => {
+    setAiConfigMessage(null);
+    setFormLoading(true);
+    try {
+      const token = localStorage.getItem('admin_token');
+      const body: Record<string, string | number> = {
+        aiMode: aiConfigForm.aiMode,
+      };
+      if (aiConfigForm.aiMode === 'own_cf') {
+        body.cfAccountId = aiConfigForm.cfAccountId;
+        if (aiConfigForm.cfAiToken) {
+          body.cfAiToken = aiConfigForm.cfAiToken;
+        }
+      }
+      const res = await fetch('/api/business/ai-config', {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAiConfigMessage({ type: 'success', text: t('ai_config_saved') });
+        // 清除 token 输入
+        setAiConfigForm(prev => ({ ...prev, cfAiToken: '' }));
+        loadAiConfig(); // 刷新
+      } else {
+        setAiConfigMessage({ type: 'error', text: data.error || t('ai_config_save_failed') });
+      }
+    } catch {
+      setAiConfigMessage({ type: 'error', text: t('ai_config_save_failed') });
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleSettingsTabEnter = () => {
+    if (!aiConfig) {
+      loadAiConfig();
+    }
+  };
+
 
   const allPermissions = [
     { key: 'admin_view', label: t('permission_admin_view') },
@@ -181,6 +266,13 @@ export function AdminPage() {
   useEffect(() => {
     if (activeTab === 'domains' && !loading) {
       loadDomains();
+    }
+  }, [activeTab, loading]);
+
+  // 🆕 切换到设置Tab时自动加载AI配置
+  useEffect(() => {
+    if (activeTab === 'settings' && !loading) {
+      loadAiConfig();
     }
   }, [activeTab, loading]);
 
@@ -1569,6 +1661,171 @@ export function AdminPage() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* 🆕 AI 翻译配置 */}
+      <div style={cardStyle}>
+        <h2 style={{ fontSize: '16px', fontWeight: 500, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Zap size={18} style={{ color: '#722ed1' }} />
+          {t('ai_config')}
+        </h2>
+        <p style={{ fontSize: '13px', color: '#999', marginBottom: '20px' }}>{t('ai_config_desc')}</p>
+
+        {aiConfigLoading ? (
+          <div style={{ textAlign: 'center', padding: '24px', color: '#999' }}>
+            <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px' }} />
+            <p>{t('loading')}</p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: '20px' }}>
+            {/* AI 模式选择 */}
+            <div>
+              <label style={labelStyle}>{t('ai_mode_label')}</label>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setAiConfigForm(prev => ({ ...prev, aiMode: 'platform' }))}
+                  style={{
+                    flex: 1,
+                    padding: '16px',
+                    borderRadius: '8px',
+                    border: aiConfigForm.aiMode === 'platform' ? '2px solid #1890ff' : '1px solid #d9d9d9',
+                    backgroundColor: aiConfigForm.aiMode === 'platform' ? '#e6f7ff' : '#fff',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <div style={{ fontWeight: 500, fontSize: '14px', marginBottom: '4px', color: '#333' }}>
+                    🏢 {t('ai_platform_mode')}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#999' }}>{t('ai_mode_platform_desc')}</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAiConfigForm(prev => ({ ...prev, aiMode: 'own_cf' }))}
+                  style={{
+                    flex: 1,
+                    padding: '16px',
+                    borderRadius: '8px',
+                    border: aiConfigForm.aiMode === 'own_cf' ? '2px solid #722ed1' : '1px solid #d9d9d9',
+                    backgroundColor: aiConfigForm.aiMode === 'own_cf' ? '#f9f0ff' : '#fff',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <div style={{ fontWeight: 500, fontSize: '14px', marginBottom: '4px', color: '#333' }}>
+                    ☁️ {t('ai_own_cf_mode')}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#999' }}>{t('ai_mode_own_cf_desc')}</div>
+                </button>
+              </div>
+            </div>
+
+            {/* 自有CF AI 配置 */}
+            {aiConfigForm.aiMode === 'own_cf' && (
+              <>
+                <div>
+                  <label style={labelStyle}>{t('ai_cf_account_id')}</label>
+                  <input
+                    type="text"
+                    value={aiConfigForm.cfAccountId}
+                    onChange={(e) => setAiConfigForm(prev => ({ ...prev, cfAccountId: e.target.value }))}
+                    style={inputStyle}
+                    placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  />
+                  <p style={{ fontSize: '12px', color: '#999', marginTop: '6px' }}>{t('ai_cf_account_id_hint')}</p>
+                </div>
+                <div>
+                  <label style={labelStyle}>{t('ai_cf_api_token')}</label>
+                  <input
+                    type="password"
+                    value={aiConfigForm.cfAiToken}
+                    onChange={(e) => setAiConfigForm(prev => ({ ...prev, cfAiToken: e.target.value }))}
+                    style={inputStyle}
+                    placeholder={aiConfig?.hasToken ? t('ai_cf_token_placeholder') : ''}
+                  />
+                  <p style={{ fontSize: '12px', color: '#999', marginTop: '6px' }}>
+                    {aiConfig?.hasToken && (
+                      <span style={{ color: '#52c41a', marginRight: '12px' }}>✓ {t('ai_token_saved')}</span>
+                    )}
+                    {t('ai_cf_api_token_hint')}
+                  </p>
+                </div>
+              </>
+            )}
+
+            {/* 用量统计 */}
+            {aiConfig && (aiConfig.aiMode !== 'platform' || aiConfig.monthlyTranslateCount > 0) && (
+              <div style={{
+                backgroundColor: '#f5f5f5',
+                borderRadius: '8px',
+                padding: '16px',
+                display: 'flex',
+                gap: '24px',
+                alignItems: 'center',
+              }}>
+                <div>
+                  <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>{t('ai_monthly_quota')}</div>
+                  <div style={{ fontSize: '24px', fontWeight: 600, color: '#333' }}>
+                    {aiConfig.monthlyTranslateCount.toLocaleString()}
+                    <span style={{ fontSize: '14px', fontWeight: 400, color: '#999' }}> / {aiConfig.monthlyTranslateLimit.toLocaleString()}</span>
+                  </div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{
+                    height: '8px',
+                    backgroundColor: '#e5e7eb',
+                    borderRadius: '4px',
+                    overflow: 'hidden',
+                  }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${Math.min((aiConfig.monthlyTranslateCount / aiConfig.monthlyTranslateLimit) * 100, 100)}%`,
+                      backgroundColor: aiConfig.monthlyTranslateCount / aiConfig.monthlyTranslateLimit > 0.8 ? '#ff4d4f' : '#52c41a',
+                      borderRadius: '4px',
+                      transition: 'width 0.3s',
+                    }} />
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+                    {t('ai_quota_reset_day').replace('{day}', String(aiConfig.resetDay))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 提示消息 */}
+            {aiConfigMessage && (
+              <div style={{
+                padding: '10px 16px',
+                borderRadius: '4px',
+                fontSize: '13px',
+                backgroundColor: aiConfigMessage.type === 'success' ? '#f6ffed' : '#fff2f0',
+                border: `1px solid ${aiConfigMessage.type === 'success' ? '#b7eb8f' : '#ffccc7'}`,
+                color: aiConfigMessage.type === 'success' ? '#52c41a' : '#ff4d4f',
+              }}>
+                {aiConfigMessage.text}
+              </div>
+            )}
+
+            {/* 保存按钮 */}
+            <div>
+              <button
+                onClick={handleSaveAiConfig}
+                disabled={formLoading}
+                style={{
+                  ...buttonStyle('primary'),
+                  opacity: formLoading ? 0.6 : 1,
+                  cursor: formLoading ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {formLoading ? <Loader2 size={14} className="animate-spin" style={{ marginRight: '8px' }} /> : null}
+                {t('ai_save_config')}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

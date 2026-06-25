@@ -863,6 +863,7 @@ chatRoutes.post('/messages/:id/translate', async c => {
     const messageId = parseInt(c.req.param('id'), 10)
     const body = await c.req.json()
     const { to, engine } = body as { to?: string; engine?: string }
+    const translateBusinessId = c.get('businessId') || 0
 
     if (!to) {
       return c.json({ success: false, error: 'Target language (to) is required' }, 400)
@@ -927,7 +928,7 @@ chatRoutes.post('/messages/:id/translate', async c => {
         '| content:', (row.content as string).substring(0, 40),
         '| to:', to);
       
-      translateResult = await translateWithEngine(row.content, to, engineKey as any);
+      translateResult = await translateWithEngine(row.content, to, engineKey as any, translateBusinessId);
     } else {
       console.log('[ChatRoutes] 🈂️ Manual translate | messageId:', messageId,
         '| content:', (row.content as string).substring(0, 40),
