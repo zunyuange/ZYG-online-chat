@@ -3,8 +3,6 @@ import { getDb } from '@server/shared/db';
 import { verifyToken } from '@server/module-auth/services/auth-service';
 import { verifyAdminToken } from '@server/module-admin/routes/admin-auth-routes';
 import { hashPassword } from '@server/shared/crypto';
-import { getDomainService } from '@server/services/domain-service';
-import { getAIRouter } from '@server/services/ai-router';
 
 const businessRoutes = new Hono();
 
@@ -22,15 +20,8 @@ async function requireAuth(c: any, next: any) {
   if (!result.valid) {
     const adminResult = await verifyAdminToken(token);
     if (adminResult.valid) {
-      // ★ 管理员 Token：查找平台默认商家 ID
-      const db = getDb();
-      const defaultBiz = await db.get<{ id: number }>(
-        "SELECT id FROM staff_users WHERE business_slug = 'default' AND business_id = 0 LIMIT 1"
-      );
-      const resolvedBusinessId = defaultBiz?.id || 1;
-      c.set('businessId', resolvedBusinessId);
-      c.set('userId', adminResult.userId || 1);
-      c.set('isPlatformAdmin', true);
+      // admin_users 的管理员 token，使用默认商家 id=1
+      c.set('businessId', adminResult.userId || 1);
       await next();
       return;
     }
@@ -44,34 +35,12 @@ async function requireAuth(c: any, next: any) {
     businessId = result.userId;
   }
   
-  c.set('businessId', businessId);
-  c.set('userId', result.userId || businessId);
+  if (businessId !== undefined) {
+    c.set('businessId', businessId);
+  }
 
   await next();
 }
-
-// ===== 公开端点：根据 Host 头识别商家（无需认证）=====
-// 用于子域名/自定义域名访问时，前端自动识别商家归属
-businessRoutes.get('/resolve-by-host', async (c) => {
-  const businessId = c.get('businessId');
-  const businessSlug = c.get('businessSlug');
-  const businessName = c.get('businessName');
-  const viaDomain = c.get('viaDomain');
-
-  if (businessId && businessSlug) {
-    return c.json({
-      success: true,
-      data: {
-        id: businessId,
-        slug: businessSlug,
-        name: businessName || '',
-        viaDomain: viaDomain || 'unknown',
-      },
-    });
-  }
-
-  return c.json({ success: false, error: '无法从域名识别商家' }, 404);
-});
 
 businessRoutes.use('/settings', (c, next) => {
   if (c.req.method === 'POST' || c.req.method === 'GET') {
@@ -92,17 +61,13 @@ businessRoutes.use('/info', (c, next) => {
 businessRoutes.get('/list', async (c) => {
   try {
     const db = getDb();
-    console.log('[BusinessRoutes] Querying business list...');
     const businesses = await db.all(
       'SELECT id, business_name as name, business_slug as slug, description, created_at FROM staff_users WHERE business_id = 0 ORDER BY created_at DESC'
     );
-    console.log('[BusinessRoutes] Found', businesses.length, 'businesses');
     return c.json({ success: true, data: businesses });
   } catch (error) {
-    const errMsg = error instanceof Error ? error.message : String(error);
-    const errStack = error instanceof Error ? error.stack : '';
-    console.error('[BusinessRoutes] Get business list error:', errMsg, errStack);
-    return c.json({ success: false, error: `Failed to get business list: ${errMsg}` }, 500);
+    console.error('Get business list error:', error);
+    return c.json({ success: false, error: 'Failed to get business list' }, 500);
   }
 });
 
@@ -410,127 +375,10 @@ businessRoutes.post('/create', async (c) => {
 
     const newBusiness = await db.get('SELECT id, business_name as name, business_slug as slug, description, created_at FROM staff_users WHERE id = ?', [result.lastInsertRowid]);
 
-    // 🆕 自动生成三级子域名
-    let chatUrl = `https://zygonlinechat.zygmail.icu/chat?business=${slug}`;
-    let autoDomain = null;
-    let autoDomainError: string | null = null;
-    try {
-      const domainService = getDomainService();
-      const domainResult = await domainService.createAutoSubdomain(
-        Number(result.lastInsertRowid),
-        slug
-      );
-      if (domainResult.success && domainResult.domain) {
-        autoDomain = domainResult.domain;
-        chatUrl = `https://${autoDomain}`;
-        console.log(`[BusinessRoutes] ✅ Auto-generated domain for business ${slug}: ${autoDomain}`);
-      } else {
-        autoDomainError = domainResult.error || '子域名创建失败';
-        console.warn(`[BusinessRoutes] ⚠️ Auto-subdomain creation unsuccessful for ${slug}:`, autoDomainError);
-      }
-    } catch (err) {
-      autoDomainError = err instanceof Error ? err.message : String(err);
-      console.error(`[BusinessRoutes] ❌ Auto-subdomain creation failed for ${slug}:`, autoDomainError);
-    }
-
-    return c.json({
-      success: true,
-      message: '商家创建成功' + (autoDomainError ? ` (但自动生成三级域名失败: ${autoDomainError})` : ''),
-      data: {
-        ...newBusiness,
-        chatUrl,
-        autoDomain,
-        autoDomainError,
-        legacyChatUrl: `https://zygonlinechat.zygmail.icu/chat?business=${slug}`,
-        workersDevUrl: `https://zyg-online-chat.linzihai.workers.dev/chat?business=${slug}`,
-      },
-    }, 201);
+    return c.json({ success: true, message: '商家创建成功', data: newBusiness }, 201);
   } catch (error) {
     console.error('Create business error:', error);
     return c.json({ success: false, error: '创建商家失败' }, 500);
-  }
-});
-
-// 🆕 AI配置中间件（需要认证）
-businessRoutes.use('/ai-config', requireAuth);
-
-// 🆕 GET /api/business/ai-config - 获取商家AI配置
-businessRoutes.get('/ai-config', async (c) => {
-  try {
-    const businessId = c.get('businessId');
-    if (!businessId) {
-      return c.json({ success: false, error: '未找到商家ID' }, 400);
-    }
-
-    const aiRouter = getAIRouter();
-    const config = await aiRouter.getBusinessAIConfig(businessId);
-
-    return c.json({
-      success: true,
-      data: config ? {
-        businessId: config.businessId,
-        aiMode: config.aiMode,
-        cfAccountId: config.cfAccountId,
-        // 不返回加密token
-        hasToken: !!config.cfAiTokenEncrypted,
-        monthlyTranslateCount: config.monthlyTranslateCount,
-        monthlyTranslateLimit: config.monthlyTranslateLimit,
-        resetDay: config.resetDay,
-      } : {
-        businessId,
-        aiMode: 'platform',
-        cfAccountId: null,
-        hasToken: false,
-        monthlyTranslateCount: 0,
-        monthlyTranslateLimit: 10000,
-        resetDay: 1,
-      },
-    });
-  } catch (error) {
-    console.error('Get AI config error:', error);
-    return c.json({ success: false, error: '获取AI配置失败' }, 500);
-  }
-});
-
-// 🆕 PUT /api/business/ai-config - 更新商家AI配置
-businessRoutes.put('/ai-config', async (c) => {
-  try {
-    const businessId = c.get('businessId');
-    if (!businessId) {
-      return c.json({ success: false, error: '未找到商家ID' }, 400);
-    }
-
-    const body = await c.req.json();
-    const { aiMode, cfAccountId, cfAiToken, monthlyTranslateLimit } = body;
-
-    // 验证
-    if (aiMode && !['platform', 'own_cf'].includes(aiMode)) {
-      return c.json({ success: false, error: '无效的AI模式' }, 400);
-    }
-
-    if (aiMode === 'own_cf') {
-      if (!cfAccountId) {
-        return c.json({ success: false, error: '使用自有CF AI需要提供Account ID' }, 400);
-      }
-      if (!cfAiToken) {
-        return c.json({ success: false, error: '使用自有CF AI需要提供API Token' }, 400);
-      }
-    }
-
-    const aiRouter = getAIRouter();
-    await aiRouter.upsertBusinessAIConfig(businessId, {
-      aiMode: aiMode || 'platform',
-      cfAccountId,
-      cfAiToken,
-      monthlyTranslateLimit: monthlyTranslateLimit || 10000,
-    });
-
-    console.log(`[BusinessRoutes] AI config updated for business ${businessId}: mode=${aiMode}`);
-
-    return c.json({ success: true, message: 'AI配置更新成功' });
-  } catch (error) {
-    console.error('Update AI config error:', error);
-    return c.json({ success: false, error: '更新AI配置失败' }, 500);
   }
 });
 

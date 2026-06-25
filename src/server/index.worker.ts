@@ -11,7 +11,6 @@ import { apiRoutes } from './module-todos/routes/todos-routes';
 import { chatRoutes } from './module-chat/routes/chat-routes';
 import { staffRoutes } from './module-staff/routes/staff-routes';
 import { businessRoutes } from './module-business/routes/business-routes';
-import { businessDomainRoutes } from './module-business/routes/business-domain-routes';
 import { authRoutes } from './module-auth/routes/auth-routes';
 import { adminRoutes } from './module-admin/routes/admin-routes';
 import { adminAuthRoutes, initAdminAuth } from './module-admin/routes/admin-auth-routes';
@@ -23,10 +22,6 @@ import { initializeR2Storage } from './shared/storage';
 import { initBarkService, setStaffUrlFromHost } from './services/bark-service';
 import { initAuthService } from './module-auth/services/auth-service';
 import { initTranslateService } from './services/translate-service';
-import { createDomainRouter, setDbGetter } from './middleware/domain-router';
-import { initTokenEncryption } from './shared/token-crypto';
-import { initAIRouter } from './services/ai-router';
-import { startSSEHeartbeat } from './module-chat/services/sse-service';
 
 // Cloudflare Workers bindings
 interface Env {
@@ -38,7 +33,6 @@ interface Env {
   BARK_KEY?: string;
   BARK_API?: string;
   STAFF_URL_BASE?: string;
-  ENCRYPTION_KEY?: string; // 🆕 Token encryption key
   // Auth configuration
   REQUIRE_AUTH?: string;
   STAFF_PASSWORD?: string;
@@ -132,22 +126,6 @@ async function ensureInitialized(env: Env): Promise<void> {
       console.warn('[Worker] Cloudflare AI binding not available, AI translation will be skipped');
     }
 
-    // 🆕 Initialize Token Encryption
-    console.log('[Worker] Initializing token encryption...');
-    initTokenEncryption(env.ENCRYPTION_KEY);
-    console.log('[Worker] Token encryption initialized');
-
-    // 🆕 Initialize AI Router
-    console.log('[Worker] Initializing AI Router...');
-    initAIRouter(env.AI);
-    console.log('[Worker] AI Router initialized');
-
-    // 🆕 Set up domain router database getter
-    setDbGetter(getDb);
-
-    // 🆕 Start SSE heartbeat (Node.js only, safe to call in Worker - checks env)
-    startSSEHeartbeat();
-
     initialized = true;
     console.log('[Worker] All services initialized successfully');
   } catch (error) {
@@ -222,10 +200,6 @@ app.use('*', async (c, next) => {
   }
 });
 
-// 🆕 Domain Router - 自动从 Host 头识别商家（三级子域名 / 自定义域名 / URL参数兜底）
-const domainRouter = createDomainRouter();
-app.use('*', domainRouter);
-
 // Public settings endpoint (no auth required) - MUST BE BEFORE /api routes
 app.get('/api/site-settings', async (c) => {
   try {
@@ -277,7 +251,6 @@ app.route('/api', apiRoutes);
 app.route('/api/chat', chatRoutes);
 app.route('/api/staff', staffRoutes);
 app.route('/api/business', businessRoutes);
-app.route('/api/business/domains', businessDomainRoutes);
 app.route('/api/auth', authRoutes);
 app.route('/api/admin', adminRoutes);
 app.route('/api/admin-auth', adminAuthRoutes);
@@ -361,20 +334,6 @@ export default {
 
     // Initialize database
     await ensureInitialized(env);
-
-    // ★ 子域名/自定义域名访问根路径 → 重定向到 /chat
-    //   让 domainRouter 中间件自动识别商家归属
-    if (path === '/' || path === '') {
-      const host = (request.headers.get('host') || '').toLowerCase();
-      const hostname = host.split(':')[0];
-      // 排除平台主域名和 workers.dev 域名（它们仍走默认首页）
-      if (hostname &&
-          hostname !== 'zygonlinechat.zygmail.icu' &&
-          hostname !== 'www.zygonlinechat.zygmail.icu' &&
-          !hostname.endsWith('.workers.dev')) {
-        return Response.redirect(new URL('/chat', url.origin), 302);
-      }
-    }
 
     // Handle API routes through Hono
     if (path.startsWith('/api/') || path === '/health' || path.startsWith('/uploads/')) {
