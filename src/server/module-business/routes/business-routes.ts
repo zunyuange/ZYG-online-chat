@@ -92,13 +92,17 @@ businessRoutes.use('/info', (c, next) => {
 businessRoutes.get('/list', async (c) => {
   try {
     const db = getDb();
+    console.log('[BusinessRoutes] Querying business list...');
     const businesses = await db.all(
-      'SELECT id, business_name as name, business_slug as slug, description, created_at FROM staff_users WHERE business_id = 0 ORDER BY created_at DESC'
+      'SELECT id, business_name as name, business_slug as slug, created_at FROM staff_users WHERE business_id = 0 ORDER BY created_at DESC'
     );
+    console.log('[BusinessRoutes] Found', businesses.length, 'businesses');
     return c.json({ success: true, data: businesses });
   } catch (error) {
-    console.error('Get business list error:', error);
-    return c.json({ success: false, error: 'Failed to get business list' }, 500);
+    const errMsg = error instanceof Error ? error.message : String(error);
+    const errStack = error instanceof Error ? error.stack : '';
+    console.error('[BusinessRoutes] Get business list error:', errMsg, errStack);
+    return c.json({ success: false, error: `Failed to get business list: ${errMsg}` }, 500);
   }
 });
 
@@ -400,11 +404,11 @@ businessRoutes.post('/create', async (c) => {
     const passwordHash = await hashPassword(password);
 
     const result = await db.run(
-      'INSERT INTO staff_users (username, password_hash, business_name, business_slug, description, business_id, role, status, enable_auto_trans, default_lang, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [username, passwordHash, name, slug, description || '', 0, 'admin', 'active', 1, 'zh-CN', Date.now(), Date.now()]
+      'INSERT INTO staff_users (username, password_hash, business_name, business_slug, business_id, role, status, enable_auto_trans, default_lang, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [username, passwordHash, name, slug, 0, 'admin', 'active', 1, 'zh-CN', Date.now(), Date.now()]
     );
 
-    const newBusiness = await db.get('SELECT id, business_name as name, business_slug as slug, description, created_at FROM staff_users WHERE id = ?', [result.lastInsertRowid]);
+    const newBusiness = await db.get('SELECT id, business_name as name, business_slug as slug, created_at FROM staff_users WHERE id = ?', [result.lastInsertRowid]);
 
     // 🆕 自动生成三级子域名
     let chatUrl = `https://zygonlinechat.zygmail.icu/chat?business=${slug}`;
