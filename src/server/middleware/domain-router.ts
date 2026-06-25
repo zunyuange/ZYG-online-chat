@@ -68,32 +68,40 @@ export function createDomainRouter() {
       try {
         const db = getDb();
         const biz = await db.get<{
-          id: number; business_slug: string; business_name: string;
+          id: number; business_slug: string; business_name: string; status: string;
         }>(
-          `SELECT id, business_slug, business_name
+          `SELECT id, business_slug, business_name, status
            FROM staff_users
-           WHERE business_slug = ? AND business_id = 0 AND status = 'active'`,
+           WHERE business_slug = ? AND business_id = 0`,
           [subdomainMatch.slug]
         );
 
         if (biz) {
-          const entry: DomainCacheEntry = {
-            businessId: biz.id,
-            businessSlug: biz.business_slug,
-            businessName: biz.business_name || '',
-            viaDomain: 'subdomain',
-            expiredAt: Date.now() + CACHE_TTL,
-          };
-          setBusinessContext(c, entry);
-          cacheDomain(host, entry);
-          return next();
+          if (biz.status !== 'active') {
+            // 商家存在但已停用 → 不设置上下文，继续走兜底策略
+            console.warn(`[DomainRouter] Business '${subdomainMatch.slug}' exists but status is '${biz.status}', skipping subdomain recognition`);
+          } else {
+            const entry: DomainCacheEntry = {
+              businessId: biz.id,
+              businessSlug: biz.business_slug,
+              businessName: biz.business_name || '',
+              viaDomain: 'subdomain',
+              expiredAt: Date.now() + CACHE_TTL,
+            };
+            setBusinessContext(c, entry);
+            cacheDomain(host, entry);
+            return next();
+          }
+        } else {
+          // 子域名匹配但商家记录不存在（可能是 D1 未同步或已删除）
+          console.warn(`[DomainRouter] Subdomain '${subdomainMatch.slug}' matched but no business found in DB. Continuing to fallback strategies...`);
         }
 
-        // slug无效 → 404
-        return c.json({ success: false, error: '商家不存在或已停用' }, 404);
+        // ⚠️ 不返回 404！继续走后续策略（URL参数/自定义域名）或让路由处理器自行判断
+        // 这样即使商家不在 D1 中，API 请求也能继续处理而非被硬阻断
       } catch (err) {
         console.error('[DomainRouter] Subdomain lookup error:', err);
-        // DB查询失败时降级到URL参数模式
+        // DB查询失败时降级到后续策略
       }
     }
 

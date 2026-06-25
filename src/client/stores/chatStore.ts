@@ -265,11 +265,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
         // Connect SSE (will fallback to polling if it fails)
         get().connectSSE();
       } else {
-        set({ error: result.error || 'Failed to initialize session', loading: false });
+        const rawErr = result.error || 'Failed to initialize session';
+        let displayError = rawErr;
+        if (rawErr.includes('BUSINESS_NOT_FOUND')) {
+          displayError = '该商家不存在或尚未激活，请确认访问链接是否正确';
+        }
+        set({ error: displayError, loading: false });
       }
     } catch (error) {
+      const rawMsg = error instanceof Error ? error.message : String(error);
+      let displayError = rawMsg;
+      if (rawMsg.includes('BUSINESS_NOT_FOUND')) {
+        displayError = '该商家不存在或尚未激活，请确认访问链接是否正确';
+      } else if (rawMsg.includes('Failed to fetch') || rawMsg.includes('NetworkError')) {
+        displayError = '网络连接失败，请检查网络后重试';
+      }
       set({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: displayError,
         loading: false,
       });
     }

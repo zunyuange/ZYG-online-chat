@@ -70,8 +70,59 @@ businessRoutes.get('/resolve-by-host', async (c) => {
     });
   }
 
-  return c.json({ success: false, error: '无法从域名识别商家' }, 404);
+  // 🔍 子域名匹配了但 DB 中没找到记录 → 从 hostname 中提取 slug 给前端做提示
+  const host = (c.req.header('host') || '').toLowerCase();
+  const hostname = host.split(':')[0];
+  const subdomainHint = extractSlugFromHost(hostname);
+
+  // 🔍 再尝试从 URL 参数中查找（作为兜底）
+  const urlBusiness = new URL(c.req.url).searchParams.get('business');
+  if (urlBusiness) {
+    try {
+      const db = getDb();
+      const biz = await db.get<{ id: number; business_slug: string; business_name: string }>(
+        "SELECT id, business_slug, business_name FROM staff_users WHERE business_slug = ? AND business_id = 0 AND status = 'active'",
+        [urlBusiness]
+      );
+      if (biz) {
+        return c.json({
+          success: true,
+          data: {
+            id: biz.id,
+            slug: biz.business_slug,
+            name: biz.business_name || '',
+            viaDomain: 'url_param',
+          },
+        });
+      }
+    } catch (err) {
+      // DB 查询失败，继续返回错误
+    }
+  }
+
+  return c.json({
+    success: false,
+    error: '无法从域名识别商家',
+    hint: subdomainHint ? `子域名 '${subdomainHint}' 对应的商家记录不存在（可能未同步到生产 D1）` : undefined,
+    urlParamMode: !urlBusiness
+      ? `尝试在 URL 中添加 ?business=你的商家标识 来访问`
+      : `URL 参数 business='${urlBusiness}' 对应的商家也不存在`,
+  }, 404);
 });
+
+/**
+ * 从 hostname 提取子域名 slug（纯辅助函数）
+ */
+function extractSlugFromHost(hostname: string): string | null {
+  const suffix = '.zygonlinechat.zygmail.icu';
+  if (hostname.endsWith(suffix)) {
+    const slug = hostname.slice(0, -suffix.length);
+    if (/^[a-z0-9]{2,64}$/.test(slug) && slug !== 'www') {
+      return slug;
+    }
+  }
+  return null;
+}
 
 businessRoutes.use('/settings', (c, next) => {
   if (c.req.method === 'POST' || c.req.method === 'GET') {
