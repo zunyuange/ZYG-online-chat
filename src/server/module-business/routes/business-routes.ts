@@ -22,9 +22,15 @@ async function requireAuth(c: any, next: any) {
   if (!result.valid) {
     const adminResult = await verifyAdminToken(token);
     if (adminResult.valid) {
-      // admin_users 的管理员 token，使用默认商家 id=1
-      c.set('businessId', adminResult.userId || 1);
+      // ★ 管理员 Token：查找平台默认商家 ID
+      const db = getDb();
+      const defaultBiz = await db.get<{ id: number }>(
+        "SELECT id FROM staff_users WHERE business_slug = 'default' AND business_id = 0 LIMIT 1"
+      );
+      const resolvedBusinessId = defaultBiz?.id || 1;
+      c.set('businessId', resolvedBusinessId);
       c.set('userId', adminResult.userId || 1);
+      c.set('isPlatformAdmin', true);
       await next();
       return;
     }
@@ -403,6 +409,7 @@ businessRoutes.post('/create', async (c) => {
     // 🆕 自动生成三级子域名
     let chatUrl = `https://zygonlinechat.zygmail.icu/chat?business=${slug}`;
     let autoDomain = null;
+    let autoDomainError: string | null = null;
     try {
       const domainService = getDomainService();
       const domainResult = await domainService.createAutoSubdomain(
@@ -412,19 +419,24 @@ businessRoutes.post('/create', async (c) => {
       if (domainResult.success && domainResult.domain) {
         autoDomain = domainResult.domain;
         chatUrl = `https://${autoDomain}`;
-        console.log(`[BusinessRoutes] Auto-generated domain for business ${slug}: ${autoDomain}`);
+        console.log(`[BusinessRoutes] ✅ Auto-generated domain for business ${slug}: ${autoDomain}`);
+      } else {
+        autoDomainError = domainResult.error || '子域名创建失败';
+        console.warn(`[BusinessRoutes] ⚠️ Auto-subdomain creation unsuccessful for ${slug}:`, autoDomainError);
       }
     } catch (err) {
-      console.warn('[BusinessRoutes] Failed to auto-generate domain:', err);
+      autoDomainError = err instanceof Error ? err.message : String(err);
+      console.error(`[BusinessRoutes] ❌ Auto-subdomain creation failed for ${slug}:`, autoDomainError);
     }
 
     return c.json({
       success: true,
-      message: '商家创建成功',
+      message: '商家创建成功' + (autoDomainError ? ` (但自动生成三级域名失败: ${autoDomainError})` : ''),
       data: {
         ...newBusiness,
         chatUrl,
         autoDomain,
+        autoDomainError,
         legacyChatUrl: `https://zygonlinechat.zygmail.icu/chat?business=${slug}`,
         workersDevUrl: `https://zyg-online-chat.linzihai.workers.dev/chat?business=${slug}`,
       },

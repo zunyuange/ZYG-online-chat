@@ -35,8 +35,18 @@ async function requireAuth(c: any, next: any) {
   if (!result.valid) {
     const adminResult = await verifyAdminToken(token);
     if (adminResult.valid) {
-      c.set('businessId', adminResult.userId || 1);
+      // ★ 管理员 Token：从 staff_users 表查找平台默认商家
+      //    admin_users.id 和 staff_users.id 是两个不同的表，不能直接用 userId 作为 businessId
+      const { getDb } = await import('@server/shared/db');
+      const db = getDb();
+      // 查找 business_slug='default' 的商家记录（平台主商家）
+      const defaultBiz = await db.get<{ id: number }>(
+        "SELECT id FROM staff_users WHERE business_slug = 'default' AND business_id = 0 LIMIT 1"
+      );
+      const resolvedBusinessId = defaultBiz?.id || 1;
+      c.set('businessId', resolvedBusinessId);
       c.set('userId', adminResult.userId || 1);
+      c.set('isPlatformAdmin', true);
       await next();
       return;
     }

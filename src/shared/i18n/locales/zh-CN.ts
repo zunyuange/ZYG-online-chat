@@ -843,4 +843,19 @@ export const zhCN = {
   ai_save_config: '保存配置',
   ai_config_saved: 'AI 配置已保存',
   ai_config_save_failed: 'AI 配置保存失败',
+
+  // ===== 商家管理 =====
+  business_management: '商家管理',
+  add_business: '添加商家',
+  business_no_data: '暂无商家',
+  business_create_hint: '点击上方按钮创建第一个商家',
+  business_name_input_hint: '例如: 某某科技',
+  business_desc_placeholder: '可选，商家简要描述',
+  business_admin_username_placeholder: '商家管理员登录用户名',
+  business_admin_username_hint: '此账号将作为该商家的管理员，可管理客服、域名、设置等',
+  business_auto_domain_note: '创建后将自动为商家分配专属三级子域名 (slug.zygonlinechat.zygmail.icu) 和随机 Slug 标识',
+  business_auto_domain_hint: '创建商家时，系统会自动为其生成专属三级子域名 (slug.zygonlinechat.zygmail.icu)，无需额外配置。',
+  business_created: '商家创建成功',
+  domain_auto_failed: '自动生成三级域名失败',
+  retry: '重试',
 };

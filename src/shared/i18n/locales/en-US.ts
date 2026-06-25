@@ -851,4 +851,19 @@ export const enUS = {
   ai_save_config: 'Save Config',
   ai_config_saved: 'AI config saved',
   ai_config_save_failed: 'AI config save failed',
+
+  // ===== Business Management =====
+  business_management: 'Business Management',
+  add_business: 'Add Business',
+  business_no_data: 'No businesses yet',
+  business_create_hint: 'Click the button above to create your first business',
+  business_name_input_hint: 'e.g. Acme Corp',
+  business_desc_placeholder: 'Optional, brief description of the business',
+  business_admin_username_placeholder: 'Business admin login username',
+  business_admin_username_hint: 'This account will be the admin for this business, able to manage staff, domains, settings, etc.',
+  business_auto_domain_note: 'A dedicated subdomain (slug.zygonlinechat.zygmail.icu) and random Slug will be automatically created for this business.',
+  business_auto_domain_hint: 'When creating a business, the system will automatically generate a dedicated subdomain (slug.zygonlinechat.zygmail.icu) — no extra configuration needed.',
+  business_created: 'Business created successfully',
+  domain_auto_failed: 'Auto subdomain generation failed',
+  retry: 'Retry',
 };
