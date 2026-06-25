@@ -158,6 +158,26 @@ export const useChatStore = create<ChatState>((set, get) => ({
           console.log('[ChatStore] Recovered business from localStorage:', business);
         }
       }
+      // ★ 域名自动识别：通过 Host 头解析商家（子域名/自定义域名无需 ?business= 参数）
+      if (!business) {
+        try {
+          const resolveResp = await fetch('/api/business/resolve-by-host');
+          if (resolveResp.ok) {
+            const resolveData = await resolveResp.json();
+            if (resolveData.success && resolveData.data?.slug) {
+              business = resolveData.data.slug;
+              localStorage.setItem(BUSINESS_SLUG_KEY, business);
+              console.log('[ChatStore] Detected business from domain host:', business);
+              // 同步到 URL，确保后续刷新和分享链接携带 business 参数
+              const url = new URL(window.location.href);
+              url.searchParams.set('business', business);
+              window.history.replaceState({}, '', url.toString());
+            }
+          }
+        } catch (err) {
+          console.log('[ChatStore] Domain host resolution skipped:', err);
+        }
+      }
       
       console.log('[ChatStore] initSession: business from URL =', getUrlBusiness(), 'effective business =', business);
       console.log('[ChatStore] initSession: URL =', window.location.href);

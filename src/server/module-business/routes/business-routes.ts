@@ -44,6 +44,29 @@ async function requireAuth(c: any, next: any) {
   await next();
 }
 
+// ===== 公开端点：根据 Host 头识别商家（无需认证）=====
+// 用于子域名/自定义域名访问时，前端自动识别商家归属
+businessRoutes.get('/resolve-by-host', async (c) => {
+  const businessId = c.get('businessId');
+  const businessSlug = c.get('businessSlug');
+  const businessName = c.get('businessName');
+  const viaDomain = c.get('viaDomain');
+
+  if (businessId && businessSlug) {
+    return c.json({
+      success: true,
+      data: {
+        id: businessId,
+        slug: businessSlug,
+        name: businessName || '',
+        viaDomain: viaDomain || 'unknown',
+      },
+    });
+  }
+
+  return c.json({ success: false, error: '无法从域名识别商家' }, 404);
+});
+
 businessRoutes.use('/settings', (c, next) => {
   if (c.req.method === 'POST' || c.req.method === 'GET') {
     return requireAuth(c, next);

@@ -362,6 +362,20 @@ export default {
     // Initialize database
     await ensureInitialized(env);
 
+    // ★ 子域名/自定义域名访问根路径 → 重定向到 /chat
+    //   让 domainRouter 中间件自动识别商家归属
+    if (path === '/' || path === '') {
+      const host = (request.headers.get('host') || '').toLowerCase();
+      const hostname = host.split(':')[0];
+      // 排除平台主域名和 workers.dev 域名（它们仍走默认首页）
+      if (hostname &&
+          hostname !== 'zygonlinechat.zygmail.icu' &&
+          hostname !== 'www.zygonlinechat.zygmail.icu' &&
+          !hostname.endsWith('.workers.dev')) {
+        return Response.redirect(new URL('/chat', url.origin), 302);
+      }
+    }
+
     // Handle API routes through Hono
     if (path.startsWith('/api/') || path === '/health' || path.startsWith('/uploads/')) {
       return app.fetch(request, env, ctx);
