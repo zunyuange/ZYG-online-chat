@@ -784,7 +784,7 @@ export const zhCN = {
   domain_input_placeholder: 'chat.yourdomain.com',
   cf_api_token: 'Cloudflare API Token',
   cf_api_token_hint: '请输入您的 Cloudflare API Token，用于自动配置DNS和SSL',
-  cf_api_token_helper: 'Token 需要 Zone:DNS:Edit 权限（推荐使用「编辑区域 DNS」模板创建）',
+  cf_api_token_helper: 'Token 需要 Zone:DNS:Edit 权限（使用「编辑区域 DNS」模板，区域资源选择「所有区域」）',
   cf_api_token_get: '如何获取API Token？',
   domain_platform_label: 'DNS服务商',
   domain_dns_type: '记录类型',

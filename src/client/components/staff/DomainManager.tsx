@@ -772,7 +772,8 @@ export function DomainManager({ businessId, authToken, t, isPlatformAdmin }: Dom
                       <ol style={{ margin: '8px 0 0 16px', padding: 0 }}>
                         <li>Visit dash.cloudflare.com → Profile → API Tokens</li>
                         <li>Create Token → 使用「编辑区域 DNS」模板</li>
-                        <li>Zone Resources 选择「Include → Specific zone → 你的域名」</li>
+                        <li>Zone Resources 选择「Include → All zones from an account」</li>
+                        <li>（也可选择 Specific zone 指定单个域名）</li>
                         <li>Copy the token and paste it above</li>
                       </ol>
                     </div>
