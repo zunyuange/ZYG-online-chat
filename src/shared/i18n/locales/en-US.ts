@@ -791,7 +791,7 @@ export const enUS = {
   domain_input_placeholder: 'chat.yourdomain.com',
   cf_api_token: 'Cloudflare API Token',
   cf_api_token_hint: 'Enter your Cloudflare API Token for automatic DNS and SSL configuration',
-  cf_api_token_helper: 'Token requires Zone:DNS:Edit and Account:Read permissions',
+  cf_api_token_helper: 'Token requires Zone:DNS:Edit permission (use "Edit zone DNS" template)',
   cf_api_token_get: 'How to get API Token?',
   domain_platform_label: 'DNS Provider',
   domain_dns_type: 'Record Type',

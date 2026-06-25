@@ -124,7 +124,7 @@ businessDomainRoutes.post('/bind-cf', async (c) => {
       const errMap: Record<string, string> = {
         'cf_token_invalid': 'Cloudflare API Token 无效，请检查 Token 是否正确',
         'cf_token_expired': 'Cloudflare API Token 已过期或未激活',
-        'cf_token_no_permission': 'Cloudflare API Token 权限不足，需要 Zone:DNS:Edit 和 Account:Read 权限',
+        'cf_token_no_permission': 'Cloudflare API Token 权限不足，需要 Zone:DNS:Edit 权限（推荐使用「编辑区域 DNS」模板创建）',
       };
       const friendlyError = errMap[result.error as string] || result.error;
       return c.json({ success: false, error: friendlyError }, 400);

@@ -141,8 +141,17 @@ export class DomainService {
         };
       }
 
-      // Step 3: 获取 Account ID
-      const accountId = await cfClient.getAccountId();
+      // Step 3: 获取 Account ID（可选，仅用于数据库记录）
+      // 注意：需要 Account:Read 权限才能获取，如果没有此权限也不影响 DNS 操作
+      let accountId: string | null = null;
+      try {
+        accountId = await cfClient.getAccountId();
+        console.log('[DomainService] Account ID obtained:', accountId);
+      } catch (err) {
+        // Account ID 获取失败不影响 DNS 绑定，仅记录警告
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn('[DomainService] Could not get Account ID (non-blocking):', msg);
+      }
 
       // Step 4: 创建 DNS CNAME 记录
       console.log('[DomainService] Step 4: Creating DNS CNAME record...');
