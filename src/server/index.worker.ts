@@ -27,6 +27,7 @@ import { createDomainRouter, setDbGetter } from './middleware/domain-router';
 import { initTokenEncryption } from './shared/token-crypto';
 import { initAIRouter } from './services/ai-router';
 import { startSSEHeartbeat } from './module-chat/services/sse-service';
+import { setPlatformCFConfig } from './services/domain-service';
 
 // Cloudflare Workers bindings
 interface Env {
@@ -44,6 +45,10 @@ interface Env {
   STAFF_PASSWORD?: string;
   JWT_SECRET?: string;
   ADMIN_JWT_SECRET?: string;
+  // 🆕 Cloudflare 平台级配置（用于 Workers 自定义域管理）
+  CF_API_TOKEN?: string;     // 平台级 API Token (Workers:Edit, Zone:Read)
+  CF_ACCOUNT_ID?: string;    // Cloudflare Account ID
+  CF_ZONE_ID?: string;       // zygmail.icu 的 Zone ID
 }
 
 // MIME types for common file extensions
@@ -141,6 +146,20 @@ async function ensureInitialized(env: Env): Promise<void> {
     console.log('[Worker] Initializing AI Router...');
     initAIRouter(env.AI);
     console.log('[Worker] AI Router initialized');
+
+    // 🆕 Initialize platform CF config for Workers custom domain registration
+    if (env.CF_API_TOKEN && env.CF_ACCOUNT_ID && env.CF_ZONE_ID) {
+      console.log('[Worker] Setting up platform CF config for Workers domain management...');
+      setPlatformCFConfig({
+        apiToken: env.CF_API_TOKEN,
+        accountId: env.CF_ACCOUNT_ID,
+        zoneId: env.CF_ZONE_ID,
+      });
+      console.log('[Worker] Platform CF config initialized');
+    } else {
+      console.log('[Worker] Platform CF config not fully configured, Workers custom domain registration will be skipped');
+      setPlatformCFConfig(null);
+    }
 
     // 🆕 Set up domain router database getter
     setDbGetter(getDb);

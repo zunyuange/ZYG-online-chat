@@ -414,6 +414,7 @@ businessRoutes.post('/create', async (c) => {
     let chatUrl = `https://zygonlinechat.zygmail.icu/chat?business=${slug}`;
     let autoDomain = null;
     let autoDomainError: string | null = null;
+    let cfWorkerDomain: { registered: boolean; domainId?: string; error?: string } | null = null;
     try {
       const domainService = getDomainService();
       const domainResult = await domainService.createAutoSubdomain(
@@ -423,7 +424,15 @@ businessRoutes.post('/create', async (c) => {
       if (domainResult.success && domainResult.domain) {
         autoDomain = domainResult.domain;
         chatUrl = `https://${autoDomain}`;
+        cfWorkerDomain = domainResult.cfWorkerDomain || null;
         console.log(`[BusinessRoutes] ✅ Auto-generated domain for business ${slug}: ${autoDomain}`);
+        if (cfWorkerDomain?.registered) {
+          console.log(`[BusinessRoutes] ✅ Workers custom domain registered: ${autoDomain}`);
+        } else if (cfWorkerDomain?.error === 'blocked_by_wildcard_route') {
+          console.warn(`[BusinessRoutes] ⚠️ Workers custom domain blocked by wildcard route. Remove '*.zygonlinechat.zygmail.icu' from wrangler.toml to enable.`);
+        } else if (cfWorkerDomain?.error === 'missing_platform_config') {
+          console.log(`[BusinessRoutes] ℹ️ Workers custom domain skipped: platform CF config not set`);
+        }
       } else {
         autoDomainError = domainResult.error || '子域名创建失败';
         console.warn(`[BusinessRoutes] ⚠️ Auto-subdomain creation unsuccessful for ${slug}:`, autoDomainError);
@@ -443,6 +452,8 @@ businessRoutes.post('/create', async (c) => {
         autoDomainError,
         legacyChatUrl: `https://zygonlinechat.zygmail.icu/chat?business=${slug}`,
         workersDevUrl: `https://zyg-online-chat.linzihai.workers.dev/chat?business=${slug}`,
+        // 🆕 Workers 自定义域注册状态
+        cfWorkerDomain: cfWorkerDomain || { registered: false, error: autoDomainError || 'unknown' },
       },
     }, 201);
   } catch (error) {

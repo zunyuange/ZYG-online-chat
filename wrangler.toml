@@ -17,7 +17,15 @@ run_worker_first = true
 pattern = "zygonlinechat.zygmail.icu"
 zone_name = "zygmail.icu"
 
-# 三级子域名通配符（覆盖所有商家）
+# 🔧 三级子域名通配符（覆盖所有商家）
+# ⚠️ 注意：如果你希望每个商家的三级域名作为独立的「Workers 自定义域」
+#   出现在 Cloudflare Dashboard → Workers → Settings → Domains & Routes 中，
+#   需要：
+#   1. 注释掉下面这行通配符路由
+#   2. 配置 CF_API_TOKEN / CF_ACCOUNT_ID / CF_ZONE_ID
+#   3. 运行 scripts/register-workers-domains.ts 注册已有域名
+#   4. 新建商家时将自动注册 Workers 自定义域
+#   详细说明见 docs/PLAN_CUSTOM_DOMAIN.md
 [[routes]]
 pattern = "*.zygonlinechat.zygmail.icu"
 zone_name = "zygmail.icu"
@@ -33,6 +41,14 @@ REQUIRE_AUTH = "true"
 # 🆕 Token encryption key (AES-GCM, 32 chars recommended)
 # ⚠️ 生产环境建议通过 wrangler secret put ENCRYPTION_KEY 设置
 ENCRYPTION_KEY = "dev-encryption-key-change-in-production"
+# 🆕 Cloudflare 平台级配置（用于 Workers 自定义域自动注册）
+# 从 Cloudflare Dashboard → 我的个人资料 → API 令牌 创建 Token（需要 Workers:Edit + Zone:Read 权限）
+# ⚠️ 生产环境建议通过 wrangler secret put CF_API_TOKEN 设置
+# CF_ACCOUNT_ID: Cloudflare 账号 ID (Dashboard → Workers & Pages → 右侧栏)
+# CF_ZONE_ID: zygmail.icu 的 Zone ID (Dashboard → zygmail.icu → 概述 → API 区域)
+CF_API_TOKEN = ""
+CF_ACCOUNT_ID = ""
+CF_ZONE_ID = ""
 
 [[d1_databases]]
 binding = "DB"
@@ -55,6 +71,10 @@ BARK_API = "https://api.day.app"
 REQUIRE_AUTH = "true"
 # ⚠️ 生产环境强烈建议使用 wrangler secret put ENCRYPTION_KEY 而非明文配置
 ENCRYPTION_KEY = "prod-placeholder-change-via-secret"
+# 🆕 生产环境 Cloudflare 平台配置
+CF_API_TOKEN = ""
+CF_ACCOUNT_ID = ""
+CF_ZONE_ID = ""
 
 [[env.production.d1_databases]]
 binding = "DB"
@@ -76,6 +96,7 @@ binding = "AI"
 pattern = "zygonlinechat.zygmail.icu"
 zone_name = "zygmail.icu"
 
+# 🔧 生产环境通配符路由（参见上方注释说明）
 [[env.production.routes]]
 pattern = "*.zygonlinechat.zygmail.icu"
 zone_name = "zygmail.icu"

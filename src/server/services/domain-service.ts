@@ -17,6 +17,24 @@ import { encryptToken, decryptToken } from '@server/shared/token-crypto';
 const PLATFORM_CNAME_TARGET = 'zygonlinechat.zygmail.icu';
 
 // ==========================================
+// 🆕 Workers 自定义域配置
+// ==========================================
+// 从环境变量获取（由 Worker fetch handler 注入）
+let platformCFConfig: {
+  apiToken: string;
+  accountId: string;
+  zoneId: string;
+} | null = null;
+
+export function setPlatformCFConfig(config: { apiToken: string; accountId: string; zoneId: string } | null): void {
+  platformCFConfig = config;
+}
+
+export function getPlatformCFConfig() {
+  return platformCFConfig;
+}
+
+// ==========================================
 // 类型定义
 // ==========================================
 
@@ -35,6 +53,12 @@ export interface BindDomainResult {
   dnsRecord?: { type: string; name: string; value: string };
   verificationStatus?: string;
   error?: string;
+  /** 🆕 Workers 自定义域注册状态 */
+  cfWorkerDomain?: {
+    registered: boolean;
+    domainId?: string;
+    error?: string;
+  };
 }
 
 export interface DomainRecord {
@@ -59,7 +83,7 @@ export class DomainService {
 
   /**
    * 为商家自动生成三级子域名
-   * 在创建商家时调用
+   * 在创建商家时调用，同时尝试注册为 Workers 自定义域
    */
   async createAutoSubdomain(
     businessId: number,
@@ -69,12 +93,39 @@ export class DomainService {
     const domain = `${slug}.zygonlinechat.zygmail.icu`;
 
     // 检查是否已存在
-    const existing = await db.get<{ id: number }>(
-      "SELECT id FROM business_domains WHERE domain = ?",
+    const existing = await db.get<{ id: number; cf_worker_route_id: string | null }>(
+      "SELECT id, cf_worker_route_id FROM business_domains WHERE domain = ?",
       [domain]
     );
     if (existing) {
-      return { success: true, domainId: existing.id, domain, verificationStatus: 'active' };
+      // 🆕 如果已存在但未注册 Workers 自定义域，尝试补充注册
+      let cfWorkerDomainResult: { success: boolean; domainId?: string; error?: string } = { success: false };
+      if (!existing.cf_worker_route_id) {
+        try {
+          cfWorkerDomainResult = await this.registerWorkersCustomDomain(domain);
+          if (cfWorkerDomainResult.success && cfWorkerDomainResult.domainId) {
+            await db.run(
+              "UPDATE business_domains SET cf_worker_route_id = ? WHERE id = ?",
+              [cfWorkerDomainResult.domainId, existing.id]
+            );
+          }
+        } catch (err) {
+          cfWorkerDomainResult = { success: false, error: err instanceof Error ? err.message : String(err) };
+        }
+      } else {
+        cfWorkerDomainResult = { success: true, domainId: existing.cf_worker_route_id };
+      }
+      return {
+        success: true,
+        domainId: existing.id,
+        domain,
+        verificationStatus: 'active',
+        cfWorkerDomain: {
+          registered: cfWorkerDomainResult.success,
+          domainId: cfWorkerDomainResult.domainId,
+          error: cfWorkerDomainResult.error,
+        },
+      };
     }
 
     // 写入数据库
@@ -86,10 +137,32 @@ export class DomainService {
       [businessId, businessId, domain, slug]
     );
 
+    // 🆕 注册 Workers 自定义域
+    let cfWorkerDomainResult: { success: boolean; domainId?: string; error?: string } = { success: false };
+    try {
+      cfWorkerDomainResult = await this.registerWorkersCustomDomain(domain);
+    } catch (err) {
+      cfWorkerDomainResult = { success: false, error: err instanceof Error ? err.message : String(err) };
+    }
+
+    // 🆕 保存 Workers 自定义域 ID 到数据库
+    if (cfWorkerDomainResult.success && cfWorkerDomainResult.domainId) {
+      try {
+        await db.run(
+          "UPDATE business_domains SET cf_worker_route_id = ? WHERE id = ?",
+          [cfWorkerDomainResult.domainId, result.lastInsertRowid]
+        );
+      } catch (e) {
+        console.warn('[DomainService] Failed to save cf_worker_route_id:', e);
+      }
+    }
+
     // 记录操作日志
     await this.logOperation(businessId, Number(result.lastInsertRowid), 'auto_create', {
       domain,
       subdomain: slug,
+      cfWorkerDomainRegistered: cfWorkerDomainResult.success,
+      cfWorkerDomainError: cfWorkerDomainResult.error || null,
     });
 
     return {
@@ -97,7 +170,70 @@ export class DomainService {
       domainId: Number(result.lastInsertRowid),
       domain,
       verificationStatus: 'active',
+      // 🆕 返回 Workers 自定义域注册状态
+      cfWorkerDomain: {
+        registered: cfWorkerDomainResult.success,
+        domainId: cfWorkerDomainResult.domainId,
+        error: cfWorkerDomainResult.error,
+      },
     };
+  }
+
+  /**
+   * 🆕 注册 Workers 自定义域
+   * 将子域名添加到 Cloudflare Workers 的自定义域列表，确保子域名专属路由
+   */
+  async registerWorkersCustomDomain(hostname: string): Promise<{ success: boolean; domainId?: string; error?: string }> {
+    const config = platformCFConfig;
+    if (!config || !config.apiToken || !config.accountId || !config.zoneId) {
+      console.log('[DomainService] Workers custom domain skipped: missing platform CF config');
+      return { success: false, error: 'missing_platform_config' };
+    }
+
+    const cfClient = new CloudflareApiClient(config.apiToken);
+
+    try {
+      // 检查是否已注册
+      const existing = await cfClient.listWorkersDomains(config.accountId);
+      const exists = existing.find(
+        (d) => d.hostname.toLowerCase() === hostname.toLowerCase()
+      );
+      if (exists) {
+        console.log(`[DomainService] Workers custom domain already exists: ${hostname} (id: ${exists.id})`);
+        return { success: true, domainId: exists.id };
+      }
+
+      // 注册自定义域
+      const result = await cfClient.addWorkersDomain(
+        config.accountId,
+        hostname,
+        config.zoneId,
+        'zyg-online-chat',
+        'production'
+      );
+      console.log(`[DomainService] ✅ Workers custom domain registered: ${hostname} (id: ${result.id})`);
+      return { success: true, domainId: result.id };
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      const cfError = error as any;
+      
+      // 分析错误原因
+      if (errMsg.includes('already exists') || errMsg.includes('duplicate')) {
+        console.log(`[DomainService] Workers custom domain already exists: ${hostname}`);
+        return { success: true, domainId: 'already_exists' };
+      }
+      
+      // 如果是因为通配符路由冲突，给出明确提示
+      if (errMsg.includes('route') || errMsg.includes('overlap') || errMsg.includes('conflict')) {
+        console.warn(`[DomainService] ⚠️ Workers custom domain registration blocked by wildcard route: ${hostname}`);
+        console.warn(`[DomainService] 💡 To enable individual custom domains, remove '*.zygonlinechat.zygmail.icu' from wrangler.toml routes and redeploy.`);
+        return { success: false, error: 'blocked_by_wildcard_route' };
+      }
+      
+      console.error(`[DomainService] ❌ Workers custom domain registration failed for ${hostname}:`, errMsg,
+        cfError.cfStatusCode ? `(CF status=${cfError.cfStatusCode})` : '');
+      return { success: false, error: errMsg };
+    }
   }
 
   /**

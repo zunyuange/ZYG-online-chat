@@ -22,6 +22,16 @@ export interface CFDnsRecord {
   ttl: number;
 }
 
+/** Workers 自定义域记录 */
+export interface CFWorkersDomain {
+  id: string;
+  zone_id: string;
+  zone_name: string;
+  hostname: string;
+  service: string;
+  environment: string;
+}
+
 export class CloudflareApiClient {
   private apiToken: string;
 
@@ -162,6 +172,63 @@ export class CloudflareApiClient {
       throw new Error('No Cloudflare accounts found for this API token');
     }
     return accounts[0].id;
+  }
+
+  // ==========================================
+  // Workers Custom Domains API
+  // ==========================================
+
+  /**
+   * 列出 Worker 的所有自定义域
+   */
+  async listWorkersDomains(accountId: string): Promise<CFWorkersDomain[]> {
+    const res = await this.request<CFWorkersDomain[]>(
+      `/accounts/${accountId}/workers/domains`
+    );
+    return res.result;
+  }
+
+  /**
+   * 为 Worker 添加自定义域
+   * PUT /accounts/{account_id}/workers/domains
+   * 
+   * @param accountId - Cloudflare Account ID
+   * @param hostname - 自定义域名（如 7t0dhxkk.zygonlinechat.zygmail.icu）
+   * @param zoneId - 域名所在的 Zone ID
+   * @param service - Worker 名称（默认 zyg-online-chat）
+   * @param environment - Worker 环境（默认 production）
+   */
+  async addWorkersDomain(
+    accountId: string,
+    hostname: string,
+    zoneId: string,
+    service: string = 'zyg-online-chat',
+    environment: string = 'production'
+  ): Promise<CFWorkersDomain> {
+    const res = await this.request<CFWorkersDomain>(
+      `/accounts/${accountId}/workers/domains`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({
+          hostname,
+          service,
+          zone_id: zoneId,
+          environment,
+        }),
+      }
+    );
+    return res.result;
+  }
+
+  /**
+   * 删除 Worker 的自定义域
+   * DELETE /accounts/{account_id}/workers/domains/{domain_id}
+   */
+  async deleteWorkersDomain(accountId: string, domainId: string): Promise<void> {
+    await this.request<null>(
+      `/accounts/${accountId}/workers/domains/${domainId}`,
+      { method: 'DELETE' }
+    );
   }
 
   /**
