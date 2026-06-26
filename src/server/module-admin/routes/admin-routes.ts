@@ -6,6 +6,7 @@
 import { Hono } from 'hono';
 import * as adminService from '../services/admin-service';
 import { verifyAdminToken } from './admin-auth-routes';
+import { requirePermission, PERMISSIONS } from '@server/shared/rbac-middleware';
 
 export const adminRoutes = new Hono();
 
@@ -23,12 +24,17 @@ async function requireAuth(c: any, next: any) {
     return c.json({ success: false, error: result.error || 'Token 无效' }, 401);
   }
 
+  // Admin_users are system administrators - they get ALL permissions
+  c.set('userId', result.userId);
+  c.set('role', 'admin');
+  c.set('permissions', Object.values(PERMISSIONS));
+
   await next();
 }
 
 adminRoutes.use('*', requireAuth);
 
-adminRoutes.post('/users', async (c) => {
+adminRoutes.post('/users', requirePermission(PERMISSIONS.ADMIN_EDIT), async (c) => {
   try {
     const body = await c.req.json();
     const { username, password, email, name, role, business_id } = body;
@@ -50,7 +56,7 @@ adminRoutes.post('/users', async (c) => {
   }
 });
 
-adminRoutes.get('/users', async (c) => {
+adminRoutes.get('/users', requirePermission(PERMISSIONS.ADMIN_VIEW), async (c) => {
   try {
     const users = await adminService.listUsers();
     const sanitizedUsers = users.map((user) => ({
@@ -70,7 +76,7 @@ adminRoutes.get('/users', async (c) => {
   }
 });
 
-adminRoutes.get('/users/:id', async (c) => {
+adminRoutes.get('/users/:id', requirePermission(PERMISSIONS.ADMIN_VIEW), async (c) => {
   try {
     const id = parseInt(c.req.param('id'), 10);
     if (isNaN(id)) {
@@ -100,7 +106,7 @@ adminRoutes.get('/users/:id', async (c) => {
   }
 });
 
-adminRoutes.put('/users/:id', async (c) => {
+adminRoutes.put('/users/:id', requirePermission(PERMISSIONS.ADMIN_EDIT), async (c) => {
   try {
     const id = parseInt(c.req.param('id'), 10);
     if (isNaN(id)) {
@@ -123,7 +129,7 @@ adminRoutes.put('/users/:id', async (c) => {
   }
 });
 
-adminRoutes.delete('/users/:id', async (c) => {
+adminRoutes.delete('/users/:id', requirePermission(PERMISSIONS.ADMIN_EDIT), async (c) => {
   try {
     const id = parseInt(c.req.param('id'), 10);
     if (isNaN(id)) {
@@ -144,10 +150,10 @@ adminRoutes.delete('/users/:id', async (c) => {
 });
 
 // Staff Users Management (商家用户管理)
-adminRoutes.post('/staff-users', async (c) => {
+adminRoutes.post('/staff-users', requirePermission(PERMISSIONS.STAFF_EDIT), async (c) => {
   try {
     const body = await c.req.json();
-    const { username, password, email, name, role, status, business_id } = body;
+    const { username, password, email, name, role, role_id, business_id } = body;
 
     if (!username || !password) {
       return c.json({ success: false, error: '用户名和密码是必填项' }, 400);
@@ -159,6 +165,7 @@ adminRoutes.post('/staff-users', async (c) => {
       email, 
       name, 
       role: role || 'staff',
+      role_id,
       business_id
     });
     
@@ -173,7 +180,7 @@ adminRoutes.post('/staff-users', async (c) => {
   }
 });
 
-adminRoutes.get('/staff-users', async (c) => {
+adminRoutes.get('/staff-users', requirePermission(PERMISSIONS.STAFF_VIEW), async (c) => {
   try {
     const db = await import('@server/shared/db').then(m => m.getDb());
     
@@ -205,7 +212,7 @@ adminRoutes.get('/staff-users', async (c) => {
   }
 });
 
-adminRoutes.get('/staff-users/:id', async (c) => {
+adminRoutes.get('/staff-users/:id', requirePermission(PERMISSIONS.STAFF_VIEW), async (c) => {
   try {
     const id = parseInt(c.req.param('id'), 10);
     if (isNaN(id)) {
@@ -234,7 +241,7 @@ adminRoutes.get('/staff-users/:id', async (c) => {
   }
 });
 
-adminRoutes.put('/staff-users/:id', async (c) => {
+adminRoutes.put('/staff-users/:id', requirePermission(PERMISSIONS.STAFF_EDIT), async (c) => {
   try {
     const id = parseInt(c.req.param('id'), 10);
     if (isNaN(id)) {
@@ -242,9 +249,9 @@ adminRoutes.put('/staff-users/:id', async (c) => {
     }
 
     const body = await c.req.json();
-    const { email, name, role, status, password } = body;
+    const { email, name, role, role_id, status, password } = body;
 
-    const result = await adminService.updateUser(id, { email, name, role, status, password });
+    const result = await adminService.updateUser(id, { email, name, role, role_id, status, password });
     
     if (result.success) {
       return c.json({ success: true, message: '商家用户更新成功' });
@@ -257,7 +264,7 @@ adminRoutes.put('/staff-users/:id', async (c) => {
   }
 });
 
-adminRoutes.delete('/staff-users/:id', async (c) => {
+adminRoutes.delete('/staff-users/:id', requirePermission(PERMISSIONS.STAFF_EDIT), async (c) => {
   try {
     const id = parseInt(c.req.param('id'), 10);
     if (isNaN(id)) {
@@ -278,7 +285,7 @@ adminRoutes.delete('/staff-users/:id', async (c) => {
 });
 
 // Roles Management (角色管理) - 使用新的 roles 表
-adminRoutes.post('/roles', async (c) => {
+adminRoutes.post('/roles', requirePermission(PERMISSIONS.ROLE_EDIT), async (c) => {
   try {
     const body = await c.req.json();
     const { name, description, permissions } = body;
@@ -305,7 +312,7 @@ adminRoutes.post('/roles', async (c) => {
   }
 });
 
-adminRoutes.get('/roles', async (c) => {
+adminRoutes.get('/roles', requirePermission(PERMISSIONS.ROLE_VIEW), async (c) => {
   try {
     const db = await import('@server/shared/db').then(m => m.getDb());
     const roles = await db.all('SELECT * FROM roles ORDER BY created_at DESC');
@@ -328,7 +335,7 @@ adminRoutes.get('/roles', async (c) => {
   }
 });
 
-adminRoutes.get('/roles/:id', async (c) => {
+adminRoutes.get('/roles/:id', requirePermission(PERMISSIONS.ROLE_VIEW), async (c) => {
   try {
     const id = parseInt(c.req.param('id'), 10);
     if (isNaN(id)) {
@@ -336,7 +343,7 @@ adminRoutes.get('/roles/:id', async (c) => {
     }
 
     const db = await import('@server/shared/db').then(m => m.getDb());
-    const role = await db.get('SELECT * FROM roles WHERE id = ?', [id]);
+    const role = await db.get<{ id: number; name: string; description: string; permissions: string; is_system: number; status: string; created_at: number; updated_at: number }>('SELECT * FROM roles WHERE id = ?', [id]);
     
     if (!role) {
       return c.json({ success: false, error: '角色不存在' }, 404);
@@ -360,7 +367,7 @@ adminRoutes.get('/roles/:id', async (c) => {
   }
 });
 
-adminRoutes.put('/roles/:id', async (c) => {
+adminRoutes.put('/roles/:id', requirePermission(PERMISSIONS.ROLE_EDIT), async (c) => {
   try {
     const id = parseInt(c.req.param('id'), 10);
     if (isNaN(id)) {
@@ -369,7 +376,7 @@ adminRoutes.put('/roles/:id', async (c) => {
 
     const db = await import('@server/shared/db').then(m => m.getDb());
     
-    const role = await db.get('SELECT is_system FROM roles WHERE id = ?', [id]);
+    const role = await db.get<{ is_system: number }>('SELECT is_system FROM roles WHERE id = ?', [id]);
     if (!role) {
       return c.json({ success: false, error: '角色不存在' }, 404);
     }
@@ -398,7 +405,7 @@ adminRoutes.put('/roles/:id', async (c) => {
   }
 });
 
-adminRoutes.delete('/roles/:id', async (c) => {
+adminRoutes.delete('/roles/:id', requirePermission(PERMISSIONS.ROLE_EDIT), async (c) => {
   try {
     const id = parseInt(c.req.param('id'), 10);
     if (isNaN(id)) {
@@ -407,7 +414,7 @@ adminRoutes.delete('/roles/:id', async (c) => {
 
     const db = await import('@server/shared/db').then(m => m.getDb());
     
-    const role = await db.get('SELECT is_system FROM roles WHERE id = ?', [id]);
+    const role = await db.get<{ is_system: number }>('SELECT is_system FROM roles WHERE id = ?', [id]);
     if (!role) {
       return c.json({ success: false, error: '角色不存在' }, 404);
     }

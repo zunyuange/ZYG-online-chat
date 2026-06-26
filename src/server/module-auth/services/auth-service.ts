@@ -4,7 +4,7 @@
  * Supports both legacy single-password auth and multi-user database auth
  */
 
-import { verifyPassword, listUsers, updateStaffLastActive } from '@server/module-admin/services/admin-service';
+import { verifyPassword, listUsers, updateStaffLastActive, getRolePermissions } from '@server/module-admin/services/admin-service';
 
 // Configuration
 let _staffPassword: string | null = null;
@@ -28,6 +28,8 @@ const ipRateLimit = new Map<string, RateLimitEntry>();
 
 interface TokenPayload {
   role: 'staff' | 'admin';
+  roleId?: number | null;
+  permissions?: string[];
   userId?: number;
   username?: string;
   businessId?: number;
@@ -241,10 +243,12 @@ async function simpleHash(message: string, secret: string): Promise<string> {
 /**
  * Generate JWT token
  */
-async function generateToken(userId?: number, username?: string, businessId?: number, businessSlug?: string, businessName?: string, role?: string): Promise<string> {
+async function generateToken(userId?: number, username?: string, businessId?: number, businessSlug?: string, businessName?: string, role?: string, roleId?: number | null, permissions?: string[]): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const payload: TokenPayload = {
-    role: role || 'staff',
+    role: (role === 'admin' ? 'admin' : 'staff') as 'staff' | 'admin',
+    roleId: roleId ?? null,
+    permissions: permissions || [],
     userId,
     username,
     businessId,
@@ -328,6 +332,8 @@ export interface VerifyResult {
   businessSlug?: string;
   businessName?: string;
   role?: string;
+  roleId?: number | null;
+  permissions?: string[];
 }
 
 /**
@@ -383,13 +389,19 @@ export async function login(username: string, password: string, clientIp: string
         businessId = userId;
       }
       
+      // Fetch role permissions from RBAC roles table
+      const roleId = u.role_id ?? null;
+      const permissions = await getRolePermissions(roleId);
+      
       const token = await generateToken(
         userId, 
         user.username, 
         businessId,
         u.business_slug || '',
         u.business_name || '',
-        user.role
+        user.role,
+        roleId,
+        permissions
       );
       return {
         success: true,
@@ -445,7 +457,9 @@ export async function verifyToken(token: string): Promise<VerifyResult> {
     businessId: payload.businessId,
     businessSlug: payload.businessSlug,
     businessName: payload.businessName,
-    role: payload.role
+    role: payload.role,
+    roleId: payload.roleId,
+    permissions: payload.permissions || []
   };
 }
 

@@ -38,6 +38,21 @@ async function requireAuth(c: any, next: any) {
   if (businessId !== undefined) {
     c.set('businessId', businessId);
   }
+  if (result.businessSlug) {
+    c.set('businessSlug', result.businessSlug);
+  }
+  if (result.userId !== undefined) {
+    c.set('userId', result.userId);
+  }
+  if (result.role) {
+    c.set('role', result.role);
+  }
+  if (result.roleId !== undefined) {
+    c.set('roleId', result.roleId);
+  }
+  if (result.permissions) {
+    c.set('permissions', result.permissions);
+  }
 
   await next();
 }

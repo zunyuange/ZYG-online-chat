@@ -34,6 +34,8 @@ interface UserInfo {
   businessSlug?: string;
   businessName?: string;
   role?: string;
+  roleId?: number | null;
+  permissions?: string[];
 }
 
 // Check if device is mobile
@@ -308,6 +310,8 @@ export function StaffPage() {
             businessSlug: result.businessSlug,
             businessName: result.businessName,
             role: result.role,
+            roleId: result.roleId,
+            permissions: result.permissions || [],
           });
           setUser({
             userId: result.userId,
@@ -1193,7 +1197,7 @@ export function StaffPage() {
           <MessageCircle size={16} />
           <span>{t('staff_nav_home')}</span>
         </div>
-        {userInfo?.role === 'admin' && (
+        {((userInfo?.permissions?.includes('staff_view') || userInfo?.permissions?.includes('staff_edit')) || userInfo?.role === 'admin') && (
           <div
             onClick={() => setCurrentPage('staff')}
             style={navTabItemStyle(currentPage === 'staff')}
@@ -1202,7 +1206,7 @@ export function StaffPage() {
             <span>{t('staff_nav_management')}</span>
           </div>
         )}
-        {userInfo?.role === 'admin' && (
+        {(userInfo?.permissions?.includes('settings') || userInfo?.role === 'admin') && (
           <div
             onClick={() => setCurrentPage('visitorFields')}
             style={navTabItemStyle(currentPage === 'visitorFields')}
@@ -1218,7 +1222,7 @@ export function StaffPage() {
           <Code2 size={16} />
           <span>{t('staff_nav_code')}</span>
         </div>
-        {userInfo?.role === 'admin' && (
+        {(userInfo?.permissions?.includes('settings') || userInfo?.role === 'admin') && (
           <div
             onClick={() => setCurrentPage('settings')}
             style={navTabItemStyle(currentPage === 'settings')}

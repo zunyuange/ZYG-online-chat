@@ -51,7 +51,7 @@ async function requireAuth(c: any, next: any) {
     return c.json({ success: false, error: result.error || 'Token 无效' }, 401)
   }
 
-  // Attach businessId, businessSlug, userId and role to context for downstream use
+  // Attach businessId, businessSlug, userId, role, roleId and permissions to context for downstream use
   // 注意：businessId 可能是 0（超级管理员），需要用 !== undefined 判断
   if (result.businessId !== undefined) {
     c.set('businessId', result.businessId)
@@ -64,6 +64,12 @@ async function requireAuth(c: any, next: any) {
   }
   if (result.role) {
     c.set('role', result.role)
+  }
+  if (result.roleId !== undefined) {
+    c.set('roleId', result.roleId)
+  }
+  if (result.permissions) {
+    c.set('permissions', result.permissions)
   }
 
   await next()
@@ -936,7 +942,7 @@ staffRoutes.put('/evaluation-settings', async c => {
 staffRoutes.post('/users', async c => {
   try {
     const body = await c.req.json()
-    const { username, password, name, email, role } = body
+    const { username, password, name, email, role, role_id } = body
 
     if (!username || !password) {
       return c.json({ success: false, error: '用户名和密码不能为空' }, 400)
@@ -956,6 +962,7 @@ staffRoutes.post('/users', async c => {
       name,
       email,
       role,
+      role_id,
       businessId: effectiveBusinessId,
     })
 
@@ -988,7 +995,7 @@ staffRoutes.get('/users', async c => {
 staffRoutes.put('/users', async c => {
   try {
     const body = await c.req.json()
-    const { id, username, password, name, email, role } = body
+    const { id, username, password, name, email, role, role_id } = body
 
     if (!id) {
       return c.json({ success: false, error: '用户ID不能为空' }, 400)
@@ -1003,6 +1010,7 @@ staffRoutes.put('/users', async c => {
       name,
       email,
       role,
+      role_id,
     })
 
     if (!result.success) {

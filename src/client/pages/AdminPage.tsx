@@ -31,6 +31,7 @@ interface StaffData {
   email: string | null;
   name: string | null;
   role: string;
+  role_id: number | null;
   status: string;
   created_at: number;
   business_id: number;
@@ -43,6 +44,7 @@ interface RoleData {
   permissions: string[];
   created_at: number;
   is_system?: boolean;
+  status?: string;
 }
 
 interface StatCard {
@@ -58,6 +60,7 @@ interface UserFormData {
   email: string;
   name: string;
   role: string;
+  role_id: number | null;
   business_id?: number;
 }
 
@@ -96,6 +99,7 @@ export function AdminPage() {
     email: '',
     name: '',
     role: 'staff',
+    role_id: null,
     business_id: 1,
   });
   const [roleFormData, setRoleFormData] = useState<RoleFormData>({
@@ -272,7 +276,7 @@ export function AdminPage() {
   // Admin User Management
   const handleCreateAdmin = () => {
     setEditingUser(null);
-    setFormData({ username: '', password: '', email: '', name: '', role: 'admin' });
+    setFormData({ username: '', password: '', email: '', name: '', role: 'admin', role_id: null });
     setFormError(null);
     setShowUserModal(true);
   };
@@ -285,6 +289,7 @@ export function AdminPage() {
       email: user.email || '',
       name: user.name || '',
       role: user.role,
+      role_id: null,
     });
     setFormError(null);
     setShowUserModal(true);
@@ -377,7 +382,7 @@ export function AdminPage() {
   // Staff User Management
   const handleCreateStaff = () => {
     setEditingUser(null);
-    setFormData({ username: '', password: '', email: '', name: '', role: 'admin' });
+    setFormData({ username: '', password: '', email: '', name: '', role: 'staff', role_id: null });
     setFormError(null);
     setShowUserModal(true);
   };
@@ -390,6 +395,7 @@ export function AdminPage() {
       email: user.email || '',
       name: user.name || '',
       role: user.role,
+      role_id: user.role_id ?? null,
       business_id: user.business_id || 1,
     });
     setFormError(null);
@@ -448,6 +454,7 @@ export function AdminPage() {
         email: formData.email || undefined,
         name: formData.name || undefined,
         role: formData.role,
+        role_id: formData.role_id,
         status: 'active',
       };
 
@@ -773,8 +780,14 @@ export function AdminPage() {
     color,
   });
 
-  // Role label mapping
-  const getRoleLabel = (role: string): string => {
+  // Role label mapping - falls back to roles table for custom roles
+  const getRoleLabel = (role: string, roleId?: number | null): string => {
+    // First check the roles table for a matching custom role
+    if (roleId) {
+      const customRole = roles.find(r => r.id === roleId);
+      if (customRole) return customRole.name;
+    }
+    // Fallback to built-in role names
     const roleMap: Record<string, string> = {
       admin: t('admin_role_admin'),
       staff: t('admin_role_staff'),
@@ -925,7 +938,7 @@ export function AdminPage() {
               <tr key={user.id}>
                 <td style={tdStyle}>{user.username}</td>
                 <td style={tdStyle}>{user.name || '-'}</td>
-                <td style={tdStyle}><span style={roleBadgeStyle}>{getRoleLabel(user.role)}</span></td>
+                <td style={tdStyle}><span style={roleBadgeStyle}>{getRoleLabel(user.role, user.role_id)}</span></td>
                 <td style={tdStyle}><span style={badgeStyle(user.status)}>{user.status === 'active' ? t('active') : t('inactive')}</span></td>
               </tr>
             ))}
@@ -988,7 +1001,7 @@ export function AdminPage() {
                   <td style={tdStyle}>{user.name || '-'}</td>
                   <td style={tdStyle}>{user.email || '-'}</td>
                   <td style={tdStyle}>{businessName}</td>
-                  <td style={tdStyle}><span style={roleBadgeStyle}>{getRoleLabel(user.role)}</span></td>
+                  <td style={tdStyle}><span style={roleBadgeStyle}>{getRoleLabel(user.role, user.role_id)}</span></td>
                   <td style={tdStyle}><span style={badgeStyle(user.status)}>{user.status === 'active' ? t('active') : t('inactive')}</span></td>
                   <td style={tdStyle}>{new Date(user.created_at).toLocaleDateString()}</td>
                   <td style={tdStyle}>
@@ -1452,12 +1465,22 @@ export function AdminPage() {
                 <>
                   <label style={labelStyle}>{t('role')}</label>
                   <select
-                    value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                    value={formData.role_id ?? ''}
+                    onChange={(e) => {
+                      const roleId = e.target.value ? Number(e.target.value) : null;
+                      const selectedRole = roles.find(r => r.id === roleId);
+                      setFormData({
+                        ...formData,
+                        role_id: roleId,
+                        role: selectedRole?.name || 'staff',
+                      });
+                    }}
                     style={inputStyle}
                   >
-                    <option value="admin">{t('admin_role_admin')}</option>
-                    <option value="staff">{t('admin_role_staff')}</option>
+                    <option value="">{t('admin_role_staff')}</option>
+                    {roles.filter(r => r.status !== 'deleted').map(r => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
                   </select>
                 </>
               ) : (

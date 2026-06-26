@@ -151,6 +151,8 @@ authRoutes.get('/verify', async (c) => {
       businessSlug: result.businessSlug,
       businessName: result.businessName,
       role: result.role,
+      roleId: result.roleId,
+      permissions: result.permissions,
     });
   } else {
     return c.json({

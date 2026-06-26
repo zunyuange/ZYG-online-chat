@@ -16,6 +16,7 @@ export interface StaffUser {
   email: string | null;
   name: string | null;
   role: string;
+  role_id: number | null;
   status: string;
   created_at: number;
   updated_at: number;
@@ -27,6 +28,7 @@ export interface CreateUserInput {
   email?: string;
   name?: string;
   role?: string;
+  role_id?: number | null;
   business_id?: number;
 }
 
@@ -34,6 +36,7 @@ export interface UpdateUserInput {
   email?: string;
   name?: string;
   role?: string;
+  role_id?: number | null;
   status?: string;
   password?: string;
 }
@@ -80,8 +83,8 @@ export async function createUser(input: CreateUserInput): Promise<{ success: boo
     }
     
     const result = await db.run(
-      'INSERT INTO staff_users (username, password_hash, email, name, role, business_id, business_slug, business_name, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [input.username, passwordHash, input.email || null, input.name || null, input.role || 'staff', finalBusinessId, businessSlug, businessName, 'active', Date.now(), Date.now()]
+      'INSERT INTO staff_users (username, password_hash, email, name, role, role_id, business_id, business_slug, business_name, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [input.username, passwordHash, input.email || null, input.name || null, input.role || 'staff', input.role_id ?? null, finalBusinessId, businessSlug, businessName, 'active', Date.now(), Date.now()]
     );
 
     return { success: true, userId: result.lastInsertRowid };
@@ -130,6 +133,10 @@ export async function updateUser(id: number, input: UpdateUserInput): Promise<{ 
       updates.push('role = ?');
       params.push(input.role);
     }
+    if (input.role_id !== undefined) {
+      updates.push('role_id = ?');
+      params.push(input.role_id || null);
+    }
     if (input.status !== undefined) {
       updates.push('status = ?');
       params.push(input.status);
@@ -175,6 +182,32 @@ export async function deleteUser(id: number): Promise<{ success: boolean; error?
     console.error('[AdminService] Delete user error:', error);
     return { success: false, error: '删除用户失败' };
   }
+}
+
+export async function getRolePermissions(roleId: number | null): Promise<string[]> {
+  if (!roleId) return [];
+  const db = getDb();
+  const role = await db.get<{ permissions: string }>(
+    'SELECT permissions FROM roles WHERE id = ? AND status = ?',
+    [roleId, 'active']
+  );
+  if (!role) return [];
+  try {
+    return JSON.parse(role.permissions);
+  } catch {
+    return [];
+  }
+}
+
+export async function getUserWithPermissions(userId: number): Promise<(StaffUser & { permissions: string[] }) | null> {
+  const db = getDb();
+  const user = await db.get<StaffUser>(
+    'SELECT su.* FROM staff_users su WHERE su.id = ?',
+    [userId]
+  );
+  if (!user) return null;
+  const permissions = await getRolePermissions(user.role_id);
+  return { ...user, permissions };
 }
 
 export async function verifyPassword(username: string, password: string): Promise<StaffUser | null> {

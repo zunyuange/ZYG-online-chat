@@ -867,6 +867,7 @@ export interface CreateStaffUserParams {
   name?: string
   email?: string
   role?: string
+  role_id?: number | null
   businessId?: number
 }
 
@@ -879,6 +880,7 @@ export interface StaffUser {
   email: string | null
   name: string | null
   role: string
+  role_id: number | null
   status: string
   created_at: number
   updated_at: number
@@ -891,7 +893,7 @@ export async function createStaffUser(
   params: CreateStaffUserParams
 ): Promise<{ success: boolean; data?: StaffUser; error?: string }> {
   const db = getDb()
-  const { username, password, name, email, role = 'staff', businessId = 1 } = params
+  const { username, password, name, email, role = 'staff', role_id = null, businessId = 1 } = params
 
   try {
     // Check if username already exists
@@ -907,13 +909,13 @@ export async function createStaffUser(
 
     // Insert the new staff user
     const result = await db.run(
-      'INSERT INTO staff_users (business_id, username, password_hash, name, email, role, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [businessId, username, passwordHash, name || '', email || '', role, 'active']
+      'INSERT INTO staff_users (business_id, username, password_hash, name, email, role, role_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [businessId, username, passwordHash, name || '', email || '', role, role_id, 'active']
     )
 
     // Fetch the created user
     const user = await db.get<StaffUser>(
-      'SELECT id, business_id, username, email, name, role, status, created_at, updated_at FROM staff_users WHERE id = ?',
+      'SELECT id, business_id, username, email, name, role, role_id, status, created_at, updated_at FROM staff_users WHERE id = ?',
       [result.lastInsertRowid]
     )
 
@@ -940,7 +942,7 @@ export async function listStaffUsers(
   if (businessId === 0 && currentUserId) {
     console.log('[StaffService] listStaffUsers: super admin mode, returning self + subordinates')
     return await db.all<StaffUser>(
-      'SELECT id, business_id, username, email, name, role, status, created_at, updated_at FROM staff_users WHERE id = ? OR business_id = ? ORDER BY created_at DESC',
+      'SELECT id, business_id, username, email, name, role, role_id, status, created_at, updated_at FROM staff_users WHERE id = ? OR business_id = ? ORDER BY created_at DESC',
       [currentUserId, currentUserId]
     )
   }
@@ -949,7 +951,7 @@ export async function listStaffUsers(
   // 同时也要查出商家主账号自己（business_id=0 但 id=businessId 的那条记录）
   console.log('[StaffService] listStaffUsers: filtering by business_id =', businessId, 'or id =', businessId, '(owner)')
   return await db.all<StaffUser>(
-    'SELECT id, business_id, username, email, name, role, status, created_at, updated_at FROM staff_users WHERE business_id = ? OR (id = ? AND business_id = 0) ORDER BY created_at DESC',
+    'SELECT id, business_id, username, email, name, role, role_id, status, created_at, updated_at FROM staff_users WHERE business_id = ? OR (id = ? AND business_id = 0) ORDER BY created_at DESC',
     [businessId, businessId]
   )
 }
@@ -963,7 +965,7 @@ export async function updateStaffUser(
   params: Partial<CreateStaffUserParams>
 ): Promise<{ success: boolean; data?: StaffUser; error?: string }> {
   const db = getDb()
-  const { username, password, name, email, role } = params
+  const { username, password, name, email, role, role_id } = params
 
   try {
     const user = await db.get<{ business_id: number }>(
@@ -1001,6 +1003,10 @@ export async function updateStaffUser(
       updates.push('role = ?')
       updateParams.push(role)
     }
+    if (role_id !== undefined) {
+      updates.push('role_id = ?')
+      updateParams.push(role_id || null)
+    }
 
     if (updates.length === 0) {
       return { success: false, error: '没有需要更新的字段' }
@@ -1013,7 +1019,7 @@ export async function updateStaffUser(
     ])
 
     const updatedUser = await db.get<StaffUser>(
-      'SELECT id, business_id, username, email, name, role, status, created_at, updated_at FROM staff_users WHERE id = ?',
+      'SELECT id, business_id, username, email, name, role, role_id, status, created_at, updated_at FROM staff_users WHERE id = ?',
       [id]
     )
 
@@ -1085,7 +1091,7 @@ export async function updateOwnProfile(
     ])
 
     const updatedUser = await db.get<StaffUser>(
-      'SELECT id, business_id, username, email, name, role, status, created_at, updated_at FROM staff_users WHERE id = ?',
+      'SELECT id, business_id, username, email, name, role, role_id, status, created_at, updated_at FROM staff_users WHERE id = ?',
       [id]
     )
 

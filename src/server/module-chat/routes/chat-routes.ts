@@ -43,6 +43,12 @@ async function requireAuth(c: any, next: any) {
   if (result.role) {
     c.set('role', result.role)
   }
+  if (result.roleId !== undefined) {
+    c.set('roleId', result.roleId)
+  }
+  if (result.permissions) {
+    c.set('permissions', result.permissions)
+  }
 
   await next()
 }

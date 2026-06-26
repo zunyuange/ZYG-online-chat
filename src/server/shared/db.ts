@@ -697,6 +697,9 @@ async function runMigrations(database: Database): Promise<void> {
   await addColumnIfMissing('staff_users', 'enable_auto_trans', 'INTEGER NOT NULL DEFAULT 0')
   await addColumnIfMissing('staff_users', 'default_lang', "TEXT NOT NULL DEFAULT 'zh-CN'")
 
+  // Add role_id to staff_users (RBAC: link to roles table)
+  await addColumnIfMissing('staff_users', 'role_id', 'INTEGER')
+
   // Fix existing staff_users data: ensure admin user has correct role and business_id
   await ensureDefaultStaffData(database)
 
@@ -801,6 +804,15 @@ async function ensureDefaultStaffData(database: Database): Promise<void> {
       updates.push('business_name = COALESCE(business_name, \'默认商家\')')
       updates.push('role = \'admin\'')
       
+      // Link role_id to 超级管理员 role if not already set
+      const superAdminRole = await database.get<{ id: number }>(
+        'SELECT id FROM roles WHERE name = ?', ['超级管理员']
+      )
+      if (superAdminRole) {
+        updates.push('role_id = COALESCE(role_id, ?)')
+        values.push(superAdminRole.id)
+      }
+      
       // Ensure translation defaults
       updates.push('enable_auto_trans = COALESCE(enable_auto_trans, 1)')
       updates.push('default_lang = COALESCE(NULLIF(default_lang, \'\'), \'zh-CN\')')
@@ -812,7 +824,7 @@ async function ensureDefaultStaffData(database: Database): Promise<void> {
         `UPDATE staff_users SET ${updates.join(', ')} WHERE id = ?`,
         values
       )
-      console.log('[Database] Fixed existing admin user data: business_id=0, role=admin, auto_trans enabled')
+      console.log('[Database] Fixed existing admin user data: business_id=0, role=admin, role_id linked, auto_trans enabled')
     }
   } catch (error) {
     console.error('[Database] Failed to ensure default staff data:', error)
