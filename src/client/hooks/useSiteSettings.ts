@@ -22,7 +22,7 @@ export function useSiteSettings() {
         if (data.success && data.data) {
           const siteData = data.data;
           const newSettings: SiteSettings = {
-            siteName: siteData.site_name?.value || '在线客服系统',
+            siteName: siteData.site_name?.value || 'CF智能多语言在线客服系统',
             defaultLanguage: siteData.default_language?.value || 'zh-CN',
             enableAuth: (siteData.enable_auth?.value || 'true') === 'true',
           };

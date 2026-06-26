@@ -280,7 +280,7 @@ export const zhCN = {
   administrator: '管理员',
 
   // AdminPage 权限和角色相关
-  default_site_name: '在线客服系统',
+  default_site_name: 'CF智能多语言在线客服系统',
   permission_admin_view: '查看管理后台',
   permission_admin_edit: '编辑管理员',
   permission_staff_view: '查看商家',
@@ -496,7 +496,7 @@ export const zhCN = {
   docs_api_header_endpoint: '接口',
   docs_api_header_method: '方法',
   docs_api_header_desc: '说明',
-  docs_footer: '在线客服系统 - 对接文档',
+  docs_footer: 'CF智能多语言在线客服系统 - 对接文档',
 
   // ===== 其他 =====
   online_service: '在线客服',
